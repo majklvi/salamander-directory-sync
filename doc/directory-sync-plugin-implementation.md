@@ -2,6 +2,8 @@
 
 > Redakční příprava exportu: neutrální označení předlohy a zdrojů; cesty s prefixem `reference-sync-probe-` jsou dokumentační aliasy. Výsledky a hashe se nemění; původní podklady zachovává archiv forku.
 
+Navazující ověření [Stop/Close a chyb po publikaci](directory-sync-plugin-copy-cancellation.md): 375 copy assertions a 429 lifecycle kontrol Debug/Release x64. Nový záznam odděluje úspěšné nativní testy od omezeného GUI měření.
+
 Stav k 15. říjnu 2026: implementována kostra nativního pluginu `dirsync`, sken, porovnání a náhled **bez provádění změn**. Navazuje na [schválený návrh](directory-sync-plugin-design.md), [technický audit](directory-sync-plugin-sdk.md) a [pozorování předlohy](directory-sync-plugin-reference-observations.md).
 
 ## Rozsah
