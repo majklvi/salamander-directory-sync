@@ -2,6 +2,9 @@
 
 > Redakční příprava exportu: neutrální označení předlohy a zdrojů; cesty s prefixem `reference-sync-probe-` jsou dokumentační aliasy. Výsledky a hashe se nemění; původní podklady zachovává archiv forku.
 
+
+**Navazující stav (15. října 2026):** na samostatný pokyn uživatele implementována [kopie pouze do nových cílů](directory-sync-plugin-copy-new.md), včetně stagingu, Verify, metadat, průběhu a Stop. Původní návrhové pasáže níže nejsou tvrzením o přepisech či mazání; ty zůstávají neimplementované. SDK/hostitel beze změn, bez SMB testů. Přesné runtime výsledky a odchylku vlastní CREATE_NEW rezervace stagingu uvádí nový protokol.
+
 Doplněk k [návrhu chování a rozsahu](directory-sync-plugin-design.md). Původní audit SDK proběhl 14. října 2026 před implementací. K 15. říjnu je hotová [první etapa bez zápisů a její ověření](directory-sync-plugin-implementation.md); SDK zůstává nezměněné. Samostatné UI ověření předlohy 11.58 je zachyceno v [protokolu pozorování](directory-sync-plugin-reference-observations.md); technické záruky zápisového enginu tím nejsou ověřené.
 
 Audit proběhl v `C:\Samandarin\directory-sync-plugin` na commitu `a84dbed6db632a9e63b5ed9f4bc6691e4cc5f449`. Odkazy níže jsou připnuté na tento commit forku `majklvi/salamander`; API z jiných rozpracovaných větví se nepředpokládají.
