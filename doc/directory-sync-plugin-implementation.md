@@ -2,6 +2,8 @@
 
 > Redakční příprava exportu: neutrální označení předlohy a zdrojů; cesty s prefixem `reference-sync-probe-` jsou dokumentační aliasy. Výsledky a hashe se nemění; původní podklady zachovává archiv forku.
 
+**Rozhraní (16. října 2026):** [nativní status bar a strukturované potvrzovací/výsledkové dialogy](directory-sync-plugin-ui.md). Stav a počítadla mají vlastní části; souhrny tabulku údaj/hodnota, kopírovatelnou úplnou hodnotu a oddělené poznámky. Bez změny zápisových operací nebo SDK.
+
 **Souvislý pracovní postup (16. října 2026):** dokončen [GUI průchod porovnání → ruční Skip → nová kopie → přepis s obnovou → mazání souboru s obnovou → závěrečné obsahové porovnání](directory-sync-plugin-workflow.md). Všechny tři operace bez chyb, 37 nezávislých kontrol disku prošlo. Bez změny produkčního kódu; ruční návrhy se po novém Compare zadávají znovu. Ponechaná složka a záměrně nekopírovaný soubor zůstávají očekávanými rozdíly.
 
 **Aktuální stav:** implementováno [asymetrické mazání souborů s volitelnou obnovou](directory-sync-plugin-delete.md), 3 380 kontrol adaptéru a 2 343 lifecycle kontrol Debug/Release x64. Mazání složek, SMB testy a změny SDK/hostitele nejsou součástí. Níže zůstává historie předchozích etap.
