@@ -2,6 +2,8 @@
 
 > Redakční příprava exportu: neutrální označení předlohy a zdrojů; cesty s prefixem `reference-sync-probe-` jsou dokumentační aliasy. Výsledky a hashe se nemění; původní podklady zachovává archiv forku.
 
+**Navazující stav:** implementováno [samostatné uchování originálů s protokolem](directory-sync-plugin-recovery.md), bez přepisů či mazání. Aktuálně 1 281 společných copy/recovery kontrol, 725 lifecycle kontrol v Debug i Release x64 a 1 174 kontrol rozšířeného dialogu. Níže zůstává historický popis první etapy.
+
 Dokončen [skutečný NTFS VHD test nedostatku místa](directory-sync-plugin-vhd-results.md), včetně GUI chyby 112 a nového pokusu. Opraven nadbytečný zápis zděděné DACL při právech Modify; aktuálně 766 copy assertions Debug/Release x64. Dřívější zmínky o neprovedeném skutečném testu popisují stav tehdejších etap.
 
 Nové [ověření chyb nedostatku místa](directory-sync-plugin-copy-space.md): 743 copy assertions Debug/Release x64. Reakce na chyby 112/39 prošla řízeným testem; skutečně zaplněný svazek a odpovídající GUI běh zůstávají neověřené kvůli oprávnění k připojení VHD. Produkční kód se neměnil.
