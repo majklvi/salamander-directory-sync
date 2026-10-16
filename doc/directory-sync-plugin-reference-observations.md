@@ -2,6 +2,9 @@
 
 > Redakční příprava exportu: neutrální označení předlohy a zdrojů; cesty s prefixem `reference-sync-probe-` jsou dokumentační aliasy. Výsledky a hashe se nemění; původní podklady zachovává archiv forku.
 
+> **Datovaný návrh / evidence vývoje.** Aktuální stav, instalace, ovládání a omezení jsou v [hlavním návodu](directory-sync-plugin.md). Níže uvedené tehdejší rozsahy, názvy ovládacích prvků, počty testů a neprovedená ověření popisují příslušnou etapu; nejsou souhrnem současné verze.
+
+
 Datum: 14. října 2026. Předimplementační ověření V1–V4 k [návrhu pluginu](directory-sync-plugin-design.md).
 
 Dokument obsahuje tři série. První ověřuje náhled bez zápisů; druhá zahrnuje skutečné kopie, schválené testovací mazání a další hraniční případy. Třetí dokončuje přerušení přenosu a chybu Verify. Starší seznamy neověřených případů je nutné číst spolu s následujícími doplněními.
