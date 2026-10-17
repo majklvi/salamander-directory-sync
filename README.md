@@ -12,6 +12,8 @@ A native directory comparison and synchronization plugin for **Samandarin**, wit
 
 **Version 0.1.4 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
 
+<img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/1c3a90e8-4a1f-446c-9d2d-0a9f90bd65a2" />
+
 ## Highlights
 
 - Optional relative file sizes and timestamps.
@@ -34,6 +36,8 @@ These options only change presentation: they do not change comparison results, t
 Open **Settings…** in the preview or **Plugins Manager → Configure…**. The color button beside each item opens a native color picker. **Restore default colors** restores only the current light/dark palette. The host chooses the active scheme; the plugin has no separate theme switch.
 
 Preferences also control action labels, optional columns, side labels in column headings, relative values, Keep originals, and the recovery directory. **OK** saves changes; **Cancel** discards them. Appearance changes preserve current results and manual proposals.
+
+<img width="461" height="498" alt="image" src="https://github.com/user-attachments/assets/20c640ae-bc85-41b8-befa-b1196f4f7a20" />
 
 ## Tested host versions
 
