@@ -1,6 +1,6 @@
-# Ověření synchronizace v referenčním správci souborů 11.58
+# Ověření synchronizace v referenčním správci souborů
 
-> Redakční příprava exportu: neutrální označení předlohy a zdrojů; cesty s prefixem `reference-sync-probe-` jsou dokumentační aliasy. Výsledky a hashe se nemění; původní podklady zachovává archiv forku.
+Redakční příprava exportu, 17. října 2026: označení předlohy a jejích zdrojů je neutrální. Cesty s prefixem `reference-sync-probe-` a zástupný název nápovědy jsou dokumentační aliasy původních cest; žádná testovací data nebyla přejmenována. Výsledky, časy, hashe a meze ověření zůstávají původní. Nezkrácené zdroje a skutečné cesty zachovává původní fork před touto úpravou.
 
 > **Datovaný návrh / evidence vývoje.** Aktuální stav, instalace, ovládání a omezení jsou v [hlavním návodu](directory-sync-plugin.md). Níže uvedené tehdejší rozsahy, názvy ovládacích prvků, počty testů a neprovedená ověření popisují příslušnou etapu; nejsou souhrnem současné verze.
 
