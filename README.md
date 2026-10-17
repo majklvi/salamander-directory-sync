@@ -41,7 +41,7 @@ The lowest tested Samandarin versions are **0.15.1** in user testing and **0.16*
 
 ## Install the alpha build
 
-1. Download the [ready-to-use x64 ZIP from release 0.1.4](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.4/dirsync-0.1.4-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned.
+1. Download the [ready-to-use x64 ZIP from release 0.1.4](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.4/dirsync-0.1.4-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
 2. Close any host instance using an older copy. Put the entire `dirsync` directory inside the host's `plugins` directory, beside `salamand.exe`. Keep `dirsync.spl`, `lang/english.slg`, and `lang/czech.slg` in their original layout.
 3. In **Plugins → Plugins Manager → Add…**, select `plugins/dirsync/dirsync.spl` unless already registered. Launch **Plugins → Directory Synchronization → Directory synchronization…**. The host selects the interface language.
 
@@ -67,7 +67,7 @@ The separate **Remove selected…** command immediately removes highlighted item
 
 With **Keep originals ON**, synchronization saves and verifies originals before overwrites/deletions and records the run in the recovery directory. With it **OFF**, these commands make no new recovery copy or persistent execution journal and do not use the Recycle Bin. Existing backups remain untouched.
 
-For manual recovery, find the run and `manifest.jsonl` named in the summary. Match a successfully saved item's `original` and `saved` paths. First copy saved data into a separate checking directory and inspect it before restoring to the original location. Recreate directory structure from directory records as needed; do not copy the entire run directory into the original tree. Original ACLs and every NTFS property are not automatically restored. See the [detailed manual (Czech)](docs/directory-sync-plugin.md) and [recovery records (Czech)](docs/directory-sync-plugin-recovery.md).
+For manual recovery, find the run and `manifest.jsonl` named in the summary. Match a successfully saved item's `original` and `saved` paths. First copy saved data into a separate checking directory and inspect it before restoring to the original location. Recreate directory structure from directory records as needed; do not copy the entire run directory into the original tree. Original ACLs and every NTFS property are not automatically restored. See the [detailed user guide](docs/directory-sync-plugin.en.md) and [recovery records (Czech)](docs/directory-sync-plugin-recovery.md).
 
 ## Limits and bug reports
 
@@ -98,7 +98,7 @@ Own CI builds Debug Win32/x64/ARM64 and Release x64, runs all five x64 suites in
 
 ## Documentation and license
 
-[Český přehled](README.cs.md) · [Detailed manual (Czech)](docs/directory-sync-plugin.md) · [Pilot checklist (Czech)](docs/directory-sync-plugin-pilot-guide.md)
+[Český přehled](README.cs.md) · [Detailed user guide](docs/directory-sync-plugin.en.md) · [Pilot checklist](docs/directory-sync-plugin-pilot-guide.en.md)
 
 This repository retains the plugin's own development history and documentation from the original fork. The [commit map](docs/migration/commit-map.tsv) connects original and exported SHAs. Dated reports in `docs/` describe their historical stages, not necessarily current limitations.
 

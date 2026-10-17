@@ -1,14 +1,22 @@
 # Directory Synchronization — aktuální návod
 
-Stav 17. října 2026, vývojová verze 0.1.4 pro současný **Samandarin 0.16**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
+> [!CAUTION]
+> **ALFA VERZE — NEBEZPEČÍ ZTRÁTY DAT. NENÍ URČENO PRO PRODUKČNÍ POUŽITÍ.**
+> Použití výhradně na vlastní nebezpečí. Autoři a přispěvatelé neposkytují **ŽÁDNOU ZÁRUKU A NENESOU ODPOVĚDNOST ZA JAKOUKOLI ZTRÁTU NEBO POŠKOZENÍ DAT**. Testujte pouze na postradatelných kopiích a mějte nezávislou ověřenou zálohu. Uchování originálů nezajišťuje automatické vrácení změn ani neodstraňuje riziko ztráty dat.
+
+[English](directory-sync-plugin.en.md)
+
+Stav 17. října 2026, alfa verze 0.1.4 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
 
 Pro pilotní používání začněte [krátkými pokyny včetně hlášení chyb](directory-sync-plugin-pilot-guide.md), přiloženými v balíčku jako `PILOT.cs.md`.
 
 Stavový řádek od 0.1.4 používá samostatné nativní oddíly: stav operace a jednotlivé počty řádků nebo průběhu. Šířky se přizpůsobují textu a oknu; celý údaj je dostupný v tooltipu.
 
+Nejnižší testované verze hostitele: 0.15.1 uživatelsky a nevydaná 0.16 automatizovaně pomocí AI z vlastního vývojářského sestavení.
+
 ## Instalace a spuštění
 
-Použijte plugin ze stejného sestavení a pro stejnou architekturu jako hostitel (x64 hostitel vyžaduje x64 SPL). Vývojový výstup obsahuje:
+Použijte hotový x64 ZIP s x64 hostitelem; není potřeba kompilátor ani instalace SDK. Balíček obsahuje:
 
 ```text
 plugins/dirsync/dirsync.spl
@@ -118,3 +126,5 @@ Do vzdálenějšího plánu patří [integrace s přenosovým oknem a frontou j�
 | Přerušení a nedostatek místa | [Stop/Close](directory-sync-plugin-copy-cancellation.md), [uvolnění](directory-sync-plugin-copy-unload.md), [chyby místa](directory-sync-plugin-copy-space.md), [skutečný VHD test](directory-sync-plugin-vhd-results.md) |
 
 Starší protokolové a souběhové experimenty jsou výzkumná evidence, nikoli požadavek první verze. Rozhodnutí držet úroveň běžných operací jádra má přednost před jejich původními doporučeními. Použitelný rozsah první preview verze uzavírá [distribuční ověření](directory-sync-plugin-distribution.md). Aktuální rozšíření mazání adresářů popisuje [návrh a evidence](directory-sync-plugin-directories.md). SMB testy a změny SDK zůstávají mimo tento rozsah.
+
+Podrobné vývojové záznamy zůstávají na GitHubu; adresář docs se do instalačního ZIP nepřibaluje.

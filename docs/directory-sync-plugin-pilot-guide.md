@@ -1,10 +1,18 @@
 # Synchronizace adresářů — pilotní testování
 
-Vývojová verze 0.1.4 pro **Samandarin 0.16 x64**, čeština i angličtina. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
+> [!CAUTION]
+> **ALFA VERZE — NEBEZPEČÍ ZTRÁTY DAT. NENÍ URČENO PRO PRODUKČNÍ POUŽITÍ.**
+> Použití výhradně na vlastní nebezpečí. Autoři a přispěvatelé neposkytují **ŽÁDNOU ZÁRUKU A NENESOU ODPOVĚDNOST ZA JAKOUKOLI ZTRÁTU NEBO POŠKOZENÍ DAT**. Testujte pouze na postradatelných kopiích a mějte nezávislou ověřenou zálohu. Uchování originálů nezajišťuje automatické vrácení změn ani neodstraňuje riziko ztráty dat.
+
+[English](directory-sync-plugin-pilot-guide.en.md)
+
+Alfa verze 0.1.4 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
 
 Klikáním do záhlaví sloupce přepínáte vzestupné/sestupné řazení souborů uvnitř adresářů. Pravé tlačítko na záhlaví nebo sekce **Sloupce / Columns** v nastavení pluginu skryje či zobrazí volitelné sloupce. Názvy vlevo i vpravo, cesta adresáře a operace zůstávají. Volby sloupců a řazení se pamatují; skrytí sloupce nevynechává soubory ze synchronizace.
 
 Výsledky jsou seskupené podle relativních adresářů (`\` je kořen). Pod záhlavím jsou názvy souborů; záhlaví samo není položka operace a nevybírá své potomky. Prázdné skupiny po filtrování zmizí. Adresář určený k odstranění má vlastní řádek v nadřazené skupině.
+
+Nejnižší testované verze hostitele: 0.15.1 uživatelsky a nevydaná 0.16 automatizovaně pomocí AI z vlastního vývojářského sestavení.
 
 ## Instalace
 
@@ -37,7 +45,7 @@ Horní „Označit ke kopírování…“ / „Označit k přeskočení“ pouze
 - První chyba zastaví zbývající práci. Nejde o transakci ani úplný NTFS zálohovací nástroj; během běhu neměňte testovací stromy jiným programem. Mohou zůstat vytvoření prázdní rodiče, neúplný protokol nebo oznámený zbytek stagingu.
 - Přenos zatím používá vlastní okno pluginu, bez společné fronty jádra, přenosu na pozadí a rychlostního limitu. Ověřený runtime je x64. Běh na jiném systémovém DPI a přechody mezi monitory zbývají ověřit; procházení tisíců řádků přes UI Automation dříve způsobovalo prodlevy.
 
-Podrobnosti jsou v přiloženém [aktuálním návodu](directory-sync-plugin.md) (`README.cs.md` v ZIP).
+Podrobnosti jsou v [aktuálním návodu](directory-sync-plugin.md) (`README.cs.md` v ZIP).
 
 ## Jak hlásit chybu
 
@@ -54,3 +62,5 @@ Při neočekávané změně dat další zápisy zastavte, uchovejte souhrn i obn
 Od 0.1.3 lze v Nastavení → Sloupce nezávisle zapnout relativní velikost a relativní čas. Obě volby jsou standardně vypnuté. U rozdílných hodnot dvojic souborů zobrazují rozdíl vůči protější straně; shodné hodnoty a chybějící protějšek ponechávají absolutní údaje. Řazení se nadále řídí skutečnou velikostí a časem. Podrobnosti uvádí README.cs.md.
 
 Tabulka má symetrické pořadí Název | Velikost | Změněno | Operace | Změněno | Velikost | Název. První trojice patří levému adresáři, poslední pravému. Volba Nastavení → Sloupce → Uvádět stranu v záhlaví přidá do popisků vlevo/vpravo; standardně je vypnutá a pamatuje se.
+
+Podrobné vývojové záznamy zůstávají na GitHubu; adresář docs se do instalačního ZIP nepřibaluje.
