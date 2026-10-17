@@ -48,7 +48,7 @@ Escape zavřelo potvrzení bez provedení přepisu. Původní zdroj `NEW` i cíl
 ### Opakování s Computer Use
 
 1. Zavřít pouze soukromý testovací hostitel. Zálohovat jeho konfiguraci i původní `english.slg`.
-2. Spustit [prepare-clipboard-probe.ps1](../src/plugins/dirsync/tests/prepare-clipboard-probe.ps1) s `-SourceLanguage <původní english.slg> -ProbeLanguage <nová cesta mimo instalaci>`. Skript odmítá přepis zdroje i existujícího výstupu; ověřuje extended dialog a přesnou očekávanou změnu resource. Neupravuje SPL, repozitářové resources ani SDK.
+2. Spustit [prepare-clipboard-probe.ps1](https://github.com/majklvi/salamander/blob/fa7c9c0ca18a51de5d9367f2c889c2678554efec/src/plugins/dirsync/tests/prepare-clipboard-probe.ps1) s `-SourceLanguage <původní english.slg> -ProbeLanguage <nová cesta mimo instalaci>`. Skript odmítá přepis zdroje i existujícího výstupu; ověřuje extended dialog a přesnou očekávanou změnu resource. Neupravuje SPL, repozitářové resources ani SDK.
 3. Pouze v kopii hostitele nahradit SLG vytvořeným probe, spustit hostitel a přes GUI zadat izolované kořeny a dlouhou testovací hodnotu. Porovnat, otevřít potvrzení, vybrat jeho **vlastní** vrácené okno. Neprovést žádnou zápisovou operaci.
 4. V tabulce vybrat hodnotu. Každou zkratku a menu ověřit skutečným vložením do nového dokumentu; porovnat plné řetězce. Pro celý souhrn kontrolovat také tabulátory a odstavce.
 5. Zrušit potvrzení, zavřít testovací hostitel a obnovit původní SLG i konfiguraci. Ověřit shodu hashů a nezměněné cíle.

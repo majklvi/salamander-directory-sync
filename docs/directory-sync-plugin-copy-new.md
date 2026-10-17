@@ -29,7 +29,7 @@ Průběh zobrazuje pořadí souboru, přenesené bajty včetně ADS, součet baj
 
 ## Privátní adaptér a D5
 
-[copy.cpp](../src/plugins/dirsync/copy.cpp) a [copy.h](../src/plugins/dirsync/copy.h) nemají závislost na SDK. Používají existující wide path helpery a obyčejné Win32 API. Kořeny získávají z kontrolovaného interního snapshotu, nikoli z nových neověřených parametrů. `SnapshotRoots` je interní funkce porovnávacího enginu, nikoli změna pluginového SDK.
+[copy.cpp](https://github.com/majklvi/salamander/blob/fa7c9c0ca18a51de5d9367f2c889c2678554efec/src/plugins/dirsync/copy.cpp) a [copy.h](https://github.com/majklvi/salamander/blob/fa7c9c0ca18a51de5d9367f2c889c2678554efec/src/plugins/dirsync/copy.h) nemají závislost na SDK. Používají existující wide path helpery a obyčejné Win32 API. Kořeny získávají z kontrolovaného interního snapshotu, nikoli z nových neověřených parametrů. `SnapshotRoots` je interní funkce porovnávacího enginu, nikoli změna pluginového SDK.
 
 1. Před položkou zkontrolovat relativní cestu, rodiče bez následování jejich reparse pointů, identitu/metadata zdroje a nepřítomnost cíle. Kontrola rodičů je běžný checkpoint, ne kontinuální zámek proti všem závodům. Zdrojový handle má share READ | WRITE podle běžného postupu jádra.
 2. V cílovém rodiči vytvořit vlastní `.dirsync-{GUID}.tmp` přes CREATE_NEW. Získat jeho ID a zděděnou DACL. Jde zároveň o rezervaci stagingu a jednoduchý referenční vzor cílových práv; není potřeba další pomocný soubor či native backend.
@@ -43,7 +43,7 @@ EFS, reparse/cloud/offline položky zůstávají blokované. Nejsou přidané p�
 
 ## Provedené ověření
 
-Nový [dirsync_copy_tests](../src/plugins/dirsync/tests/dirsync_copy_tests.vcxproj) běží ve standardním native runneru jako projekt `*_tests.vcxproj`. Na místních syntetických fixtures prošlo **292 assertions v Debug i Release x64**. Počet zahrnuje přípravu a opakované kontroly, nikoli 292 nezávislých scénářů.
+Nový [dirsync_copy_tests](https://github.com/majklvi/salamander/blob/fa7c9c0ca18a51de5d9367f2c889c2678554efec/src/plugins/dirsync/tests/dirsync_copy_tests.vcxproj) běží ve standardním native runneru jako projekt `*_tests.vcxproj`. Na místních syntetických fixtures prošlo **292 assertions v Debug i Release x64**. Počet zahrnuje přípravu a opakované kontroly, nikoli 292 nezávislých scénářů.
 
 | Případ | Pozorovaný výsledek |
 | --- | --- |

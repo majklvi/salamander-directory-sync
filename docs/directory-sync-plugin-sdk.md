@@ -110,7 +110,7 @@ Po změnách informovat hostitele přes `PostChangeOnPathNotification` ([spl_gen
 | Projekty | Pluginový `.vcxproj`, `.def`, resources a jazykový projekt. Shared props generují `.spl` a `lang/english.slg`: [plugin_base.props, ř. 7–11](https://github.com/majklvi/salamander/blob/a84dbed6db632a9e63b5ed9f4bc6691e4cc5f449/src/plugins/shared/vcxproj/plugin_base.props#L7-L11), [lang_base.props, ř. 7–11](https://github.com/majklvi/salamander/blob/a84dbed6db632a9e63b5ed9f4bc6691e4cc5f449/src/plugins/shared/vcxproj/lang_base.props#L7-L11). |
 | Solution a platformy | Přidat plugin i jazykový projekt do `src/vcxproj/salamand.sln`. PR build má Debug Win32/x64/ARM64: [pr-msbuild.yml, ř. 24–44](https://github.com/majklvi/salamander/blob/a84dbed6db632a9e63b5ed9f4bc6691e4cc5f449/.github/workflows/pr-msbuild.yml#L24-L44). |
 | Installer | Adresáře, `.spl`, `lang/*.slg`, případná nápověda a registrace výběru pluginu; vzor [Inno Setup, ř. 737–738](https://github.com/majklvi/salamander/blob/a84dbed6db632a9e63b5ed9f4bc6691e4cc5f449/doc/runbook-setup/inno_setup_salamander_x64.iss#L737-L738), [ř. 1897](https://github.com/majklvi/salamander/blob/a84dbed6db632a9e63b5ed9f4bc6691e4cc5f449/doc/runbook-setup/inno_setup_salamander_x64.iss#L1897). |
-| Původ a ABI | Respektovat [AGENTS.md](../AGENTS.md), zachovat licence převzatého kódu a uvést inspiraci v [third_party.md](third_party.md). První verze používá nezměněné SDK Samandarin-0.16. |
+| Původ a ABI | Respektovat [AGENTS.md](https://github.com/majklvi/salamander/blob/fa7c9c0ca18a51de5d9367f2c889c2678554efec/AGENTS.md), zachovat licence převzatého kódu a uvést inspiraci v [third_party.md](third_party.md). První verze používá nezměněné SDK Samandarin-0.16. |
 
 ## Ověřování a zbývající technické otázky
 
@@ -171,7 +171,7 @@ Dokumentace Microsoftu podporuje nález o zachování chybějících pojmenovan�
 
 Zůstávají D4/D5: nezávislá ověřená obnova před přepisem/mazáním, podporovaná data/ADS a metadata, cílová pravidla oprávnění, základní kontrola cest a změn po skenu, běžné chyby a Stop, pravdivý výsledek a ruční obnova. Není slíben atomický snapshot stromu nebo celé sady proudů ani ochrana proti všem souběžným či privilegovaným zásahům. Nepodporované položky a pozorované konflikty se nadále blokují; chyba nesmí být zaměněna za chybějící soubor nebo úspěch.
 
-Referenční worker otevírá zdroj i se share WRITE a vytváří nový cíl přes CREATE_NEW; jde o konkrétní postup v [worker.cpp](../src/worker.cpp), nikoli o univerzální záruku všech cest jádra. [SafeFile SDK](../src/plugins/shared/spl_file.h) je kandidát k posouzení pro ošetřené file I/O, nikoli prokázaná veřejná služba celého kopírovacího workeru. Bez rozšíření SDK nejprve zmapovat dostupné metody, Unicode/dlouhé cesty, threading/UI, ADS a metadata. Interní worker není automaticky volatelný z pluginu.
+Referenční worker otevírá zdroj i se share WRITE a vytváří nový cíl přes CREATE_NEW; jde o konkrétní postup v [worker.cpp](https://github.com/majklvi/salamander/blob/fa7c9c0ca18a51de5d9367f2c889c2678554efec/src/worker.cpp), nikoli o univerzální záruku všech cest jádra. [SafeFile SDK](https://github.com/majklvi/salamander/blob/fa7c9c0ca18a51de5d9367f2c889c2678554efec/src/plugins/shared/spl_file.h) je kandidát k posouzení pro ošetřené file I/O, nikoli prokázaná veřejná služba celého kopírovacího workeru. Bez rozšíření SDK nejprve zmapovat dostupné metody, Unicode/dlouhé cesty, threading/UI, ADS a metadata. Interní worker není automaticky volatelný z pluginu.
 
 ### Přiměřené ověření při vývoji
 
