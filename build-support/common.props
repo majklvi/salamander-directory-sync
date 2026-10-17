@@ -22,6 +22,6 @@
   <Link><GenerateDebugInformation>true</GenerateDebugInformation><RandomizedBaseAddress>true</RandomizedBaseAddress>
    <AdditionalDependencies>user32.lib;gdi32.lib;comctl32.lib;UxTheme.lib;comdlg32.lib;shell32.lib;ole32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
   </Link>
-  <ResourceCompile><AdditionalIncludeDirectories>$(RepoRoot)src;$(RepoRoot)vendor\samandarin-sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><Culture>0x0409</Culture></ResourceCompile>
+  <ResourceCompile><PreprocessorDefinitions>WINVER=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)'=='Debug'">_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)'=='Release'">NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions><AdditionalIncludeDirectories>$(RepoRoot)src;$(RepoRoot)vendor\samandarin-sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><Culture>0x0409</Culture></ResourceCompile>
  </ItemDefinitionGroup>
 </Project>
