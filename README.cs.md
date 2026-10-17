@@ -12,6 +12,10 @@ ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není 
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
+<img width="917" height="796" alt="Náhled porovnání adresářů s návrhy synchronizačních operací." src="https://github.com/user-attachments/assets/1c3a90e8-4a1f-446c-9d2d-0a9f90bd65a2" />
+
+*Náhled porovnání adresářů s návrhy synchronizačních operací.*
+
 Samostatný vývoj a hlášení chyb probíhají v [majklvi/salamander-directory-sync](https://github.com/majklvi/salamander-directory-sync). Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
 
 ## Sestavení ze zdrojů a testy (pro vývojáře)
@@ -61,6 +65,10 @@ Rozdíl velikosti je přesný počet bajtů s oddělováním číslic podle host
 ## Nastavení vzhledu
 
 Otevřete **Settings… / Nastavení…** v náhledu nebo **Plugins Manager → Configure…**. Barevné tlačítko u každé položky otevře nativní výběr barvy. **Restore default colors** obnoví pouze barvy aktuálního světlého/tmavého režimu. OK změny uloží, Cancel je zahodí; výsledky a ruční návrhy zůstanou zachované.
+
+<img width="461" height="498" alt="Nastavení barev, sloupců, relativních údajů a uchování originálů." src="https://github.com/user-attachments/assets/20c640ae-bc85-41b8-befa-b1196f4f7a20" />
+
+*Nastavení barev, sloupců, relativních údajů a uchování originálů.*
 
 ## Stažení a instalace alfa verze
 
