@@ -40,10 +40,10 @@ Get-ChildItem -LiteralPath (Join-Path $dark 'docs') -Filter 'LICENSE-*.md' -File
 $revision=& git -C $repo rev-parse HEAD
 if($LASTEXITCODE -ne 0){throw 'Source revision unavailable.'}
 $notice=@"
-Directory Synchronization 0.1.4 local standalone pilot, x64; Samandarin 0.16 SDK.
+Directory Synchronization 0.1.4 standalone pilot, x64; Samandarin 0.16 SDK.
 Copyright (c) 2026 Open Salamander Authors. GPL-2.0-or-later.
 Source revision: $revision
-This local repository is not published. No new repository URL is claimed.
+Source: https://github.com/majklvi/salamander-directory-sync/tree/$revision
 Includes darkmodelib by ozone10; licenses are in licenses/.
 Extract dirsync/ into the host plugins/ directory, then register dirsync.spl
 using Plugins Manager > Add. English and Czech modules are in lang/.

@@ -2,7 +2,7 @@
 
 Samostatný nativní plugin pro Samandarin 0.16. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
-Toto je místní migrační kandidát; nebyl publikován. Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
+Samostatný vývoj a hlášení chyb probíhají v [majklvi/salamander-directory-sync](https://github.com/majklvi/salamander-directory-sync). Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
 
 ## Sestavení a testy
 
@@ -21,6 +21,10 @@ pwsh -NoProfile -File tools/package.ps1 -OutputDirectory out/package-01
 
 Rozbalit `dirsync/` do adresáře `plugins/` hostitele a registrovat `dirsync.spl` přes Plugins Manager > Add. Zvolit český či anglický modul. Nejprve testovat na kopii místních dat. [Aktuální návod](docs/directory-sync-plugin.md), [pilotní pokyny](docs/directory-sync-plugin-pilot-guide.md) a [ruční obnova](docs/directory-sync-plugin-recovery.md) popisují postup, známá omezení a hlášení chyb. SMB nebylo ověřeno; neslibuje se crash replay ani automatický rollback. Hotové operace po Stop zůstávají provedené.
 
-## CI kandidát
+## CI
 
-Workflow `ci.yml` sestavuje Debug Win32/x64/ARM64 a Release x64, obě x64 konfigurace všech pěti testovacích sad a ověřený ZIP. `codeql.yml` obsahuje skutečný ruční build C/C++, bez podmínky omezující analýzu na jádro hostitele. Akce jsou připnuté na konkrétní SHA; runner je výslovně `windows-2025-vs2026`. CI nebylo spuštěno na GitHubu, protože tento kandidát nemá remote. Lokálně se ověřují stejné build/test/package příkazy; CodeQL vyžaduje dostupnost služby a oprávnění budoucího repozitáře.
+Workflow `ci.yml` sestavuje Debug Win32/x64/ARM64 a Release x64, obě x64 konfigurace všech pěti testovacích sad a ověřený ZIP. `codeql.yml` obsahuje skutečný ruční build C/C++, bez podmínky omezující analýzu na jádro hostitele. Akce jsou připnuté na konkrétní SHA; runner je výslovně `windows-2025-vs2026`. Aktuální výsledky jsou v [GitHub Actions](https://github.com/majklvi/salamander-directory-sync/actions). Balíček x64 je artefaktem úspěšného workflow; instalační ZIP se nepodepisuje. Lokálně lze spustit stejné build/test/package příkazy.
+
+## Původ historie
+
+Projekt byl oddělen od původního forku se zachováním celé vlastní historie a dokumentace. [Mapa commitů](docs/migration/commit-map.tsv) spojuje původní a exportované SHA; [migrační záznam](docs/migration/repository-migration.md) vymezuje změny sestavení a archiv původního vývoje. Starší datované protokoly popisují tehdejší stav, včetně přípravných místních klonů.

@@ -7,4 +7,4 @@
 - Sestavení, testy a balení používat přes vlastní `tools/`. Nepřidávat závislost na okolním checkoutu, sdílených props hostitele, lokálním certifikátu nebo globálním výstupním adresáři.
 - Verifikovat všech pět x64 sad v Debug a Release a potřebnou build matici. ARM64 build není runtime test. SMB, živé GUI a skutečný cloudový CodeQL nevydávat za ověřené bez příslušného testu.
 - Zachovat licence a původ vendored souborů. Výsledky datovaných historických protokolů nepřepisovat na tvrzení o současném stavu.
-- Tento místní migrační kandidát nemá remote. Vytvoření/publikace vzdáleného repozitáře vyžaduje samostatné zadání uživatele.
+- Hlavní vývoj probíhá v `majklvi/salamander-directory-sync`, větev `main`. Kontrolovat vlastní CI; nepoužívat validační helper původního forku. Publikaci verzí a destruktivní změny historie provádět jen podle zadání uživatele.

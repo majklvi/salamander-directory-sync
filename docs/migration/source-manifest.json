@@ -1,0 +1,27 @@
+{
+  "sourceRepository": "https://github.com/majklvi/salamander",
+  "sourceBranch": "feature/directory-sync-plugin",
+  "sourceHead": "ac4b64fe4ab96838c28ed36a93de03dc718d7d62",
+  "referenceBase": "a84dbed6db632a9e63b5ed9f4bc6691e4cc5f449",
+  "sourceOwnedCommits": 67,
+  "historyRedactions": "Research naming and historical paths neutralized in isolated export; original fork unchanged.",
+  "supportSnapshot": "../../EXPORT-SUPPORT.json",
+  "commitMap": "commit-map.tsv",
+  "pluginVersion": "0.1.4",
+  "newRepository": "https://github.com/majklvi/salamander-directory-sync",
+  "defaultBranch": "main",
+  "visibility": "public",
+  "preservedIdentity": [
+    "DirectorySync",
+    "dirsync.spl",
+    "english.slg",
+    "czech.slg",
+    "existing configuration and recovery formats"
+  ],
+  "migrationChanges": [
+    "include paths and standalone MSBuild projects",
+    "own build/test/package/CI scripts",
+    "source metadata and current guide links"
+  ],
+  "originalHistoryRewritten": false
+}

@@ -21,7 +21,7 @@
 #define VERSINFO_INTERNAL "DIRSYNC"
 #define VERSINFO_ORIGINAL "DIRSYNC.SPL"
 #endif
-#define VERSINFO_SLG_WEB "github.com/majklvi/salamander"
+#define VERSINFO_SLG_WEB "github.com/majklvi/salamander-directory-sync"
 #ifdef DIRSYNC_CZECH
 #define VERSINFO_SLG_COMMENT "Česká verze"
 #else

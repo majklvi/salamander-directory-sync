@@ -18,7 +18,7 @@ plugins/dirsync/lang/czech.slg
 
 Zavřete instance používající starou verzi pluginu, zkopírujte celý adresář `dirsync` do `plugins` vedle programu a ponechte uvedenou strukturu. V Samandarinu otevřete **Plugins → Plugins Manager → Add…**, vyberte `dirsync.spl` a ověřte položku Directory Synchronization. Pokud ji distribuce už zaregistrovala, znovu ji nepřidávejte. Plugin spusťte z nabídky **Plugins → Directory Synchronization → Directory synchronization…**. Obě porovnávané adresáře musí být fyzické Windows cesty; archivy a virtuální pluginové systémy nejsou vstupem.
 
-Při sestavení ze zdrojů použijte projekt `src/plugins/dirsync/vcxproj/dirsync.vcxproj`; jazykový modul je jeho závislost. Podrobný build postup je v [implementačním záznamu](directory-sync-plugin-implementation.md#sestavení-a-testy). [Distribuční ověření](directory-sync-plugin-distribution.md) dokončilo rozbalení ZIP do čisté konfigurace 0.16 x64, automatickou registraci a dva skutečné restarty s ON/OFF a Unicode cestou obnovy. Jde o ruční portable instalaci pluginu, nikoli sestavení celého Inno instalátoru.
+Při sestavení ze zdrojů použijte `pwsh -File tools/build.ps1 -Configuration Release -Platform x64`; oba jazykové moduly jsou závislosti projektu `build-support/dirsync.vcxproj`. Samostatný build, testy a balení popisuje [README](https://github.com/majklvi/salamander-directory-sync/blob/main/README.md). Historické distribuční záznamy níže zůstávají datovanou evidencí původních ověření.
 
 ## Okamžité odstranění vybraných položek
 

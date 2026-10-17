@@ -41,7 +41,7 @@ Podrobnosti jsou v přiloženém [aktuálním návodu](directory-sync-plugin.md)
 
 ## Jak hlásit chybu
 
-Pošlete hlášení autorovi pluginu; souhrn výsledku lze zkopírovat přes **Ctrl+Shift+C**, cestu vybraného řádku přes **Ctrl+C**. Hlášení ideálně obsahuje:
+Chybu hlaste v [Issues](https://github.com/majklvi/salamander-directory-sync/issues); souhrn výsledku lze zkopírovat přes **Ctrl+Shift+C**, cestu vybraného řádku přes **Ctrl+C**. Hlášení ideálně obsahuje:
 
 - Identifikaci balíčku: název ZIP a SHA-256 z přiloženého `package-sha256.txt`; hash `dirsync.spl` je také v `files.json`.
 - Verzi Samandarinu a Windows, jazyk, světlý/tmavý režim, DPI monitorů a potvrzení místního NTFS.
