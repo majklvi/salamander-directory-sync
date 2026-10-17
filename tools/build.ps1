@@ -5,7 +5,8 @@ param(
  [ValidateSet('Debug','Release')][string]$Configuration='Debug',
  [ValidateSet('Win32','x64','ARM64')][string]$Platform='x64',
  [ValidateSet('Plugin','Tests')][string]$Mode='Plugin',
- [string]$Project
+ [string]$Project,
+ [ValidateRange(30,900)][int]$BuildTimeoutSeconds=105
 )
 $ErrorActionPreference='Stop'
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -26,7 +27,7 @@ foreach($name in $projects){
  foreach($argument in $arguments){[void]$start.ArgumentList.Add($argument)}
  $process=[Diagnostics.Process]::Start($start)
  $stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync()
- if(!$process.WaitForExit(105000)){$process.Kill($true);throw "Build timed out: $name"}
+ if(!$process.WaitForExit($BuildTimeoutSeconds * 1000)){$process.Kill($true);throw "Build timed out: $name"}
  $stdout.GetAwaiter().GetResult() | Write-Output
  $errors=$stderr.GetAwaiter().GetResult();if($errors){Write-Output $errors}
  if($process.ExitCode -ne 0){[IO.File]::ReadAllText((Join-Path $logs "$name.log"),[Text.Encoding]::UTF8) | Write-Output;throw "Build failed: $name ($($process.ExitCode))"}

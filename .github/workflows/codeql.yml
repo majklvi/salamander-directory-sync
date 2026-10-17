@@ -22,7 +22,7 @@ jobs:
           queries: security-extended
       - name: Compile plugin sources for analysis
         shell: pwsh
-        run: ./tools/build.ps1 -Configuration Release -Platform x64
+        run: ./tools/build.ps1 -Configuration Release -Platform x64 -BuildTimeoutSeconds 900
       - name: Analyze C++
         uses: github/codeql-action/analyze@f051dc808ef3645eb0d08647ec751634ec2304ac # v4
         with:
