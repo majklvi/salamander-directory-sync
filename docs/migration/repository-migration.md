@@ -34,3 +34,20 @@ Testovací kořen C:\Samandarin\builds\dirsync-migration-20261017-final\gui je o
 České hlavní okno porovnalo izolované left/right: přesně jeden Unicode soubor žluťoučký-漢字.txt, 9 B, pouze vlevo, návrh doprava; stavové oddíly 1 řádek / 1 viditelný / 0 skrytých / 0 blokovaných. Žádná zápisová operace nebyla spuštěna. Následující skutečný start s -language english načetl anglickou nabídku, hlavní okno, ovládání i stavový řádek. Hostitelský tmavý vzhled byl zachován. Oba jazyky byly tedy načtené v hostiteli, nikoli pouze ověřené resource testy.
 
 Minimální hostitelská kopie hlásila známý chybějící salmon.exe a při prvním startu nedokreslila hlavní panely; po restartu byly panely vykreslené. Jedno kliknutí přes UIA index otevřelo chybný prvek; navazující kontrola používala aktuální snímky a přímou vazbu dialogu. Jednou chybějící geometrie kliknutí se vyřešila novým snímkem. Jde o omezení testovacího hostitele/automatizace, nebyla prokázána chyba pluginu. Testovací instance byly řádně zavřeny a uživatelské instance se neměnily. Tento krok nepředstavuje nové úplné GUI ověření všech datových operací, SMB, změny DPI mezi monitory ani registry backendu.
+
+### Dokončené cloudové převzetí
+
+Revize 1fbf70f18c5aa210ae0c15aae99ff798c813df91 prošla [celým build/test/package workflow](https://github.com/majklvi/salamander-directory-sync/actions/runs/39031761058) i [skutečným CodeQL C/C++ security-extended](https://github.com/majklvi/salamander-directory-sync/actions/runs/39031761053). Analýza 1972694431 byla přijata bez chyby a bez varování o neúplné analýze. Instrumentovaná kompilace po opravě limitu uspěla.
+
+Code scanning obsahuje čtyři otevřené posouzené nálezy, nikoli nulu:
+
+| Nález | Posouzení pro migrační revizi |
+| --- | --- |
+| [1](https://github.com/majklvi/salamander-directory-sync/security/code-scanning/1), [2](https://github.com/majklvi/salamander-directory-sync/security/code-scanning/2), [3](https://github.com/majklvi/salamander-directory-sync/security/code-scanning/3): cpp/non-constant-format, note | Status a souhrn používají Text(id), který volá LoadStringW nad jazykovým modulem. Pevné ID vybírají vlastní kompilované EN/CZ formáty, nikoli názvy/cesty či obsah porovnávaných souborů. V dodaných modulech jsou jedno nebo dvě %llu podle počtu argumentů uint64_t a cílové pole má omezenou kapacitu swprintf_s. Formáty byly zkontrolovány; libovolně upravený cizí jazykový modul není tímto posouzením ověřený. |
+| [4](https://github.com/majklvi/salamander-directory-sync/security/code-scanning/4): cpp/unsafe-strcat, warning | Nezměněný SDK soubor vendor/samandarin-sdk/dbg.cpp definuje historický obal _sal_lstrcatA. Vlastní zdroje pluginu jej ani lstrcat/strcat nevolají. Není k dispozici kapacita původní signatury; změna kontraktu SDK není součástí migrace. |
+
+Nálezy nejsou potlačeny, automaticky uzavřeny ani vydávány za opravené bezpečnostní chyby. Zůstávají dohledatelné pro další údržbu. Žádný nález nemá severity error; úspěch workflow se nezaměňuje s nulovým počtem upozornění.
+
+Stažený finální CI ZIP této revize má SHA-256 3c965bce5e446c0cb7ce6d02942c92f063548aac8d887ed6cd0bb5367d28e7da; prošlo všech 51 hashů, úplnost inventáře, odkazy a audit nežádoucích zmínek. Pět JSON výsledků v každé konfiguraci Debug/Release má exitCode 0. Nový čerstvý klon přímo z GitHubu prošel fsck i auditem: 615 blobů, 76 commitů, 408 stromů, 4 923 historických cest, bez nálezu. Metadata autorů/časů všech 67 mapovaných commitů a hashe všech 52 podpůrných vstupů odpovídají deklarovanému původu. Místní MSBuild read trackery pro finální checkout obsahují 495 jedinečných cest; žádná nevede do původního checkoutu (povoleny jen nový projekt a systémové VS/SDK/Windows).
+
+Původní archivní větev dostala pouze navazující dokumentační commit eae895ca, její CI prošlo. Referenční samandarin-0.16 se nezměnila. Validační draft [#30](https://github.com/majklvi/salamander/pull/30) je po převzetí určen k uzavření bez merge. Stav CI pozdějších čistě dokumentačních revizí je vždy přímo v Actions; tento záznam označuje přesné ověřené revize a balíčky.
