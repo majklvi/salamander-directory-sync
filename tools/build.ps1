@@ -20,7 +20,7 @@ if($Mode -eq 'Tests' -and $Platform -ne 'x64'){throw 'The standard runtime test 
 $logs=Join-Path $repo "out\logs\${Configuration}_${Platform}"
 [void][IO.Directory]::CreateDirectory($logs)
 foreach($name in $projects){
- $arguments=@((Join-Path $repo "build-support\$name.vcxproj"),'/m','/nr:false','/v:minimal',"/p:Configuration=$Configuration","/p:Platform=$Platform",'/p:TreatWarningAsError=true',"/bl:$logs\$name.binlog",'/fl',"/flp:logfile=$logs\$name.log;verbosity=normal")
+ $arguments=@((Join-Path $repo "build-support\$name.vcxproj"),'/m','/nr:false','/nologo','/noconsolelogger',"/p:Configuration=$Configuration","/p:Platform=$Platform",'/p:TreatWarningAsError=true',"/bl:$logs\$name.binlog",'/fl',"/flp:logfile=$logs\$name.log;verbosity=normal;encoding=UTF-8")
  $start=[Diagnostics.ProcessStartInfo]::new($msbuild);$start.WorkingDirectory=$repo;$start.UseShellExecute=$false;$start.CreateNoWindow=$true
  $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
  foreach($argument in $arguments){[void]$start.ArgumentList.Add($argument)}
@@ -29,5 +29,6 @@ foreach($name in $projects){
  if(!$process.WaitForExit(105000)){$process.Kill($true);throw "Build timed out: $name"}
  $stdout.GetAwaiter().GetResult() | Write-Output
  $errors=$stderr.GetAwaiter().GetResult();if($errors){Write-Output $errors}
- if($process.ExitCode -ne 0){throw "Build failed: $name ($($process.ExitCode))"}
+ if($process.ExitCode -ne 0){[IO.File]::ReadAllText((Join-Path $logs "$name.log"),[Text.Encoding]::UTF8) | Write-Output;throw "Build failed: $name ($($process.ExitCode))"}
+ Write-Output "Build PASS: $name ($Configuration|$Platform); UTF-8 log saved."
 }
