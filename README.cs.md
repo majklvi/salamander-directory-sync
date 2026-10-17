@@ -1,12 +1,20 @@
 # Directory Synchronization for Samandarin
 
+> [!CAUTION]
+> **ALFA VERZE — NEBEZPEČÍ ZTRÁTY DAT. NENÍ URČENO PRO PRODUKČNÍ POUŽITÍ.**
+> Použití výhradně na vlastní nebezpečí. Autoři a přispěvatelé neposkytují **ŽÁDNOU ZÁRUKU A NENESOU ODPOVĚDNOST ZA JAKOUKOLI ZTRÁTU NEBO POŠKOZENÍ DAT**. Testujte pouze na postradatelných kopiích a mějte nezávislou ověřenou zálohu. Uchování originálů nezajišťuje automatické vrácení změn ani neodstraňuje riziko ztráty dat.
+
+**[Stáhnout hotový plugin 0.1.4 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.4/dirsync-0.1.4-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.4/package-sha256.txt)
+
+ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není potřeba nic kompilovat, instalovat Visual Studio ani SDK.**
+
 [English](README.md)
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
 Samostatný vývoj a hlášení chyb probíhají v [majklvi/salamander-directory-sync](https://github.com/majklvi/salamander-directory-sync). Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
 
-## Sestavení a testy
+## Sestavení ze zdrojů a testy (pro vývojáře)
 
 Windows, Visual Studio 2026 s C++ desktop tools (v145, potřebné x86/x64/ARM64 komponenty), Windows SDK 10 a PowerShell 7.3 nebo novější. Není potřeba checkout ani knihovna Salamanderu, Python, vcpkg, certifikát nebo síťové stahování závislostí. MSBuild se vyhledává pomocí systémového vswhere.
 
@@ -54,9 +62,9 @@ Rozdíl velikosti je přesný počet bajtů s oddělováním číslic podle host
 
 Otevřete **Settings… / Nastavení…** v náhledu nebo **Plugins Manager → Configure…**. Barevné tlačítko u každé položky otevře nativní výběr barvy. **Restore default colors** obnoví pouze barvy aktuálního světlého/tmavého režimu. OK změny uloží, Cancel je zahodí; výsledky a ruční návrhy zůstanou zachované.
 
-## Kde získat pilotní balíček
+## Stažení a instalace alfa verze
 
-Na stránce [build, tests and package workflow](https://github.com/majklvi/salamander-directory-sync/actions/workflows/ci.yml) vyberte úspěšný běh a stáhněte artefakt dirsync-0.1.4-x64. Otevřete jej a rozbalte vnitřní instalační ZIP. Zachovejte strukturu dirsync.spl a obou jazyků pod lang/. Podrobnosti instalace jsou výše a v úplném návodu.
+Stáhněte [hotový x64 ZIP z release 0.1.4](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.4/dirsync-0.1.4-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
 
 ## Běžný postup a rozsah operací
 

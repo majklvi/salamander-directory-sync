@@ -1,8 +1,16 @@
 # Directory Synchronization for Samandarin
 
+> [!CAUTION]
+> **ALPHA SOFTWARE — RISK OF DATA LOSS. NOT FOR PRODUCTION USE.**
+> Use entirely at your own risk. The authors and contributors provide **NO WARRANTY** and accept **NO RESPONSIBILITY OR LIABILITY FOR ANY LOSS OR CORRUPTION OF DATA**. Test only on disposable copies and keep a separate, verified backup. Keep originals does not provide automatic rollback or eliminate the risk of data loss.
+
+**[Download the ready-to-use 0.1.4 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.4/dirsync-0.1.4-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.4/package-sha256.txt)
+
+The ZIP contains the compiled plugin and both language modules. **No compilation, Visual Studio, or SDK is needed to install it.**
+
 A native directory comparison and synchronization plugin for **Samandarin**, with English and Czech interfaces. Compare two directory trees side by side, review the proposed actions, then copy, overwrite, or remove right-only items in asymmetric mode. Optional recovery copies preserve originals before synchronization overwrites and deletions.
 
-**Version 0.1.4 · local NTFS pilot · x64** · [Česky](README.cs.md)
+**Version 0.1.4 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
 
 ## Highlights
 
@@ -31,9 +39,9 @@ Preferences also control action labels, optional columns, side labels in column 
 
 The lowest tested Samandarin versions are **0.15.1** in user testing and **0.16** in AI-automated testing using a custom developer build. Version 0.16 had not yet been released at the time of testing.
 
-## Install the pilot
+## Install the alpha build
 
-1. Download the `dirsync-0.1.4-x64` artifact from a successful [build, tests and package workflow](https://github.com/majklvi/salamander-directory-sync/actions/workflows/ci.yml), or build locally below. Open the artifact and extract its inner plugin ZIP. Pilot builds are unsigned.
+1. Download the [ready-to-use x64 ZIP from release 0.1.4](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.4/dirsync-0.1.4-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned.
 2. Close any host instance using an older copy. Put the entire `dirsync` directory inside the host's `plugins` directory, beside `salamand.exe`. Keep `dirsync.spl`, `lang/english.slg`, and `lang/czech.slg` in their original layout.
 3. In **Plugins → Plugins Manager → Add…**, select `plugins/dirsync/dirsync.spl` unless already registered. Launch **Plugins → Directory Synchronization → Directory synchronization…**. The host selects the interface language.
 
@@ -71,7 +79,7 @@ For manual recovery, find the run and `manifest.jsonl` named in the summary. Mat
 
 Report bugs in [Issues](https://github.com/majklvi/salamander-directory-sync/issues). Include package version/hash, host and Windows versions, language/theme/DPI, masks/options/filters, recovery mode, exact steps, and expected versus actual results. Copy a result dialog with **Ctrl+Shift+C**. Include errors and relevant journal excerpts with private paths removed; a small synthetic reproducer is best. After unexpected data changes, stop further writes and preserve the summary and recovery run.
 
-## Build and test
+## Build from source and test (developers)
 
 Requires Windows, Visual Studio 2026 C++ desktop tools (v145 and target architecture components), Windows SDK 10, and PowerShell 7.3+. No host checkout/import library, Python, vcpkg, signing certificate, or dependency download is required. MSBuild is found using the system's vswhere.
 
