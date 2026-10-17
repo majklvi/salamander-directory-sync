@@ -11,9 +11,9 @@
 #include <stdexcept>
 #include <cwctype>
 #include <cstring>
-#include "../resource.h"
-#include "../previewlayout.h"
-#include "../displayformat.h"
+#include "../src/resource.h"
+#include "../src/previewlayout.h"
+#include "../src/displayformat.h"
 namespace
 {
 int checks = 0;

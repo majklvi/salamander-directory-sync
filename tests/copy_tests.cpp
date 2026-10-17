@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Open Salamander Authors
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "../copy.h"
-#include "../recovery.h"
-#include "../overwrite.h"
-#include "../delete.h"
+#include "../src/copy.h"
+#include "../src/recovery.h"
+#include "../src/overwrite.h"
+#include "../src/delete.h"
 #include "copy_space_faults.h"
 #include <sddl.h>
 #include <winioctl.h>

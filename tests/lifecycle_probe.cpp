@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Never included in the shipped SPL. Exercise the real Release vtable method
 // with a worker in this DLL, then let the caller immediately FreeLibrary it.
-#include "../dirsync.cpp"
+#include "../src/dirsync.cpp"
 #include <map>
 
 namespace

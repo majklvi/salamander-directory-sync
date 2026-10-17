@@ -39,7 +39,7 @@ for ($y = 0; $y -lt 16; $y++) {
         $bitmap.SetPixel($x, $y, [Drawing.ColorTranslator]::FromHtml($color))
     }
 }
-$bitmap.Save((Join-Path $PSScriptRoot 'dirsync.png'), [Drawing.Imaging.ImageFormat]::Png)
+$bitmap.Save((Join-Path $PSScriptRoot '..\src\dirsync.png'), [Drawing.Imaging.ImageFormat]::Png)
 # Uncompressed BGRA ICO frames plus an AND mask support native Win32 loaders.
 $frames = foreach ($scale in 1, 2, 3) {
     $size = 16 * $scale
@@ -71,7 +71,7 @@ $frames = foreach ($scale in 1, 2, 3) {
     ,$stream.ToArray()
     $writer.Dispose(); $stream.Dispose()
 }
-$output = [IO.File]::Create((Join-Path $PSScriptRoot 'dirsync.ico'))
+$output = [IO.File]::Create((Join-Path $PSScriptRoot '..\src\dirsync.ico'))
 $ico = [IO.BinaryWriter]::new($output)
 $ico.Write([uint16]0); $ico.Write([uint16]1); $ico.Write([uint16]$frames.Count)
 $offset = 6 + 16*$frames.Count

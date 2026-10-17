@@ -18,5 +18,5 @@
 #include "spl_menu.h"
 #include "spl_vers.h"
 #include "dbg.h"
-#include "../../darkmode.h"
+#include "darkmode.h"
 #endif

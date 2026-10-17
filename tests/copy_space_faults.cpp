@@ -70,4 +70,4 @@ BOOL WINAPI PublishFile(LPCWSTR source,LPCWSTR target,DWORD flags)
 #define CreateFileW ::dirsync_test::ReserveFile
 #define CopyFileExW ::dirsync_test::TransferFile
 #define MoveFileExW ::dirsync_test::PublishFile
-#include "../copy.cpp"
+#include "../src/copy.cpp"

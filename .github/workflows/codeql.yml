@@ -1,0 +1,29 @@
+name: Standalone CodeQL
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+  security-events: write
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  analyze:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Initialize C++ analysis
+        uses: github/codeql-action/init@f051dc808ef3645eb0d08647ec751634ec2304ac # v4
+        with:
+          languages: c-cpp
+          build-mode: manual
+          queries: security-extended
+      - name: Compile plugin sources for analysis
+        shell: pwsh
+        run: ./tools/build.ps1 -Configuration Release -Platform x64
+      - name: Analyze C++
+        uses: github/codeql-action/analyze@f051dc808ef3645eb0d08647ec751634ec2304ac # v4
+        with:
+          category: standalone-cpp

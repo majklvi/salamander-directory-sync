@@ -1,0 +1,5 @@
+out/
+.vs/
+*.user
+__pycache__/
+*.pyc

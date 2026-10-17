@@ -1,0 +1,75 @@
+name: Standalone build, tests and package
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {configuration: Debug, platform: Win32}
+          - {configuration: Debug, platform: x64}
+          - {configuration: Debug, platform: ARM64}
+          - {configuration: Release, platform: x64}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build plugin and both language modules
+        shell: pwsh
+        run: ./tools/build.ps1 -Configuration '${{ matrix.configuration }}' -Platform '${{ matrix.platform }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: build-logs-${{ matrix.configuration }}-${{ matrix.platform }}
+          path: out/logs/
+  test:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build all five test suites and lifecycle probe
+        shell: pwsh
+        run: ./tools/build.ps1 -Configuration '${{ matrix.configuration }}' -Mode Tests
+      - name: Run isolated local tests
+        shell: pwsh
+        run: ./tools/test.ps1 -Configuration '${{ matrix.configuration }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: tests-${{ matrix.configuration }}
+          path: |
+            out/test-results-*.json
+            out/logs/
+  package:
+    needs: [build, test]
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build Release x64
+        shell: pwsh
+        run: ./tools/build.ps1 -Configuration Release -Platform x64
+      - name: Package and verify extracted hashes
+        shell: pwsh
+        run: ./tools/package.ps1 -OutputDirectory out/package-ci
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dirsync-0.1.4-x64
+          path: |
+            out/package-ci/*.zip
+            out/package-ci/package-sha256.txt

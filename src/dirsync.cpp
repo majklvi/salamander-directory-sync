@@ -13,7 +13,7 @@
 #include "previewlayout.h"
 #include "displayformat.h"
 #include "spl_gui.h"
-#include "../../third_party/darkmodelib/include/Darkmodelib.h"
+#include "Darkmodelib.h"
 #include <thread>
 #include <memory>
 #include <algorithm>

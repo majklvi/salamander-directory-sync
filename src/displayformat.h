@@ -5,7 +5,7 @@
 #include <string>
 #include <array>
 #include <cstdint>
-#include "../../filenamecase.h"
+#include "filenamecase.h"
 
 namespace dirsync
 {

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+ <PropertyGroup>
+  <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</RepoRoot>
+  <OutputRoot Condition="'$(OutputRoot)'==''">$(RepoRoot)out\</OutputRoot>
+  <OutDir>$(OutputRoot)tests\$(Configuration)_$(Platform)\</OutDir>
+  <IntDir>$(OutputRoot)obj\$(Configuration)_$(Platform)\$(MSBuildProjectName)\</IntDir>
+  <LinkIncremental>false</LinkIncremental>
+ </PropertyGroup>
+ <ItemDefinitionGroup>
+  <ClCompile>
+   <AdditionalIncludeDirectories>$(RepoRoot)src;$(RepoRoot)vendor\samandarin-sdk;$(RepoRoot)vendor\samandarin-ui;$(RepoRoot)vendor\samandarin-ui\third_party\darkmodelib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+   <PrecompiledHeader>NotUsing</PrecompiledHeader><LanguageStandard>stdcpplatest</LanguageStandard>
+   <AdditionalOptions>/utf-8 /J %(AdditionalOptions)</AdditionalOptions><WarningLevel>Level3</WarningLevel><TreatWarningAsError>true</TreatWarningAsError>
+   <PreprocessorDefinitions>WIN32;WINVER=0x0601;_WIN32_WINNT=0x0601;_WIN32_IE=0x0800;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;USE_DARKMODELIB=1;_DARKMODELIB_NO_INI_CONFIG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+   <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RuntimeLibrary>
+   <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreadedDLL</RuntimeLibrary>
+   <PreprocessorDefinitions Condition="'$(Configuration)'=='Debug'">_DEBUG;TRACE_ENABLE;MHANDLES_ENABLE;_CRTDBG_MAP_ALLOC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+   <PreprocessorDefinitions Condition="'$(Configuration)'=='Release'">NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+   <DebugInformationFormat>ProgramDatabase</DebugInformationFormat><Optimization Condition="'$(Configuration)'=='Debug'">Disabled</Optimization><Optimization Condition="'$(Configuration)'=='Release'">MaxSpeed</Optimization>
+  </ClCompile>
+  <Link><GenerateDebugInformation>true</GenerateDebugInformation><RandomizedBaseAddress>true</RandomizedBaseAddress>
+   <AdditionalDependencies>user32.lib;gdi32.lib;comctl32.lib;UxTheme.lib;comdlg32.lib;shell32.lib;ole32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+  </Link>
+  <ResourceCompile><AdditionalIncludeDirectories>$(RepoRoot)src;$(RepoRoot)vendor\samandarin-sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><Culture>0x0409</Culture></ResourceCompile>
+ </ItemDefinitionGroup>
+</Project>
