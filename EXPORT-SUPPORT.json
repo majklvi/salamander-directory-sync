@@ -1,0 +1,418 @@
+[
+  {
+    "source": "src/common/winlibdpi.h",
+    "target": "vendor/samandarin-ui/common/winlibdpi.h",
+    "sourceSha256": "5ac4c4731f9053470ab8ff5e79e21376485b147e729fefc39a4a179dacb64678",
+    "originalManifestWorktreeSha256": "70d3741e630b7b920e4baa258054dd08aacb81fafb964f14751289978c5833a3",
+    "exportedSha256": "5ac4c4731f9053470ab8ff5e79e21376485b147e729fefc39a4a179dacb64678",
+    "changed": false
+  },
+  {
+    "source": "src/darkmode.cpp",
+    "target": "vendor/samandarin-ui/darkmode.cpp",
+    "sourceSha256": "136e015512cce31b87fcb3a7f687ab1df64b7dab90a3259214d148188c37e935",
+    "originalManifestWorktreeSha256": "cb94396ce4d4f705fb6cb556d74673495137ff1712dfe134b385fc0a05fd0e84",
+    "exportedSha256": "136e015512cce31b87fcb3a7f687ab1df64b7dab90a3259214d148188c37e935",
+    "changed": false
+  },
+  {
+    "source": "src/darkmode.h",
+    "target": "vendor/samandarin-ui/darkmode.h",
+    "sourceSha256": "6056160c0b9224987742a98633e4dc9f4bf9d19851ebf5a1f2b90562a46f7213",
+    "originalManifestWorktreeSha256": "b642f11bea20efd6ecea820022651b505b8bb5ea7ff3b109e8f4a9cad10995ed",
+    "exportedSha256": "6056160c0b9224987742a98633e4dc9f4bf9d19851ebf5a1f2b90562a46f7213",
+    "changed": false
+  },
+  {
+    "source": "src/darkmode_backend_darkmodelib.cpp",
+    "target": "vendor/samandarin-ui/darkmode_backend_darkmodelib.cpp",
+    "sourceSha256": "6e81b5ff62b71ba933b3906d859114c68156dbe755d8bcf118dc03335285b5f4",
+    "originalManifestWorktreeSha256": "36d9049a2b240f84f12579bf3208afd693ca77fb8bc0d73fe184ad0d0aa077c5",
+    "exportedSha256": "6e81b5ff62b71ba933b3906d859114c68156dbe755d8bcf118dc03335285b5f4",
+    "changed": false
+  },
+  {
+    "source": "src/darkmode_backend_darkmodelib.h",
+    "target": "vendor/samandarin-ui/darkmode_backend_darkmodelib.h",
+    "sourceSha256": "8378fa2c165b52a34199f07b1f6fa33945d210ac505a6406501f7d2754c64178",
+    "originalManifestWorktreeSha256": "aa96d57d99b3d4bd18ce3803fe805fe6bb42b992be976b4dac1d398aa35330ba",
+    "exportedSha256": "8378fa2c165b52a34199f07b1f6fa33945d210ac505a6406501f7d2754c64178",
+    "changed": false
+  },
+  {
+    "source": "src/filenamecase.h",
+    "target": "vendor/samandarin-ui/filenamecase.h",
+    "sourceSha256": "939a567177622954c371875ad40f4e3d677195ab15c052a7c6bca44bcc8e12ba",
+    "originalManifestWorktreeSha256": "2ddc547734eb31eec12603fcd448e1fc44c552d639a1415e052f80ffa9549295",
+    "exportedSha256": "939a567177622954c371875ad40f4e3d677195ab15c052a7c6bca44bcc8e12ba",
+    "changed": false
+  },
+  {
+    "source": "src/plugins/shared/dbg.cpp",
+    "target": "vendor/samandarin-sdk/dbg.cpp",
+    "sourceSha256": "97cac20d6ff99cba0320be31a1f95c7334261aa8f8eda7fb43650d05e3f3e123",
+    "originalManifestWorktreeSha256": "de361f71037f49a2a7f5c1286e736b8dd080d4770a94e7197998cbf7224a5b42",
+    "exportedSha256": "97cac20d6ff99cba0320be31a1f95c7334261aa8f8eda7fb43650d05e3f3e123",
+    "changed": false
+  },
+  {
+    "source": "src/plugins/shared/dbg.h",
+    "target": "vendor/samandarin-sdk/dbg.h",
+    "sourceSha256": "e64117c664ff0ec3d914a8a08f62f2eefc0460ccf36985dbc185ba361089cb89",
+    "originalManifestWorktreeSha256": "8c90037e224595ba3a2d0ace24bdc3f7a08ad2c8aa4737ad61fb85458c05709e",
+    "exportedSha256": "e64117c664ff0ec3d914a8a08f62f2eefc0460ccf36985dbc185ba361089cb89",
+    "changed": false
+  },
+  {
+    "source": "src/plugins/shared/spl_base.h",
+    "target": "vendor/samandarin-sdk/spl_base.h",
+    "sourceSha256": "1981477f67d09259f6a9c42da5e39cd856d608ef245643105f487409f97b5647",
+    "originalManifestWorktreeSha256": "f3a359651ca6e960945d4ccebf2ef0b0dd540e6084c739a9d9138548b7d8539e",
+    "exportedSha256": "1981477f67d09259f6a9c42da5e39cd856d608ef245643105f487409f97b5647",
+    "changed": false
+  },
+  {
+    "source": "src/plugins/shared/spl_com.h",
+    "target": "vendor/samandarin-sdk/spl_com.h",
+    "sourceSha256": "3f009a04bc073d5a25eff3076fd09babdf6543c9ac6b215c9e0e7ffaff32ad1e",
+    "originalManifestWorktreeSha256": "9350ce3c73d775fa31661c7a9372f17baade8b0a05aa5b68d48e7f2ae8243ca3",
+    "exportedSha256": "3593f071b922c2bf69c0791933a26d288d84b24589635c7cfe683a1171ec9bda",
+    "changed": true
+  },
+  {
+    "source": "src/plugins/shared/spl_gen.h",
+    "target": "vendor/samandarin-sdk/spl_gen.h",
+    "sourceSha256": "bc19ef242b6ad9c9ea3611dd3aaa3a68f0e2cee14473a2d350b7a346e283f6b0",
+    "originalManifestWorktreeSha256": "34d60cbf3f69e478d3ac487447e8587d44852e9259598d4691cb50edc66e0bd2",
+    "exportedSha256": "bc19ef242b6ad9c9ea3611dd3aaa3a68f0e2cee14473a2d350b7a346e283f6b0",
+    "changed": false
+  },
+  {
+    "source": "src/plugins/shared/spl_gui.h",
+    "target": "vendor/samandarin-sdk/spl_gui.h",
+    "sourceSha256": "099f34e9220a901627654c903bf55293af4696825bf0fa73861f22febf34c6f0",
+    "originalManifestWorktreeSha256": "d98a2913345c677b4ebb10e7660307143dd7ea46bd84b5cb4224c78c04f72954",
+    "exportedSha256": "099f34e9220a901627654c903bf55293af4696825bf0fa73861f22febf34c6f0",
+    "changed": false
+  },
+  {
+    "source": "src/plugins/shared/spl_menu.h",
+    "target": "vendor/samandarin-sdk/spl_menu.h",
+    "sourceSha256": "58eba3f61d4f788f56876c2a614c4514d64e028f259a3ce58043f4cb1d74c4da",
+    "originalManifestWorktreeSha256": "061e80a38d9de5da572a2eee8b1a5aced6e31e4f4742d89c59c59585f19696d9",
+    "exportedSha256": "58eba3f61d4f788f56876c2a614c4514d64e028f259a3ce58043f4cb1d74c4da",
+    "changed": false
+  },
+  {
+    "source": "src/plugins/shared/spl_vers.h",
+    "target": "vendor/samandarin-sdk/spl_vers.h",
+    "sourceSha256": "9d57511dafcf1555131e5269f0cd7b54ef7f4ab5c478f28af01c06073daf5b3d",
+    "originalManifestWorktreeSha256": "310bd2d8342dbf179859474a87275f074d2a1bd515aab78aa85f82100960c31b",
+    "exportedSha256": "9d57511dafcf1555131e5269f0cd7b54ef7f4ab5c478f28af01c06073daf5b3d",
+    "changed": false
+  },
+  {
+    "source": "src/plugins/shared/versinfo.rc2",
+    "target": "vendor/samandarin-sdk/versinfo.rc2",
+    "sourceSha256": "709d13059da0fc9e9a047e9b6965d019b0a7bd0a5bedff07d5a648b7c68dc0cc",
+    "originalManifestWorktreeSha256": "e7047463bc580b9dccb543b387785f9b434fe517c5fb39bc631ed29f60d13f6e",
+    "exportedSha256": "709d13059da0fc9e9a047e9b6965d019b0a7bd0a5bedff07d5a648b7c68dc0cc",
+    "changed": false
+  },
+  {
+    "source": "src/salamand.rh",
+    "target": "vendor/samandarin-ui/salamand.rh",
+    "sourceSha256": "a58c39846e8579808cf35f1174188f3537d01d0957fec6a206ac43f05e0f471b",
+    "originalManifestWorktreeSha256": "4c5a038c2d63b169287477bfb6d4fb4aca05ef16dd66212c6bb54ef59b48a8c3",
+    "exportedSha256": "a58c39846e8579808cf35f1174188f3537d01d0957fec6a206ac43f05e0f471b",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/LICENSE-MIT.md",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/LICENSE-MIT.md",
+    "sourceSha256": "438b8b44c0f1889f512abb1c42d69b21e8dd36f711d4becaa89adf0af3c89fef",
+    "originalManifestWorktreeSha256": "471c268c94891d5482c1c8d24f53cc26f27ca9ec9a26b966e969ca8ffffefbac",
+    "exportedSha256": "438b8b44c0f1889f512abb1c42d69b21e8dd36f711d4becaa89adf0af3c89fef",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/LICENSE.md",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/LICENSE.md",
+    "sourceSha256": "4d51155b35e4c804365b4c8a133aed634ab520296c9e559bd0c91128980ccb1d",
+    "originalManifestWorktreeSha256": "2728888d62a600aac5c21481270989fe0576311c8c583423e1cf4e87d086db06",
+    "exportedSha256": "4d51155b35e4c804365b4c8a133aed634ab520296c9e559bd0c91128980ccb1d",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/README.md",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/README.md",
+    "sourceSha256": "802121d90eaba0e173dc62566ecb5c98c77cdc9269c1f7937d704980646fcfa9",
+    "originalManifestWorktreeSha256": "7a0988f38893e4e61abc49bafe9cef0ca3e2bfe8cc49055de975f59d24deb86e",
+    "exportedSha256": "802121d90eaba0e173dc62566ecb5c98c77cdc9269c1f7937d704980646fcfa9",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/VENDORED_FROM.md",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/VENDORED_FROM.md",
+    "sourceSha256": "9ba613b3f05b9f36a9eea7c921b903c35579cfb97a4c56f690586da9e4c75deb",
+    "originalManifestWorktreeSha256": "4be7876945e1466ef2fc5a9f79a1413ac4fecfcea9f5bc01d3deb070bc16d28f",
+    "exportedSha256": "9ba613b3f05b9f36a9eea7c921b903c35579cfb97a4c56f690586da9e4c75deb",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/docs/Dark.ini",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/docs/Dark.ini",
+    "sourceSha256": "777a07f62d961df648575980746c256dbe48893f9c1ab8c8ee60096bf8a8f1d7",
+    "originalManifestWorktreeSha256": "4ec477e1393dfce22cb74866f45019b3b9599565904937b09bcaa357f41fde2d",
+    "exportedSha256": "777a07f62d961df648575980746c256dbe48893f9c1ab8c8ee60096bf8a8f1d7",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/docs/LICENSE-PolyHook_2_0.md",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/docs/LICENSE-PolyHook_2_0.md",
+    "sourceSha256": "c0dc0c2a852d986cd736c8bc12f45bf7062179fd84bce5154cfacf1cca228aec",
+    "originalManifestWorktreeSha256": "e74944ec8945c9625ef0b5f3220dacfae5590aeb27d9888941108f102fa0989e",
+    "exportedSha256": "c0dc0c2a852d986cd736c8bc12f45bf7062179fd84bce5154cfacf1cca228aec",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/docs/LICENSE-UAHMenuBar.md",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/docs/LICENSE-UAHMenuBar.md",
+    "sourceSha256": "e7c7dec4f30e7c6b2093faf66e8ac74dc4194e65af48dee84461aebdeea60348",
+    "originalManifestWorktreeSha256": "37bbe3ccc956d23d875fa0e3e9d04ed0b3a7fcc884be979d0acb023e7d0018e3",
+    "exportedSha256": "e7c7dec4f30e7c6b2093faf66e8ac74dc4194e65af48dee84461aebdeea60348",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/docs/LICENSE-win32-darkmode.md",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/docs/LICENSE-win32-darkmode.md",
+    "sourceSha256": "b9981623711f17a4d09b73002167393424e52f0566581901db41a39f30b3df06",
+    "originalManifestWorktreeSha256": "58b30e56c6b9d2ba4be3e41e717e01ae5404516f16bab328228409e70abe5fcc",
+    "exportedSha256": "b9981623711f17a4d09b73002167393424e52f0566581901db41a39f30b3df06",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/include/Darkmodelib.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/include/Darkmodelib.h",
+    "sourceSha256": "5fa5a2949d6b20015194b6285a69c094a3313eb5cacc9d4e56ca1901c1718e1d",
+    "originalManifestWorktreeSha256": "3c6e9c38cb897e0d134111de1742f102d5a5a1404b963983554b30aa3a65a072",
+    "exportedSha256": "5fa5a2949d6b20015194b6285a69c094a3313eb5cacc9d4e56ca1901c1718e1d",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/Darkmodelib.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/Darkmodelib.cpp",
+    "sourceSha256": "644b25a8db012a12d70eb8a1f2a0ebfd0a76a4101b33c9bda96b63ee36ca75c1",
+    "originalManifestWorktreeSha256": "6d08fc88dee4a4abe210b8b1498a6fe605a2d2c7b8b58873501a1178eb3b2c7a",
+    "exportedSha256": "644b25a8db012a12d70eb8a1f2a0ebfd0a76a4101b33c9bda96b63ee36ca75c1",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibColor.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibColor.cpp",
+    "sourceSha256": "6c6a6ac803eeb5858086c9d7403e5542ca745450d1a89e9b82fc075cc2fe6daf",
+    "originalManifestWorktreeSha256": "55810a1506ed36856dacb3b89f550aa45f11b93acbd9ef4840486e0d715ed103",
+    "exportedSha256": "6c6a6ac803eeb5858086c9d7403e5542ca745450d1a89e9b82fc075cc2fe6daf",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibColor.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibColor.h",
+    "sourceSha256": "3f18843095a44424aa8b2b98e65d7a615105dfd80a5fe7b12020c00b4d2452e5",
+    "originalManifestWorktreeSha256": "7709be75b9d239a23d691afa64df3923fcbc01856d299cb71ab555e81e004542",
+    "exportedSha256": "3f18843095a44424aa8b2b98e65d7a615105dfd80a5fe7b12020c00b4d2452e5",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibDpi.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibDpi.cpp",
+    "sourceSha256": "6d7a6e3018399f3f5cbfbbcc11772649783245b6e2fbeada5fd3565d4cd64604",
+    "originalManifestWorktreeSha256": "6c739f281f7a80b1272e414e468b88193f0041d9f58c34749e9fb9084c780622",
+    "exportedSha256": "6d7a6e3018399f3f5cbfbbcc11772649783245b6e2fbeada5fd3565d4cd64604",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibDpi.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibDpi.h",
+    "sourceSha256": "a06c0f877b9d0990ee0881c284830c91d9a05d0942e68550fea1e6ecb4c01f70",
+    "originalManifestWorktreeSha256": "f83cf88663a8e7851570a68b591e1190d7ca59d912a523d352da48178bfcaa1b",
+    "exportedSha256": "a06c0f877b9d0990ee0881c284830c91d9a05d0942e68550fea1e6ecb4c01f70",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibGlyph.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibGlyph.h",
+    "sourceSha256": "013c111a70a98443f4bd5605319a44c3b869d6f36f7c8af940b167fd45e435b5",
+    "originalManifestWorktreeSha256": "f6839d54a212d102c4cded6fe5cb9b4a15cde2fdc4e71da0c37244ad43d49f24",
+    "exportedSha256": "013c111a70a98443f4bd5605319a44c3b869d6f36f7c8af940b167fd45e435b5",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibHook.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibHook.cpp",
+    "sourceSha256": "8bb0f7d5161c47943be16b18e4fc91134cb566a5c80b50a2286854f1635747e9",
+    "originalManifestWorktreeSha256": "ed514b5e6b8159e1c78c959733af93f653fa4cc3464d720e8a16f702bfdc1361",
+    "exportedSha256": "8bb0f7d5161c47943be16b18e4fc91134cb566a5c80b50a2286854f1635747e9",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibHook.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibHook.h",
+    "sourceSha256": "510462978711b239098b7b9a778855b2d43196fb5c0f04527e6a6eef932e8312",
+    "originalManifestWorktreeSha256": "4d5f45bc69698397b6a375d58b05b628b14378d5f14b202a2c01613b5950bfae",
+    "exportedSha256": "510462978711b239098b7b9a778855b2d43196fb5c0f04527e6a6eef932e8312",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibIni.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibIni.cpp",
+    "sourceSha256": "b3d9e2776c7c23880c75af5f5c5aeadd1ebc0bf149d5e1c7ebfcbb149ebc9374",
+    "originalManifestWorktreeSha256": "54bb79a801d359e24dca1eb943cc10443790d2c64767b5a2146557e87ddb62e8",
+    "exportedSha256": "b3d9e2776c7c23880c75af5f5c5aeadd1ebc0bf149d5e1c7ebfcbb149ebc9374",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibIni.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibIni.h",
+    "sourceSha256": "4c8897097ddccc8cc9eed973f4c35dba30e732a087ae63f1e80ddd83465f3fb0",
+    "originalManifestWorktreeSha256": "8bd1183dcc31ddd9c92cf1e9f715f6e1233441241d9677dfc9120427f04644ef",
+    "exportedSha256": "4c8897097ddccc8cc9eed973f4c35dba30e732a087ae63f1e80ddd83465f3fb0",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibPaintHelper.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibPaintHelper.cpp",
+    "sourceSha256": "32952076bcdc39ffe66712ab5deeb984de951b7b08d37786ef3794766be27430",
+    "originalManifestWorktreeSha256": "ab8bfd4b676dbe20ea7903bc50e2b06e1d88a47a65d7a994222c064fa3bbf01b",
+    "exportedSha256": "32952076bcdc39ffe66712ab5deeb984de951b7b08d37786ef3794766be27430",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibPaintHelper.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibPaintHelper.h",
+    "sourceSha256": "f34a99c90ad55ed52944ff8f842977d14494a096f55b27af1800c3b9e99501d7",
+    "originalManifestWorktreeSha256": "a9c690bf4478a36b135107d9ff5d2e9c2727ea906a2eb914b8e81e8e672cd959",
+    "exportedSha256": "f34a99c90ad55ed52944ff8f842977d14494a096f55b27af1800c3b9e99501d7",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibSubclass.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibSubclass.cpp",
+    "sourceSha256": "0fb569929d305a897e96ffdcb78a83f2c9a0f1fda7ab3d967c1407e2613a9134",
+    "originalManifestWorktreeSha256": "de9444e09445f81d4bbda00a199de6f81da913ff8ce072f42dfc44fe33075aa0",
+    "exportedSha256": "0fb569929d305a897e96ffdcb78a83f2c9a0f1fda7ab3d967c1407e2613a9134",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibSubclass.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibSubclass.h",
+    "sourceSha256": "26fcfc42bed68346feaaed0bb8573ef0dad114e65fecb8163840029fd7f772b7",
+    "originalManifestWorktreeSha256": "8e2dd56e9fbcb7e7ccd38c0b1898211fc11e3fd13d28771e1daf8795ccb66332",
+    "exportedSha256": "26fcfc42bed68346feaaed0bb8573ef0dad114e65fecb8163840029fd7f772b7",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibSubclassControl.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibSubclassControl.cpp",
+    "sourceSha256": "dd6b8cd75bc39ed04d8cc3cef1b10f9957dd58fc25f5feeba8288b129d5b7e34",
+    "originalManifestWorktreeSha256": "40b0d9b2799bc1043f4eb8e19d92e9d808007f99718802831078842c125b0a09",
+    "exportedSha256": "dd6b8cd75bc39ed04d8cc3cef1b10f9957dd58fc25f5feeba8288b129d5b7e34",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibSubclassControl.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibSubclassControl.h",
+    "sourceSha256": "71f0e44ae0b979f5b23d8dab0446a472fbbedfad0e4a5ae4bbb1a6be093e4322",
+    "originalManifestWorktreeSha256": "063c6bfb18232d98f46026b61f26288cbdef7fa07ddae6535dac98a0cf9971f9",
+    "exportedSha256": "71f0e44ae0b979f5b23d8dab0446a472fbbedfad0e4a5ae4bbb1a6be093e4322",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibSubclassWindow.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibSubclassWindow.cpp",
+    "sourceSha256": "5c124070a015d1474dc0225f224396f42986cb239be7480a24e3a50261f277e9",
+    "originalManifestWorktreeSha256": "a54eed24ceef224372a560ce128485e0d2dcccffe2440056e30162eb03d376a1",
+    "exportedSha256": "5c124070a015d1474dc0225f224396f42986cb239be7480a24e3a50261f277e9",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibSubclassWindow.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibSubclassWindow.h",
+    "sourceSha256": "613b5e58fa46e1a811a579ad402e6535156e1b6791ec0694c5a40deea14863c9",
+    "originalManifestWorktreeSha256": "0820e6cca1610d2eb26d9127dccb2e78dc1da28e9a0e22c9c2ebcda8cc07e428",
+    "exportedSha256": "613b5e58fa46e1a811a579ad402e6535156e1b6791ec0694c5a40deea14863c9",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibWinApi.cpp",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibWinApi.cpp",
+    "sourceSha256": "a36cdd8c1e23d7229f6d02d1543f17eb4a2667c346bba6b009ac40b974af08de",
+    "originalManifestWorktreeSha256": "17f4d43ff34e7d8239d45f90ae0693627b9618efcd5f425de80ca20cde2450ef",
+    "exportedSha256": "a36cdd8c1e23d7229f6d02d1543f17eb4a2667c346bba6b009ac40b974af08de",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/DmlibWinApi.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/DmlibWinApi.h",
+    "sourceSha256": "1c2c6fba54cff36e1fed017dbdf6c9b54cb504615a5e31bff561653c192660d8",
+    "originalManifestWorktreeSha256": "3d33c560d587688a6fb127fe34913bee1d8bea19737ffdc28607b3f651f8c4a3",
+    "exportedSha256": "1c2c6fba54cff36e1fed017dbdf6c9b54cb504615a5e31bff561653c192660d8",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/IatHook.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/IatHook.h",
+    "sourceSha256": "f261db007914942cd987fb8473f5f9037b3f968a170da9b415c7670e2c334e46",
+    "originalManifestWorktreeSha256": "383bf32498cb9c5318a015dbab451f67ef67b6b34401d9fa6b781f909eb8d0b9",
+    "exportedSha256": "f261db007914942cd987fb8473f5f9037b3f968a170da9b415c7670e2c334e46",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/ModuleHelper.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/ModuleHelper.h",
+    "sourceSha256": "46432ed3e33d9f20a3e4940a1845f0960c74c872d42548efb265b252d5ff3bbe",
+    "originalManifestWorktreeSha256": "cbe64f94f366a8cc487299aebd9ea81f6d0e675b76fb70027b21db20858783c1",
+    "exportedSha256": "46432ed3e33d9f20a3e4940a1845f0960c74c872d42548efb265b252d5ff3bbe",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/StdAfx.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/StdAfx.h",
+    "sourceSha256": "c554aafbc407ec33d7af45950b789674da13ad8cee79bc8aa48dca240098e698",
+    "originalManifestWorktreeSha256": "8c42f6ff16e400853e9d33b8a2d2c9781eeb745210345cb417c2038dc130c46a",
+    "exportedSha256": "c554aafbc407ec33d7af45950b789674da13ad8cee79bc8aa48dca240098e698",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/UAHMenuBar.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/UAHMenuBar.h",
+    "sourceSha256": "fd6fc6b270eb2f2ab9a626f6e6f83d29794e57cddbe8d32c03a15008d4ba1040",
+    "originalManifestWorktreeSha256": "e05ee9687855a26d51e4490d53f12f4568c7d638d968f1d0f8d54996da47122c",
+    "exportedSha256": "fd6fc6b270eb2f2ab9a626f6e6f83d29794e57cddbe8d32c03a15008d4ba1040",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/Version.h",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/Version.h",
+    "sourceSha256": "0fc6e939496736b8dc3fd5f32ab495a37e1fd47fdc58e7f35212cdd68a9b7b48",
+    "originalManifestWorktreeSha256": "c7cb33693c1d64fa540bd8468583c868f26e7503ff38d8fb6c4aa10d0564f559",
+    "exportedSha256": "0fc6e939496736b8dc3fd5f32ab495a37e1fd47fdc58e7f35212cdd68a9b7b48",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/dmlib.def",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/dmlib.def",
+    "sourceSha256": "2e480e13bc3bdf2f3ff1e97e3081aa5719d612036a2e4aae7bfb2b39c86e6836",
+    "originalManifestWorktreeSha256": "e6768cdf78f170e645491a319f46054cf8450ad57e0470ed87a526c49fb9b620",
+    "exportedSha256": "2e480e13bc3bdf2f3ff1e97e3081aa5719d612036a2e4aae7bfb2b39c86e6836",
+    "changed": false
+  },
+  {
+    "source": "src/third_party/darkmodelib/src/dmlib.rc",
+    "target": "vendor/samandarin-ui/third_party/darkmodelib/src/dmlib.rc",
+    "sourceSha256": "38cf55ee867679f46de6a8a5283dd4e281a1e7d16cd271b3e9848fdf1de077fc",
+    "originalManifestWorktreeSha256": "d7ce1bf6986cef0b6b375b2ec66eef9333840c8ea123cd692af3577c10eb0dd0",
+    "exportedSha256": "38cf55ee867679f46de6a8a5283dd4e281a1e7d16cd271b3e9848fdf1de077fc",
+    "changed": false
+  }
+]
