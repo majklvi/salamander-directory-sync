@@ -4,15 +4,15 @@
 > **ALPHA SOFTWARE — RISK OF DATA LOSS. NOT FOR PRODUCTION USE.**
 > Use entirely at your own risk. The authors and contributors provide **NO WARRANTY** and accept **NO RESPONSIBILITY OR LIABILITY FOR ANY LOSS OR CORRUPTION OF DATA**. Test only on disposable copies and keep a separate, verified backup. Keep originals does not provide automatic rollback or eliminate the risk of data loss.
 
-**[Download the ready-to-use 0.1.5 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.5/dirsync-0.1.5-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.5/package-sha256.txt)
+**[Download the ready-to-use 0.1.6 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/dirsync-0.1.6-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/package-sha256.txt)
 
 The ZIP contains the compiled plugin and both language modules. **No compilation, Visual Studio, or SDK is needed to install it.**
 
 A native directory comparison and synchronization plugin for **Samandarin**, with English and Czech interfaces. Compare two directory trees side by side, review the proposed actions, then copy, overwrite, or remove right-only items in asymmetric mode. Optional recovery copies preserve originals before synchronization overwrites and deletions.
 
-**Source version 0.1.6 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
+**Version 0.1.6 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
 
-Version 0.1.6 disables proposal commands when they would not change any selected item. Mixed selections keep commands available if at least one item can change. The published download above is release 0.1.5, which introduced optional row text coloring and status-bar explanations of synchronization commands.
+Version 0.1.6 disables proposal commands when they would not change any selected item. Mixed selections keep commands available if at least one item can change. File names appear only on sides where the item exists; matched items show their names on both sides.
 
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
@@ -47,7 +47,7 @@ The lowest tested Samandarin versions are **0.15.1** in user testing and **0.16*
 
 ## Install the alpha build
 
-1. Download the [ready-to-use x64 ZIP from release 0.1.5](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.5/dirsync-0.1.5-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
+1. Download the [ready-to-use x64 ZIP from release 0.1.6](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/dirsync-0.1.6-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
 2. Close any host instance using an older copy. Put the entire `dirsync` directory inside the host's `plugins` directory, beside `salamand.exe`. Keep `dirsync.spl`, `lang/english.slg`, and `lang/czech.slg` in their original layout.
 3. In **Plugins → Plugins Manager → Add…**, select `plugins/dirsync/dirsync.spl` unless already registered. Launch **Plugins → Directory Synchronization → Directory synchronization…**. The host selects the interface language.
 

@@ -4,13 +4,13 @@
 > **ALFA VERZE — NEBEZPEČÍ ZTRÁTY DAT. NENÍ URČENO PRO PRODUKČNÍ POUŽITÍ.**
 > Použití výhradně na vlastní nebezpečí. Autoři a přispěvatelé neposkytují **ŽÁDNOU ZÁRUKU A NENESOU ODPOVĚDNOST ZA JAKOUKOLI ZTRÁTU NEBO POŠKOZENÍ DAT**. Testujte pouze na postradatelných kopiích a mějte nezávislou ověřenou zálohu. Uchování originálů nezajišťuje automatické vrácení změn ani neodstraňuje riziko ztráty dat.
 
-**[Stáhnout hotový plugin 0.1.5 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.5/dirsync-0.1.5-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.5/package-sha256.txt)
+**[Stáhnout hotový plugin 0.1.6 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/dirsync-0.1.6-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/package-sha256.txt)
 
 ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není potřeba nic kompilovat, instalovat Visual Studio ani SDK.**
 
 [English](README.md)
 
-**Verze zdrojového kódu 0.1.6 ALFA · místní NTFS pilot · x64.** Příkazy pro změnu návrhu jsou neaktivní, pokud by nezměnily žádnou vybranou položku. U smíšeného výběru zůstanou dostupné, pokud lze změnit alespoň jednu položku. Výše odkazovaný zveřejněný balíček je release 0.1.5, který přidal volitelné barvení textu řádků a vysvětlení operací ve stavovém řádku.
+**Verze 0.1.6 ALFA · místní NTFS pilot · x64.** Příkazy pro změnu návrhu jsou neaktivní, pokud by nezměnily žádnou vybranou položku. U smíšeného výběru zůstanou dostupné, pokud lze změnit alespoň jednu položku. Název souboru se zobrazuje pouze na straně, kde položka existuje; párové položky mají názvy na obou stranách.
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
@@ -74,7 +74,7 @@ Otevřete **Settings… / Nastavení…** v náhledu nebo **Plugins Manager → 
 
 ## Stažení a instalace alfa verze
 
-Stáhněte [hotový x64 ZIP z release 0.1.5](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.5/dirsync-0.1.5-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
+Stáhněte [hotový x64 ZIP z release 0.1.6](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/dirsync-0.1.6-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
 
 ## Běžný postup a rozsah operací
 
