@@ -4,13 +4,15 @@
 > **ALFA VERZE — NEBEZPEČÍ ZTRÁTY DAT. NENÍ URČENO PRO PRODUKČNÍ POUŽITÍ.**
 > Použití výhradně na vlastní nebezpečí. Autoři a přispěvatelé neposkytují **ŽÁDNOU ZÁRUKU A NENESOU ODPOVĚDNOST ZA JAKOUKOLI ZTRÁTU NEBO POŠKOZENÍ DAT**. Testujte pouze na postradatelných kopiích a mějte nezávislou ověřenou zálohu. Uchování originálů nezajišťuje automatické vrácení změn ani neodstraňuje riziko ztráty dat.
 
-**[Stáhnout hotový plugin 0.1.6 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/dirsync-0.1.6-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/package-sha256.txt)
+**[Stáhnout hotový plugin 0.2.0 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/dirsync-0.2.0-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/package-sha256.txt)
 
 ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není potřeba nic kompilovat, instalovat Visual Studio ani SDK.**
 
 [English](README.md)
 
-**Verze 0.1.6 ALFA · místní NTFS pilot · x64.** Příkazy pro změnu návrhu jsou neaktivní, pokud by nezměnily žádnou vybranou položku. U smíšeného výběru zůstanou dostupné, pokud lze změnit alespoň jednu položku. Název souboru se zobrazuje pouze na straně, kde položka existuje; párové položky mají názvy na obou stranách.
+**Verze 0.2.0 ALFA · místní NTFS pilot · x64.**
+
+**Od verze 0.2.0 plugin podporuje pojmenované profily.** Uložte dvojici adresářů, masky, volby porovnání a filtry výsledků a přepínejte úlohy tlačítkem s hvězdou vedle adresářů. Při příštím otevření se načte naposledy vybraný profil; načtení nikdy samo nespustí porovnání ani synchronizaci. Obnova a vzhled zůstávají společné pro všechny profily. [Používání profilů](docs/directory-sync-plugin.md#profily-020).
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
@@ -19,10 +21,6 @@ Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava ná
 *Náhled porovnání adresářů s návrhy synchronizačních operací.*
 
 Samostatný vývoj a hlášení chyb probíhají v [majklvi/salamander-directory-sync](https://github.com/majklvi/salamander-directory-sync). Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
-
-**Vývojová verze: 0.2.0 ALFA.** Pojmenované profily ukládají dvojici adresářů, masky, volby porovnání a filtry. Obnova a vzhled zůstávají společné; načtení profilu nespouští operaci. Odkaz ke stažení výše nadále vede na vydanou verzi 0.1.6.
-
-[Používání profilů](docs/directory-sync-plugin.md#profily-020)
 
 ## Sestavení ze zdrojů a testy (pro vývojáře)
 
@@ -66,7 +64,7 @@ Projekt byl oddělen od původního forku se zachováním celé vlastní histori
 
 V **Nastavení → Sloupce** lze nezávisle zapnout relativní velikosti a časy; obě volby jsou výchozím stavem vypnuté. Například soubory o 8 KiB a 4 KiB ukážou „o 4 096 B větší/menší“, čas může uvádět „o 2 d 3 h novější/starší“.
 
-Rozdíl velikosti je přesný počet bajtů s oddělováním číslic podle hostitele. Čas je uplynulá doba z UTC údajů, den má 24 hodin; rozdíl pod sekundou má vlastní popisek. Shodné hodnoty, jednostranné položky a adresáře ponechávají absolutní zobrazení. Volby nemění pevnou toleranci času 3 sekundy, návrhy ani řazení podle skutečných hodnot. Použijí se bez nového skenu a pamatují se přes restart.
+Rozdíl velikosti je přesný počet bajtů s oddělováním číslic podle hostitele. Čas je uplynulá doba z UTC údajů, den má 24 hodin; rozdíl pod sekundou má vlastní popisek. Shodné hodnoty, jednostranné položky a adresáře ponechávají absolutní zobrazení. Volby nemění toleranci času, návrhy ani řazení podle skutečných hodnot. Plugin při každém porovnání přebírá časovou toleranci hostitele; pokud není dostupná, použije náhradní toleranci 3 sekundy. Relativní zobrazení se použije bez nového skenu a pamatuje se přes restart.
 
 ## Nastavení vzhledu
 
@@ -78,7 +76,7 @@ Otevřete **Settings… / Nastavení…** v náhledu nebo **Plugins Manager → 
 
 ## Stažení a instalace alfa verze
 
-Stáhněte [hotový x64 ZIP z release 0.1.6](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/dirsync-0.1.6-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
+Stáhněte [hotový x64 ZIP z release 0.2.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/dirsync-0.2.0-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
 
 ## Běžný postup a rozsah operací
 
@@ -98,7 +96,7 @@ Uchovat originály je standardně ON a nastavení se pamatuje. Zvolte adresář 
 
 Ruční obnova: podle souhrnu najděte běh a manifest.jsonl, u úspěšně uložené položky spárujte original a saved. Kopii nejprve přeneste do odděleného kontrolního adresáře; až po kontrole ji vraťte na původní místo. Strukturu vytvořte podle adresářových záznamů, nekopírujte celý pomocný strom běhu. Původní ACL ani všechny NTFS vlastnosti se automaticky neobnovují.
 
-Ověřen je místní NTFS a x64. SMB je neotestované. Skryté a systémové položky zahrnuje maska a rozsah i při jejich skrytí v panelech; atributy ukazuje tooltip. Porovnání obsahu nezahrnuje ADS. Samostatné kopírování prázdných adresářů, historie, profily dvojic, automatická smíšená dávka, obnova a úklid záloh nejsou implementované. Reparse body, EFS a nepodporované cloud/offline položky se blokují; read-only cíle se násilně nepřepisují ani nemažou. První chyba zastaví další práci, hotové změny zůstanou. Přenosy zatím nemají společnou frontu hostitele, pozadí ani rychlostní limit. Přechod mezi monitory s různým DPI zůstává neověřený.
+Ověřen je místní NTFS a x64. SMB je neotestované. Skryté a systémové položky zahrnuje maska a rozsah i při jejich skrytí v panelech; atributy ukazuje tooltip. Porovnání obsahu nezahrnuje ADS. Samostatné kopírování prázdných adresářů, historie, automatická smíšená dávka, obnova a úklid záloh nejsou implementované. Reparse body, EFS a nepodporované cloud/offline položky se blokují; read-only cíle se násilně nepřepisují ani nemažou. První chyba zastaví další práci, hotové změny zůstanou. Přenosy zatím nemají společnou frontu hostitele, pozadí ani rychlostní limit. Přechod mezi monitory s různým DPI zůstává neověřený.
 
 Chyby hlaste přes [Issues](https://github.com/majklvi/salamander-directory-sync/issues): verze a hash balíčku, prostředí/jazyk/schéma/DPI, masky/volby/filtry, obnova ON/OFF, přesný postup a očekávaný/skutečný výsledek. Souhrn lze kopírovat Ctrl+Shift+C, relativní cesty vybraných řádků Ctrl+C. Z přiložených kopií protokolů odstraňte soukromé údaje; ideální je malá syntetická reprodukce. Při neočekávané změně dat zastavte další zápisy a ponechte souhrn i obnovovací běh.
 

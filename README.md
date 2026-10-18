@@ -4,24 +4,21 @@
 > **ALPHA SOFTWARE — RISK OF DATA LOSS. NOT FOR PRODUCTION USE.**
 > Use entirely at your own risk. The authors and contributors provide **NO WARRANTY** and accept **NO RESPONSIBILITY OR LIABILITY FOR ANY LOSS OR CORRUPTION OF DATA**. Test only on disposable copies and keep a separate, verified backup. Keep originals does not provide automatic rollback or eliminate the risk of data loss.
 
-**[Download the ready-to-use 0.1.6 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/dirsync-0.1.6-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/package-sha256.txt)
+**[Download the ready-to-use 0.2.0 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/dirsync-0.2.0-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/package-sha256.txt)
 
 The ZIP contains the compiled plugin and both language modules. **No compilation, Visual Studio, or SDK is needed to install it.**
 
 A native directory comparison and synchronization plugin for **Samandarin**, with English and Czech interfaces. Compare two directory trees side by side, review the proposed actions, then copy, overwrite, or remove right-only items in asymmetric mode. Optional recovery copies preserve originals before synchronization overwrites and deletions.
 
-**Version 0.1.6 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
+**Version 0.2.0 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
 
-Version 0.1.6 disables proposal commands when they would not change any selected item. Mixed selections keep commands available if at least one item can change. File names appear only on sides where the item exists; matched items show their names on both sides.
+**Since version 0.2.0, the plugin supports named profiles.** Save directory pairs, masks, comparison options and result filters, then switch tasks from the star button beside the directory inputs. The last selected profile opens next time; loading a profile never starts comparison or synchronization. Recovery and appearance remain shared across profiles. [Using profiles](docs/directory-sync-plugin.en.md#profiles-020).
 
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
-**Development version: 0.2.0 ALPHA.** Named profiles save directory pairs, masks, comparison options and result filters. Recovery and appearance remain global; loading a profile never starts an operation. The download above remains the published 0.1.6 release.
-
-[Using profiles](docs/directory-sync-plugin.en.md#profiles-020)
-
 ## Highlights
 
+- Named synchronization profiles with remembered last selection.
 - Optional relative file sizes and timestamps.
 - Custom colors that follow the host's light or dark scheme.
 - Symmetric columns, directory groups, sorting, and combined filters.
@@ -35,7 +32,7 @@ Enable **Show sizes relatively** and **Show times relatively** independently in 
 
 Size differences are exact byte counts, with digit grouping taken from the host. Time differences are elapsed UTC durations with 24-hour days; differences below one second have a dedicated label. Equal values, unpaired entries, and directories retain their absolute display.
 
-These options only change presentation: they do not change comparison results, the fixed three-second timestamp tolerance, proposed actions, or sorting by actual values. They apply to existing results without another scan and persist across restarts.
+These options only change presentation: they do not change comparison results, timestamp tolerance, proposed actions, or sorting by actual values. The plugin reads the host's time tolerance for each comparison, with a three-second fallback if it is unavailable. Relative display applies to existing results without another scan and persists across restarts.
 
 ## Appearance and preferences
 
@@ -51,7 +48,7 @@ The lowest tested Samandarin versions are **0.15.1** in user testing and **0.16*
 
 ## Install the alpha build
 
-1. Download the [ready-to-use x64 ZIP from release 0.1.6](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.1.6/dirsync-0.1.6-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
+1. Download the [ready-to-use x64 ZIP from release 0.2.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/dirsync-0.2.0-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
 2. Close any host instance using an older copy. Put the entire `dirsync` directory inside the host's `plugins` directory, beside `salamand.exe`. Keep `dirsync.spl`, `lang/english.slg`, and `lang/czech.slg` in their original layout.
 3. In **Plugins → Plugins Manager → Add…**, select `plugins/dirsync/dirsync.spl` unless already registered. Launch **Plugins → Directory Synchronization → Directory synchronization…**. The host selects the interface language.
 
@@ -83,7 +80,7 @@ For manual recovery, find the run and `manifest.jsonl` named in the summary. Mat
 
 - Runtime testing covers **local NTFS x64**. SMB is untested. Win32/ARM64 builds are compile checks, not runtime validation.
 - Hidden/System items are included when matching the mask and scope, even when the host panels hide them. Their attributes appear in the row tooltip. By content compares the main data stream, not alternate data streams (ADS).
-- No standalone copying of empty directories, pair profiles, synchronization history, automatic mixed-operation batch, automatic restore, or backup cleanup. Reparse points, EFS, and unsupported cloud/offline items are blocked. Read-only destinations are not forcibly overwritten or removed.
+- No standalone copying of empty directories, synchronization history, automatic mixed-operation batch, automatic restore, or backup cleanup. Reparse points, EFS, and unsupported cloud/offline items are blocked. Read-only destinations are not forcibly overwritten or removed.
 - The first error stops the remaining batch. Completed changes are not rolled back. This is not transactional backup or a complete NTFS clone. Avoid modifying either tree through another program during a run.
 - Transfers use the plugin's own worker, without the host's background transfer window, speed limit, or shared queue. Live cross-monitor DPI remains unverified. Inspecting thousands of rows through UI Automation has caused delays in earlier pilot sessions.
 
