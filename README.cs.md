@@ -14,7 +14,7 @@ ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není 
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
-<img width="917" height="796" alt="Náhled porovnání adresářů s návrhy synchronizačních operací." src="https://github.com/user-attachments/assets/1c3a90e8-4a1f-446c-9d2d-0a9f90bd65a2" />
+<img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/14b296c8-2def-40cb-8b13-33a4a101a29f" />
 
 *Náhled porovnání adresářů s návrhy synchronizačních operací.*
 
@@ -68,7 +68,7 @@ Rozdíl velikosti je přesný počet bajtů s oddělováním číslic podle host
 
 Otevřete **Settings… / Nastavení…** v náhledu nebo **Plugins Manager → Configure…**. Barevné tlačítko u každé položky otevře nativní výběr barvy. **Restore default colors** obnoví pouze barvy aktuálního světlého/tmavého režimu. OK změny uloží, Cancel je zahodí; výsledky a ruční návrhy zůstanou zachované.
 
-<img width="461" height="498" alt="Nastavení barev, sloupců, relativních údajů a uchování originálů." src="https://github.com/user-attachments/assets/20c640ae-bc85-41b8-befa-b1196f4f7a20" />
+<img width="461" height="498" alt="image" src="https://github.com/user-attachments/assets/f3c9586c-fbc3-4c6a-9ff2-c04b76f4bdb8" />
 
 *Nastavení barev, sloupců, relativních údajů a uchování originálů.*
 
