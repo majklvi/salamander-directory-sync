@@ -50,6 +50,7 @@ struct Settings {
     bool sortDescending=false;
     bool keepOriginals=true;
     bool actionLabels=false;
+    bool colorRows=false;
     bool relativeSizes=false;
     bool relativeTimes=false;
     bool sideNames=false;
@@ -66,6 +67,9 @@ void LoadSettings(HKEY key,CSalamanderRegistryAbstract* registry)
     enabled=0;
     if(registry->GetValue(key,"ActionLabels",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
         settings.actionLabels=enabled!=0;
+    enabled=0;
+    if(registry->GetValue(key,"ColorRowsV1",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
+        settings.colorRows=enabled!=0;
     enabled=0;
     if(registry->GetValue(key,"RelativeSizesV1",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
         settings.relativeSizes=enabled!=0;
@@ -110,6 +114,8 @@ bool StoreSettings(HKEY key,CSalamanderRegistryAbstract* registry)
         DWORD((settings.recoveryRoot.size()+1)*sizeof(wchar_t)))!=FALSE;
     DWORD labels=settings.actionLabels?1:0;
     bool appearance=registry->SetValue(key,"ActionLabels",REG_DWORD,&labels,sizeof(labels))!=FALSE;
+    DWORD colorRows=settings.colorRows?1:0;
+    appearance=(registry->SetValue(key,"ColorRowsV1",REG_DWORD,&colorRows,sizeof(colorRows))!=FALSE) && appearance;
     DWORD relativeSize=settings.relativeSizes?1:0,relativeTime=settings.relativeTimes?1:0;
     appearance=(registry->SetValue(key,"RelativeSizesV1",REG_DWORD,&relativeSize,sizeof(relativeSize))!=FALSE) && appearance;
     appearance=(registry->SetValue(key,"RelativeTimesV1",REG_DWORD,&relativeTime,sizeof(relativeTime))!=FALSE) && appearance;
@@ -444,6 +450,8 @@ struct Preview
     dirsync::ImmediateReport immediateReport;
     bool immediateDeleting=false,immediateRecycle=true;
     std::wstring recoveryRoot,tipText;
+    CGUIMenuPopupAbstract* helpMenu=nullptr; // Borrowed only during Track().
+    std::wstring menuStatus;
     std::vector<size_t> copyRows;
     bool copying = false, hasCopyReport = false;
     bool saving = false, hasRecoveryReport = false;
@@ -596,7 +604,8 @@ COLORREF MarkColor(Mark mark)
 COLORREF PreviewColor(const dirsync::Row& row,int column,COLORREF background,COLORREF normal)
 {
     const bool skip=row.action==dirsync::Action::None;
-    if(column!=3 && column!=6) return skip?MarkColor(Mark::Skip):normal;
+    if(column!=3 && column!=6)
+        return skip?MarkColor(Mark::Skip):settings.colorRows?MarkColor(RowMark(row,true)):normal;
     Mark mark=RowMark(row,column==3);COLORREF color=MarkColor(mark);
     if(!skip || mark==Mark::Skip) return color;
     // Preserve the semantic hue while fading skipped rows toward the list background.
@@ -707,6 +716,7 @@ INT_PTR AppearanceBody(HWND window,UINT message,WPARAM w,LPARAM l)
         SetWindowLongPtrW(window,DWLP_USER,l);
         ConfigureDark(window);appearance->theme=dark?1:0;
         CheckDlgButton(window,IDC_ACTION_LABELS,appearance->draft.actionLabels?BST_CHECKED:BST_UNCHECKED);
+        CheckDlgButton(window,IDC_COLOR_ROWS,appearance->draft.colorRows?BST_CHECKED:BST_UNCHECKED);
         CheckDlgButton(window,IDC_KEEP_ORIGINALS,appearance->draft.keepOriginals?BST_CHECKED:BST_UNCHECKED);
         for(size_t i=0;i<OptionalColumns.size();++i) {
             SetDlgItemTextW(window,IDC_COLUMN_FIRST+int(i),Text(IDS_COLUMNS+OptionalColumns[i]).c_str());
@@ -767,6 +777,7 @@ INT_PTR AppearanceBody(HWND window,UINT message,WPARAM w,LPARAM l)
             settings.keepOriginals=Checked(window,IDC_KEEP_ORIGINALS);
             settings.recoveryRoot=std::move(appearance->draft.recoveryRoot);
             settings.actionLabels=Checked(window,IDC_ACTION_LABELS);
+            settings.colorRows=Checked(window,IDC_COLOR_ROWS);
             settings.sideNames=Checked(window,IDC_SIDE_NAMES);
             settings.relativeSizes=Checked(window,IDC_RELATIVE_SIZES);
             settings.relativeTimes=Checked(window,IDC_RELATIVE_TIMES);
@@ -1264,6 +1275,57 @@ std::wstring RowPaths(const Preview& p,const std::vector<size_t>& rows,int side)
 }
 // These commands always use the visible plan, even with no highlighted rows.
 constexpr int PlanSummary=30,PlanSave=31,PlanCopy=32,PlanOverwrite=33,PlanDelete=34;
+constexpr UINT_PTR MenuHelpTimer=2;
+std::wstring PlanHelp(int command)
+{
+    int id=0;
+    switch(command) {
+    case PlanSummary:id=IDS_PLAN_HELP_SUMMARY;break;
+    case PlanSave:id=IDS_PLAN_HELP_SAVE;break;
+    case PlanCopy:id=IDS_PLAN_HELP_COPY;break;
+    case PlanOverwrite:id=IDS_PLAN_HELP_OVERWRITE;break;
+    case PlanDelete:id=IDS_PLAN_HELP_DELETE;break;
+    default:return {};
+    }
+    auto text=Text(id);
+    if(command==PlanOverwrite || command==PlanDelete)
+        text+=L" "+Text(settings.keepOriginals?IDS_PLAN_HELP_RECOVERY:IDS_PLAN_HELP_NO_RECOVERY);
+    return text+L" "+Text(IDS_PLAN_HELP_SCOPE);
+}
+void MenuStatus(Preview& p)
+{
+    if(!p.helpMenu) return;
+    auto* menu=p.helpMenu;std::wstring help;
+    // Follow the selected submenu too, for Visible plan in the context menu.
+    for(int depth=0;menu && depth<8;++depth) {
+        int index=menu->GetSelectedItemIndex();if(index<0) break;
+        MENU_ITEM_INFO item{};item.Mask=MENU_MASK_ID;
+        if(!menu->GetItemInfo(DWORD(index),TRUE,&item)) break;
+        help=PlanHelp(int(item.ID)-1);
+        menu=menu->GetSubMenu(DWORD(index),TRUE);
+    }
+    StatusPane(p.window,0,help.empty()?p.menuStatus:help);
+}
+DWORD TrackWithStatus(Preview& p,CGUIMenuPopupAbstract* menu,DWORD flags,int x,int y)
+{
+    struct HelpScope {
+        Preview& p;
+        HelpScope(Preview& preview,CGUIMenuPopupAbstract* popup):p(preview) {
+            HWND bar=GetDlgItem(p.window,IDC_STATUS);
+            const auto length=LOWORD(SendMessageW(bar,SB_GETTEXTLENGTHW,0,0));
+            std::vector<wchar_t> text(size_t(length)+1);
+            SendMessageW(bar,SB_GETTEXTW,0,LPARAM(text.data()));p.menuStatus=text.data();
+            p.helpMenu=popup;
+            // The existing SDK exposes selection queries, but no highlight notification.
+            SetTimer(p.window,MenuHelpTimer,50,nullptr);
+        }
+        ~HelpScope() {
+            KillTimer(p.window,MenuHelpTimer);p.helpMenu=nullptr;
+            StatusPane(p.window,0,p.menuStatus);p.menuStatus.clear();
+        }
+    } help(p,menu);
+    return menu->Track(flags,x,y,p.window,nullptr);
+}
 Preview::Intent PlanIntent(int command)
 {
     switch(command) {
@@ -1300,7 +1362,7 @@ void SynchronizeMenu(Preview& p)
     auto* menu=gui->CreateMenuPopup();if(!menu) return;DWORD command=0;
     if(menu->LoadFromTemplate(language,items,nullptr,nullptr,nullptr)) {
         EnablePlanMenu(menu,p);RECT r{};GetWindowRect(GetDlgItem(p.window,IDC_SYNCHRONIZE),&r);
-        command=menu->Track(MENU_TRACK_RETURNCMD|MENU_TRACK_NONOTIFY,r.left,r.bottom,p.window,nullptr);
+        command=TrackWithStatus(p,menu,MENU_TRACK_RETURNCMD|MENU_TRACK_NONOTIFY,r.left,r.bottom);
     }
     gui->DestroyMenuPopup(menu);
     if(command && PlanEnabled(p,int(command)-1)) ValidatePreview(p,PlanIntent(int(command)-1));
@@ -1427,7 +1489,7 @@ void PreviewMenu(Preview& p,LPARAM position)
             for(int side=0;side<3;++side) paths->EnableItem(11+side,FALSE,std::any_of(rows.begin(),rows.end(),[&](size_t index) {
                 return index<p.result.rows.size() && (!side || (side==1?p.result.rows[index].hasLeft:p.result.rows[index].hasRight));
             }));
-        command=menu->Track(MENU_TRACK_RETURNCMD|MENU_TRACK_RIGHTBUTTON|MENU_TRACK_NONOTIFY,point.x,point.y,p.window,nullptr);
+        command=TrackWithStatus(p,menu,MENU_TRACK_RETURNCMD|MENU_TRACK_RIGHTBUTTON|MENU_TRACK_NONOTIFY,point.x,point.y);
     }
     gui->DestroyMenuPopup(menu);
     if(command) PreviewCommand(p,rows,int(command)-1);
@@ -1885,7 +1947,10 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         // Erase exposed old child bounds as well as repainting the moved controls.
         RedrawWindow(window,nullptr,nullptr,RDW_INVALIDATE|RDW_ERASE|RDW_ALLCHILDREN);
         return TRUE;
-    case WM_TIMER: Status(*p); return TRUE;
+    case WM_TIMER:
+        if(w==MenuHelpTimer) MenuStatus(*p);
+        else if(!p->helpMenu) Status(*p);
+        return TRUE;
     case Done:
         p->Join(); p->running = false; KillTimer(window, 1);
         if(!p->validating && !p->copying && !p->saving && !p->overwriting && !p->deleting && !p->immediateDeleting) {
@@ -2258,7 +2323,7 @@ CPluginInterfaceAbstract* WINAPI SalamanderPluginEntry(CSalamanderPluginEntryAbs
     if (!language) return nullptr;
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES}; InitCommonControlsEx(&controls);
     ConfigureDark(nullptr);
-    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.1.4", "Copyright (c) 2026 Open Salamander Authors",
+    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.1.5", "Copyright (c) 2026 Open Salamander Authors",
                               general->LoadStr(language, IDS_DESCRIPTION), "DirectorySync");
     return &plugin;
 }

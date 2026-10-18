@@ -62,6 +62,7 @@ BEGIN
     LTEXT "Vzhled", -1, 7, 7, 60, 8
     CONTROL "", -1, "Static", SS_ETCHEDHORZ, 73, 11, 226, 1
     CONTROL "&Zobrazovat popisky operací", IDC_ACTION_LABELS, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 22, 140, 12
+    CONTROL "Barvit text řádků", IDC_COLOR_ROWS, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 159, 22, 140, 12
     LTEXT "&Shoda:", -1, 7, 45, 88, 10
     PUSHBUTTON "...", IDC_COLOR_BUTTON_FIRST, 99, 42, 26, 16
     CONTROL "", IDC_COLOR_SAMPLE_FIRST, "Static", SS_OWNERDRAW, 129, 42, 18, 16

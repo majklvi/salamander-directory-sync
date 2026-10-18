@@ -10,7 +10,9 @@ The ZIP contains the compiled plugin and both language modules. **No compilation
 
 A native directory comparison and synchronization plugin for **Samandarin**, with English and Czech interfaces. Compare two directory trees side by side, review the proposed actions, then copy, overwrite, or remove right-only items in asymmetric mode. Optional recovery copies preserve originals before synchronization overwrites and deletions.
 
-**Version 0.1.4 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
+**Source version 0.1.5 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
+
+Version 0.1.5 adds optional row text coloring and status-bar explanations of synchronization commands. The published download linked above is still release 0.1.4.
 
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/1c3a90e8-4a1f-446c-9d2d-0a9f90bd65a2" />
 

@@ -10,6 +10,8 @@ ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není 
 
 [English](README.md)
 
+**Verze zdrojového kódu 0.1.5 ALFA · místní NTFS pilot · x64.** Přidává volitelné barvení textu řádků a vysvětlení synchronizačních operací ve stavovém řádku. Výše odkazovaný zveřejněný balíček je zatím release 0.1.4.
+
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
 <img width="917" height="796" alt="Náhled porovnání adresářů s návrhy synchronizačních operací." src="https://github.com/user-attachments/assets/1c3a90e8-4a1f-446c-9d2d-0a9f90bd65a2" />

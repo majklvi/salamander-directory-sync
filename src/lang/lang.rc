@@ -61,6 +61,7 @@ BEGIN
     LTEXT "Appearance", -1, 7, 7, 60, 8
     CONTROL "", -1, "Static", SS_ETCHEDHORZ, 73, 11, 226, 1
     CONTROL "Show action &labels", IDC_ACTION_LABELS, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 22, 140, 12
+    CONTROL "Color row text", IDC_COLOR_ROWS, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 159, 22, 140, 12
     LTEXT "&Equal:", -1, 7, 45, 88, 10
     PUSHBUTTON "...", IDC_COLOR_BUTTON_FIRST, 99, 42, 26, 16
     CONTROL "", IDC_COLOR_SAMPLE_FIRST, "Static", SS_OWNERDRAW, 129, 42, 18, 16
@@ -107,6 +108,14 @@ END
 STRINGTABLE
 BEGIN
     IDS_MENU_PLAN "&Visible plan"
+    IDS_PLAN_HELP_SUMMARY "Shows the visible operation plan for review; changes no files."
+    IDS_PLAN_HELP_SAVE "Saves verified recovery copies of existing overwrite targets; does not overwrite or delete them."
+    IDS_PLAN_HELP_COPY "Creates missing files in the proposed direction; never overwrites existing files."
+    IDS_PLAN_HELP_OVERWRITE "Replaces existing files in the proposed direction; preserves target permissions."
+    IDS_PLAN_HELP_DELETE "Deletes right-only items proposed for deletion in asymmetric mode; directories must be empty."
+    IDS_PLAN_HELP_RECOVERY "Originals are saved to recovery first."
+    IDS_PLAN_HELP_NO_RECOVERY "Recovery is OFF; no originals are saved."
+    IDS_PLAN_HELP_SCOPE "Uses ALL visible eligible proposals, not just highlighted rows."
     IDS_MENU_SUMMARY "Plan summar&y..."
     IDS_MENU_SAVE "&Save visible originals..."
     IDS_MENU_COPY_NEW "&Copy visible new files..."

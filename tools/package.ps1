@@ -17,7 +17,7 @@ foreach($relative in $inputs){
   if($reader.ReadUInt32() -ne 0x4550 -or $reader.ReadUInt16() -ne 0x8664){throw "Expected x64: $relative"}
  }finally{$reader.Dispose()}
  $version=[Diagnostics.FileVersionInfo]::GetVersionInfo($path)
- if($version.FileMajorPart -ne 0 -or $version.FileMinorPart -ne 1 -or $version.FileBuildPart -ne 4){throw "Expected 0.1.4: $relative"}
+ if($version.FileMajorPart -ne 0 -or $version.FileMinorPart -ne 1 -or $version.FileBuildPart -ne 5){throw "Expected 0.1.5: $relative"}
 }
 $payload=Join-Path $output 'payload\dirsync'
 [void][IO.Directory]::CreateDirectory((Join-Path $payload 'lang'))
@@ -65,7 +65,7 @@ Copy-Item -LiteralPath (Join-Path $dark 'LICENSE.md') -Destination (Join-Path $p
 Copy-Item -LiteralPath (Join-Path $dark 'LICENSE-MIT.md') -Destination (Join-Path $payload 'licenses\darkmodelib-MIT.md')
 Get-ChildItem -LiteralPath (Join-Path $dark 'docs') -Filter 'LICENSE-*.md' -File | ForEach-Object{Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $payload ('licenses\'+$_.Name))}
 $notice=@"
-Directory Synchronization 0.1.4 ALPHA, x64; for Samandarin.
+Directory Synchronization 0.1.5 ALPHA, x64; for Samandarin.
 ALPHA SOFTWARE -- RISK OF DATA LOSS. NOT FOR PRODUCTION USE.
 NO WARRANTY. Authors and contributors accept NO RESPONSIBILITY OR LIABILITY
 FOR ANY LOSS OR CORRUPTION OF DATA. Use only on disposable test copies with
@@ -87,7 +87,7 @@ $manifest=@(Get-ChildItem -LiteralPath $payload -File -Recurse | Sort-Object Ful
  [ordered]@{path=$_.FullName.Substring($payload.Length+1).Replace('\','/');sha256=(Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant()}
 })
 [IO.File]::WriteAllText((Join-Path $payload 'files.json'),($manifest|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
-$archive=Join-Path $output 'dirsync-0.1.4-x64.zip'
+$archive=Join-Path $output 'dirsync-0.1.5-x64.zip'
 Compress-Archive -LiteralPath $payload -DestinationPath $archive
 $extracted=Join-Path $output 'verified-extraction'
 Expand-Archive -LiteralPath $archive -DestinationPath $extracted
@@ -111,5 +111,5 @@ foreach($guide in $guides){
  }
 }
 $zipHash=(Get-FileHash -LiteralPath $archive).Hash.ToLowerInvariant()
-[IO.File]::WriteAllText((Join-Path $output 'package-sha256.txt'),"$zipHash  dirsync-0.1.4-x64.zip`n",[Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText((Join-Path $output 'package-sha256.txt'),"$zipHash  dirsync-0.1.5-x64.zip`n",[Text.UTF8Encoding]::new($false))
 Write-Output "Verified $($manifest.Count) packaged files; $archive; SHA256 $zipHash"

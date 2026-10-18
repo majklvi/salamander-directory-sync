@@ -255,14 +255,30 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t*
     row.state=dirsync::State::Equal;row.action=dirsync::Action::None;ok &= !RowVisible(row,mixed);
     mixed[0]=true;ok &= RowVisible(row,mixed);
     row.state=dirsync::State::Blocked;mixed.fill(false);ok &= RowVisible(row,mixed);
-    for(COLORREF bg:{RGB(255,255,255),RGB(32,32,32)}) {
+    const bool previousRowColors=settings.colorRows,previousDark=dark;
+    for(bool night:{false,true}) {
+        dark=night;
+        COLORREF bg=night?RGB(32,32,32):RGB(255,255,255);
         row.state=dirsync::State::Different;row.action=dirsync::Action::None;
         ok &= PreviewColor(row,0,bg,RGB(1,2,3))==MarkColor(Mark::Skip);
         COLORREF base=MarkColor(Mark::Different),faded=PreviewColor(row,6,bg,RGB(1,2,3));
         ok &= GetRValue(faded)==(GetRValue(base)+GetRValue(bg))/2 &&
             GetGValue(faded)==(GetGValue(base)+GetGValue(bg))/2 && GetBValue(faded)==(GetBValue(base)+GetBValue(bg))/2;
         row.action=dirsync::Action::CopyRight;ok &= PreviewColor(row,6,bg,RGB(1,2,3))==base;
+        for(bool enabled:{false,true}) {
+            settings.colorRows=enabled;
+            for(auto action:{dirsync::Action::CopyRight,dirsync::Action::CopyLeft,dirsync::Action::DeleteRight,
+                             dirsync::Action::Decide,dirsync::Action::Blocked,dirsync::Action::None}) {
+                row.action=action;
+                for(int column:{0,1,2,4,5,7,8,9}) {
+                    const COLORREF expected=action==dirsync::Action::None?MarkColor(Mark::Skip):
+                        enabled?MarkColor(RowMark(row,true)):RGB(1,2,3);
+                    ok &= PreviewColor(row,column,bg,RGB(1,2,3))==expected;
+                }
+            }
+        }
     }
+    settings.colorRows=previousRowColors;dark=previousDark;
     // Native status parts track the operation; each metric is a separate pane.
     auto partCount=[&]() {Status(p);return int(SendMessageW(bar,SB_GETPARTS,0,0));};
     ok &= partCount()==5;
@@ -508,6 +524,13 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeSettingsTest()
         plugin.LoadConfiguration(nullptr,nullptr,&registry);
         check(settings.keepOriginals && settings.recoveryRoot.empty());
         check(!settings.relativeSizes && !settings.relativeTimes);
+        check(!settings.colorRows);
+        for(bool enabled:{true,false}) {
+            settings.colorRows=enabled;plugin.SaveConfiguration(nullptr,key,&registry);
+            settings={};plugin.LoadConfiguration(nullptr,key,&registry);check(settings.colorRows==enabled);
+        }
+        registry.values["ColorRowsV1"].bytes={2,0,0,0};
+        plugin.LoadConfiguration(nullptr,key,&registry);check(!settings.colorRows);
         check(!settings.sideNames);
         settings.sideNames=true;plugin.SaveConfiguration(nullptr,key,&registry);settings={};plugin.LoadConfiguration(nullptr,key,&registry);
         check(settings.sideNames);

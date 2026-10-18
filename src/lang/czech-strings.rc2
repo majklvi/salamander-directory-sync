@@ -3,6 +3,14 @@
 STRINGTABLE
 BEGIN
     IDS_MENU_PLAN "&Viditelný plán"
+    IDS_PLAN_HELP_SUMMARY "Zobrazí viditelný plán operací ke kontrole; soubory nemění."
+    IDS_PLAN_HELP_SAVE "Uloží ověřené kopie původních cílů navržených k přepsání do obnovy; cíle nepřepisuje ani nemaže."
+    IDS_PLAN_HELP_COPY "Vytvoří chybějící soubory v navrženém směru; existující soubory nepřepisuje."
+    IDS_PLAN_HELP_OVERWRITE "Přepíše existující soubory v navrženém směru; zachová oprávnění cíle."
+    IDS_PLAN_HELP_DELETE "Smaže pravé přebytečné položky navržené k odstranění v asymetrii; adresáře musí být prázdné."
+    IDS_PLAN_HELP_RECOVERY "Originály nejprve uloží do obnovy."
+    IDS_PLAN_HELP_NO_RECOVERY "Obnova je VYPNUTÁ; originály se neuchovají."
+    IDS_PLAN_HELP_SCOPE "Platí pro VŠECHNY viditelné způsobilé návrhy, nejen zvýrazněné řádky."
     IDS_MENU_SUMMARY "&Souhrn plánu..."
     IDS_MENU_SAVE "&Uchovat viditelné originály..."
     IDS_MENU_COPY_NEW "&Kopírovat viditelné nové soubory..."

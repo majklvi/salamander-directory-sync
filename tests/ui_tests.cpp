@@ -127,6 +127,10 @@ void Test(int dialog)
     }
     if(dialog==IDD_APPEARANCE) {
         auto control=[&](DWORD id)->const Control& {for(const auto& c:controls) if(c.id==id) return c;throw std::runtime_error("missing preference control");};
+        const auto& rowColors=control(IDC_COLOR_ROWS);
+        Check(rowColors.x==159 && rowColors.y==control(IDC_ACTION_LABELS).y &&
+            (rowColors.style&BS_TYPEMASK)==BS_AUTOCHECKBOX && (rowColors.style&WS_TABSTOP),
+            "row text coloring is keyboard accessible in the existing appearance row");
         const auto& sideNames=control(IDC_SIDE_NAMES);
         Check(sideNames.x==159 && sideNames.y==control(IDC_COLUMN_FIRST+3).y && sideNames.width==140 &&
             (sideNames.style&BS_TYPEMASK)==BS_AUTOCHECKBOX,"side label option fills the unused settings grid cell");
@@ -244,6 +248,8 @@ int main()
         }
         for(int id=IDS_STATUS_COPIED;id<=IDS_STATUS_BLOCKED;++id)
             Check(!text(id).empty() && text(id).find(L'|')==std::wstring::npos,"individual status metrics localized without pipe separators");
+        for(int id=IDS_PLAN_HELP_SUMMARY;id<=IDS_PLAN_HELP_SCOPE;++id)
+            Check(!text(id).empty(),"plan menu explanations and recovery/scope details localized");
         for(int id=IDS_IMMEDIATE_MENU;id<=IDS_IMMEDIATE_EMPTY;++id) Check(!text(id).empty(),"immediate removal strings localized");
         Test(IDD_PREVIEW); Test(IDD_INFORMATION);Test(IDD_APPEARANCE); std::cout << checks << " resource/layout checks passed\n"; return 0;
     }
