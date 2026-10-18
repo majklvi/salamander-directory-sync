@@ -6,13 +6,21 @@
 
 [English](directory-sync-plugin-pilot-guide.en.md)
 
-Alfa verze 0.1.6 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
+Alfa verze 0.2.0 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
 
 Klikáním do záhlaví sloupce přepínáte vzestupné/sestupné řazení souborů uvnitř adresářů. Pravé tlačítko na záhlaví nebo sekce **Sloupce / Columns** v nastavení pluginu skryje či zobrazí volitelné sloupce. Názvy vlevo i vpravo, cesta adresáře a operace zůstávají. Volby sloupců a řazení se pamatují; skrytí sloupce nevynechává soubory ze synchronizace.
 
 Výsledky jsou seskupené podle relativních adresářů (`\` je kořen). Pod záhlavím jsou názvy souborů; záhlaví samo není položka operace a nevybírá své potomky. Prázdné skupiny po filtrování zmizí. Adresář určený k odstranění má vlastní řádek v nadřazené skupině.
 
 Nejnižší testované verze hostitele: 0.15.1 uživatelsky a nevydaná 0.16 automatizovaně pomocí AI z vlastního vývojářského sestavení.
+
+## Profily (0.2.0)
+
+Použijte **ikonu Profilů úplně napravo od polí s adresáři**. Nabídka obsahuje uložené profily, označení aktivního profilu, **Aktuální adresáře panelů** a **Správa profilů…**. Položka panelů vrátí adresáře převzaté z hostitele při otevření okna. Výběr pouze načte nastavení; nikdy sám nespustí porovnání ani synchronizaci.
+
+Aktivní profil je vidět v titulku hlavního okna a tooltipu ikony. Hvězdička označuje neuložené změny adresářů, masek, voleb porovnání či filtrů. Ve **Správě profilů…** vyberte profil: **Uložit aktuální** nahradí jeho nastavení hodnotami z hlavního okna, **Uložit jako…** vytvoří pojmenovanou variantu; další tlačítka umožňují přejmenování a odstranění. Pod seznamem je úplný obsah vybraného profilu: obě cesty, masky, pět voleb porovnání a pět filtrů výsledků, u každé volby výslovně Zapnuto/Vypnuto. Cesty a masky jsou pouze pro čtení; lze je označit a zkopírovat. **OK** potvrdí změny správy a načte vybrané nastavení, pokud se liší; **Cancel** zahodí všechny změny této správy. Odstranění profilu nikdy nemaže soubory. Před opuštěním neuloženého nastavení nebo výsledků se plugin zeptá; načtení jiného nastavení zruší staré porovnání. Uložení či přejmenování aktuální úlohy výsledky zachová.
+
+Příště se načte naposledy vybraný uložený profil, pouze s výslovně uloženými hodnotami. **Uchovat originály, adresář obnovy, vzhled, sloupce, řazení i relativní zobrazení zůstávají společné**; časová tolerance hostitele se čte při každém porovnání. Výběr panelů, zvýrazněné řádky, výsledky ani ruční návrhy se neukládají. Další variantu zachováte pomocí **Uložit profil jako…**. Během operace je správa profilů zakázaná. Tato verze nemá import/export profilů, plánování ani automatické provádění.
 
 ## Instalace
 

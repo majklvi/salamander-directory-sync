@@ -6,9 +6,17 @@
 
 [Česky](directory-sync-plugin.md) · [Pilot instructions and bug reporting](directory-sync-plugin-pilot-guide.en.md)
 
-Current behavior as of 18 October 2026, plugin version 0.1.6 ALPHA for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
+Current behavior as of 18 October 2026, plugin version 0.2.0 ALPHA for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
 
 For pilot use, start with the [short instructions](directory-sync-plugin-pilot-guide.en.md), included in the package as `PILOT.md`. Since 0.1.4, the status bar has separate native sections for the operation state and individual counts/progress values. Widths adapt to their text and the window; tooltips expose the complete values.
+
+## Profiles (0.2.0)
+
+Use the **Profiles icon at the far right of the directory inputs**. Its menu lists saved profiles, marks the active one, and offers **Current panel directories** plus **Manage profiles…**. The panel entry restores the directories captured from the host panels when the window opened. Selecting an entry only loads settings; it never starts Compare or synchronization.
+
+The active profile appears in the main window title and the icon's tooltip. An asterisk marks unsaved directory, mask, comparison-option or filter changes. In **Manage profiles…**, select a profile and use **Save current** to replace its settings with the current main-window values, **Save as…** to create a named variant, or Rename/Delete. The complete stored profile appears below the list: both paths, masks, five comparison choices and five result filters, each with an explicit On/Off state. Paths and masks are read-only and can be selected and copied. **OK** applies management changes and loads the selected settings when different; **Cancel** discards all changes made in that management session. Profile deletion never deletes files. Switching away from unsaved settings or existing results requires confirmation; a successful load clears the old comparison. Saving or renaming the current task keeps its comparison results.
+
+The last selected saved profile opens next time. Only explicitly saved values are restored. **Keep originals, recovery directory, appearance, columns, sorting and relative display remain global**; the host's time tolerance is read for each comparison. Panel selection, highlighted rows, results and manual proposals are not saved. Use **Save profile as…** to keep a second variant. Profile management is disabled during an operation. Profiles have no import/export, scheduling or automatic execution in this version.
 
 ## Installation and launch
 
@@ -96,7 +104,7 @@ Recovery copies are independent data, not hardlinks. They inherit recovery-direc
 
 - Runtime verification covers local NTFS x64 with the current SDK. SMB is untested; network reliability is not claimed. Win32 and ARM64 compile in CI but are not runtime-tested.
 - A larger NTFS pilot compared 5,849 file entries and verified 111 new copies and 51 overwrites with recovery. Exhaustive accessibility enumeration of thousands of rows caused substantial delays in that Windows/UI Automation session; hiding Equal entries made the complete data workflow usable. Independent ordinary manual use of the full list without that load remains unverified. [Pilot evidence and limits](directory-sync-plugin-pilot.md).
-- No standalone creation/copying of empty directories, global empty-directory cleanup, history, pair profiles, automatic mixed batch, automatic restore, or old-backup cleanup. Copy commands omit standalone empty directories; asymmetric deletion of included directories is supported.
+- No standalone creation/copying of empty directories, global empty-directory cleanup, history, automatic mixed batch, automatic restore, or old-backup cleanup. Copy commands omit standalone empty directories; asymmetric deletion of included directories is supported.
 - Reparse/junction/symlink, EFS, and unsupported cloud/offline entries are blocked. Roots may not overlap. The plugin supports Unicode/long paths; navigation through such paths in host panels is a separate capability.
 - The first error or Stop halts the rest. Completed copies/overwrites/deletions are not rolled back. Owned incomplete staging is cleaned when possible; inspect any reported residue. Created empty parent directories and incomplete journals may remain.
 - OFF has no persistent execution journal in this version. With ON, a journal-write error halts later work but does not undo a completed change. This is not transactional backup or protection against power failure or arbitrary concurrent changes.

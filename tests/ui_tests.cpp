@@ -85,6 +85,10 @@ void Test(int dialog)
     }
     if(dialog==IDD_PREVIEW) {
         auto control=[&](DWORD id)->const Control& { for(const auto& c:controls) if(c.id==id) return c; throw std::runtime_error("missing preview control"); };
+        const auto& profile=control(IDC_PROFILE_MENU);
+        Check((profile.style&BS_ICON) && (profile.style&WS_TABSTOP) && !profile.text.empty(),"icon-only accessible profile button");
+        Check(profile.y==control(IDC_LEFT).y && profile.x>control(IDC_BROWSE_RIGHT).x+control(IDC_BROWSE_RIGHT).width && profile.x+profile.width==width-8,"profiles at far right of directory row");
+        for(const auto& c:controls) Check(c.id!=IDC_PROFILE && c.id!=IDC_PROFILE_SAVE,"no separate profile row in preview");
         const auto& left=control(IDC_LEFT);const auto& right=control(IDC_RIGHT);
         Check(left.y==right.y && left.x+left.width<right.x,"roots side by side without overlap");
         Check(left.width==right.width,"equally sized root inputs");
@@ -153,6 +157,16 @@ void Test(int dialog)
         const auto& reset=control(IDC_COLOR_RESET);
         Check((reset.text==L"Restore defa&ult colors" || reset.text==L"Obnovit výchozí &barvy") && reset.x+reset.width==width-7 && reset.y>control(IDC_COLOR_BUTTON_FIRST+3).y,"color-only reset caption, right aligned below color grid");
     }
+    if(dialog==IDD_PROFILES) {
+        auto control=[&](DWORD id)->const Control& {for(const auto& c:controls) if(c.id==id) return c;throw std::runtime_error("missing profile detail");};
+        for(DWORD id:{IDC_PROFILE_LEFT,IDC_PROFILE_RIGHT,IDC_PROFILE_MASK})
+            Check(control(id).type==0x81 && (control(id).style&ES_READONLY) && (control(id).style&ES_AUTOHSCROLL) && (control(id).style&WS_TABSTOP),"complete profile paths and masks are selectable read-only text");
+        for(int i=0;i<5;++i) {
+            Check(control(IDC_PROFILE_OPTION_FIRST+i).y==control(IDC_PROFILE_FILTER_FIRST+i).y,"comparison and filter details share compact rows");
+            Check(control(IDC_PROFILE_OPTION_FIRST+i).x<control(IDC_PROFILE_FILTER_FIRST+i).x,"all profile switches visible in two columns");
+        }
+        Check(control(IDC_PROFILE_MASK).y>control(IDC_PROFILE_RIGHT).y && control(IDC_PROFILE_MASK).y<control(IDC_PROFILE_OPTION_FIRST).y,"mask precedes the complete boolean profile details");
+    }
     for (int dpi : {96, 120, 144, 192, 240})
     {
         HDC dc = CreateCompatibleDC(nullptr); Check(dc != nullptr, "measurement DC");
@@ -164,6 +178,13 @@ void Test(int dialog)
         Check(GetTextExtentPoint32W(dc, L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 52, &alphabet) != FALSE, "dialog base units");
         int baseX = (alphabet.cx / 26 + 1) / 2, baseY = metrics.tmHeight;
         bool fits = true;
+        if(dialog==IDD_PROFILES) {
+            for(int id:{IDS_PROFILE_ON,IDS_PROFILE_OFF}) {
+                const wchar_t* value=nullptr;int count=LoadStringW(GetModuleHandleW(nullptr),id,reinterpret_cast<LPWSTR>(&value),0);
+                SIZE textSize{};Check(count>0 && GetTextExtentPoint32W(dc,value,count,&textSize),"localized profile state text present");
+                Check(textSize.cx<=MulDiv(33,baseX,4),"both actual localized profile states fit their value column");
+            }
+        }
         std::vector<RECT> bounds;
         for (const auto& c : controls)
         {
@@ -257,7 +278,8 @@ int main()
         for(int id=IDS_PLAN_HELP_SUMMARY;id<=IDS_PLAN_HELP_SCOPE;++id)
             Check(!text(id).empty(),"plan menu explanations and recovery/scope details localized");
         for(int id=IDS_IMMEDIATE_MENU;id<=IDS_IMMEDIATE_EMPTY;++id) Check(!text(id).empty(),"immediate removal strings localized");
-        Test(IDD_PREVIEW); Test(IDD_INFORMATION);Test(IDD_APPEARANCE); std::cout << checks << " resource/layout checks passed\n"; return 0;
+        for(int id=IDS_PROFILE_PANELS;id<=IDS_PROFILE_TIP;++id) Check(!text(id).empty(),"profile interface fully localized");
+        Test(IDD_PREVIEW); Test(IDD_INFORMATION);Test(IDD_APPEARANCE);Test(IDD_PROFILE_NAME);Test(IDD_PROFILES); std::cout << checks << " resource/layout checks passed\n"; return 0;
     }
     catch (const std::exception& e) { std::cerr << "FAILED: " << e.what() << "\n"; return 1; }
 }

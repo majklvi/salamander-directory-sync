@@ -6,13 +6,21 @@
 
 [English](directory-sync-plugin.en.md)
 
-Stav 18. října 2026, alfa verze 0.1.6 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
+Stav 18. října 2026, alfa verze 0.2.0 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
 
 Pro pilotní používání začněte [krátkými pokyny včetně hlášení chyb](directory-sync-plugin-pilot-guide.md), přiloženými v balíčku jako `PILOT.cs.md`.
 
 Stavový řádek od 0.1.4 používá samostatné nativní oddíly: stav operace a jednotlivé počty řádků nebo průběhu. Šířky se přizpůsobují textu a oknu; celý údaj je dostupný v tooltipu.
 
 Nejnižší testované verze hostitele: 0.15.1 uživatelsky a nevydaná 0.16 automatizovaně pomocí AI z vlastního vývojářského sestavení.
+
+## Profily (0.2.0)
+
+Použijte **ikonu Profilů úplně napravo od polí s adresáři**. Nabídka obsahuje uložené profily, označení aktivního profilu, **Aktuální adresáře panelů** a **Správa profilů…**. Položka panelů vrátí adresáře převzaté z hostitele při otevření okna. Výběr pouze načte nastavení; nikdy sám nespustí porovnání ani synchronizaci.
+
+Aktivní profil je vidět v titulku hlavního okna a tooltipu ikony. Hvězdička označuje neuložené změny adresářů, masek, voleb porovnání či filtrů. Ve **Správě profilů…** vyberte profil: **Uložit aktuální** nahradí jeho nastavení hodnotami z hlavního okna, **Uložit jako…** vytvoří pojmenovanou variantu; další tlačítka umožňují přejmenování a odstranění. Pod seznamem je úplný obsah vybraného profilu: obě cesty, masky, pět voleb porovnání a pět filtrů výsledků, u každé volby výslovně Zapnuto/Vypnuto. Cesty a masky jsou pouze pro čtení; lze je označit a zkopírovat. **OK** potvrdí změny správy a načte vybrané nastavení, pokud se liší; **Cancel** zahodí všechny změny této správy. Odstranění profilu nikdy nemaže soubory. Před opuštěním neuloženého nastavení nebo výsledků se plugin zeptá; načtení jiného nastavení zruší staré porovnání. Uložení či přejmenování aktuální úlohy výsledky zachová.
+
+Příště se načte naposledy vybraný uložený profil, pouze s výslovně uloženými hodnotami. **Uchovat originály, adresář obnovy, vzhled, sloupce, řazení i relativní zobrazení zůstávají společné**; časová tolerance hostitele se čte při každém porovnání. Výběr panelů, zvýrazněné řádky, výsledky ani ruční návrhy se neukládají. Další variantu zachováte pomocí **Uložit profil jako…**. Během operace je správa profilů zakázaná. Tato verze nemá import/export profilů, plánování ani automatické provádění.
 
 ## Instalace a spuštění
 
@@ -103,7 +111,7 @@ Obnovovací kopie jsou nezávislá data, nikoli hardlinky. Dědí oprávnění o
 
 - Ověřený provoz je místní NTFS x64 se současným SDK 0.16. SMB není otestované; síťovou spolehlivost tento stav neslibuje. Win32 a ARM64 se sestavují v CI, runtime ověření je x64.
 - Větší NTFS pilot porovnal 5 849 souborových položek a ověřil 111 nových kopií a 51 přepisů s obnovou. Úplné procházení přístupnosti tisíců zobrazených řádků v této Windows/UI Automation relaci vyvolalo výrazné prodlevy; po skrytí shod byl celý datový průchod ovladatelný. Nezávislé běžné ruční ovládání plného seznamu bez tohoto zatížení zůstává k ověření. Podrobnosti a meze závěru jsou v [evidenci pilotu](directory-sync-plugin-pilot.md).
-- Bez samostatného vytváření prázdných adresářů, globálního úklidu prázdných adresářů, historie, profilů dvojic, automatické smíšené dávky, automatické obnovy nebo úklidu starých záloh. Kopírování samotných prázdných adresářů zatím operační příkazy vynechají; asymetrické mazání zařazených adresářů je podporované.
+- Bez samostatného vytváření prázdných adresářů, globálního úklidu prázdných adresářů, historie, automatické smíšené dávky, automatické obnovy nebo úklidu starých záloh. Kopírování samotných prázdných adresářů zatím operační příkazy vynechají; asymetrické mazání zařazených adresářů je podporované.
 - Reparse/junction/symlink, EFS a nepodporované cloud/offline položky se blokují. Kořeny se nesmějí překrývat. Unicode a dlouhé cesty jsou podporované v pluginu; průchod takovou cestou v panelech hostitele je samostatná schopnost.
 - První chyba nebo Stop zastaví zbytek. Hotové kopie/přepisy/odstranění se automaticky nevracejí. Vlastní nedokončený staging se uklidí, pokud je to možné; případný zbytek je nutné prohlédnout podle ohlášené cesty. Mohou zůstat vytvořené prázdné rodičovské adresáře a neúplné protokoly.
 - Při OFF není v této verzi trvalý prováděcí protokol. Chyba zápisu protokolu při ON zastaví další operace, ale již provedenou změnu nevrátí. Nejde o transakční zálohování ani záruku při pádu napájení či libovolných souběžných změnách.

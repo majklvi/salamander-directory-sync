@@ -8,18 +8,19 @@
 #include "../versinfo.rh2"
 #include "czech-versinfo.rc2"
 LANGUAGE LANG_CZECH, SUBLANG_DEFAULT
-IDD_PREVIEW DIALOGEX 0, 0, 610, 470
+IDD_PREVIEW DIALOGEX 0, 0, 610, 490
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX | WS_CLIPCHILDREN
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "Synchronizace adresářů"
 FONT 8, "MS Shell Dlg"
 BEGIN
     LTEXT "&Levý adresář:", -1, 8, 9, 52, 10
-    EDITTEXT IDC_LEFT, 62, 6, 218, 14, ES_AUTOHSCROLL
-    PUSHBUTTON "...", IDC_BROWSE_LEFT, 284, 6, 14, 14
-    LTEXT "&Pravý adresář:", IDC_RIGHT_LABEL, 312, 9, 52, 10
-    EDITTEXT IDC_RIGHT, 366, 6, 218, 14, ES_AUTOHSCROLL
-    PUSHBUTTON "...", IDC_BROWSE_RIGHT, 588, 6, 14, 14
+    EDITTEXT IDC_LEFT, 62, 6, 206, 14, ES_AUTOHSCROLL
+    PUSHBUTTON "...", IDC_BROWSE_LEFT, 272, 6, 14, 14
+    LTEXT "&Pravý adresář:", IDC_RIGHT_LABEL, 300, 9, 52, 10
+    EDITTEXT IDC_RIGHT, 354, 6, 206, 14, ES_AUTOHSCROLL
+    PUSHBUTTON "...", IDC_BROWSE_RIGHT, 564, 6, 14, 14
+    CONTROL "Profily", IDC_PROFILE_MENU, "Button", BS_PUSHBUTTON | BS_ICON | WS_TABSTOP, 588, 6, 14, 14
     LTEXT "&Masky:", -1, 8, 29, 28, 10
     EDITTEXT IDC_MASK, 38, 26, 45, 14, ES_AUTOHSCROLL
     CONTROL "P&odadresáře", IDC_RECURSIVE, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 91, 28, 69, 12
@@ -39,8 +40,8 @@ BEGIN
     CONTROL "&Zastavit synchronizaci", IDC_STOP_SYNC, "Button", BS_PUSHBUTTON | BS_ICON | WS_TABSTOP, 518, 46, 14, 14
     PUSHBUTTON "Nastavení...", IDC_SETTINGS, 546, 26, 56, 14
     PUSHBUTTON "Zavřít", IDCANCEL, 546, 46, 56, 14
-    CONTROL "", IDC_LIST, "SysListView32", LVS_REPORT | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 0, 70, 610, 384
-    CONTROL "", IDC_STATUS, "msctls_statusbar32", SBARS_SIZEGRIP | SBARS_TOOLTIPS, 0, 454, 610, 16
+    CONTROL "", IDC_LIST, "SysListView32", LVS_REPORT | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 0, 70, 610, 404
+    CONTROL "", IDC_STATUS, "msctls_statusbar32", SBARS_SIZEGRIP | SBARS_TOOLTIPS, 0, 474, 610, 16
 END
 IDD_INFORMATION DIALOGEX 0, 0, 300, 188
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX
@@ -107,3 +108,73 @@ BEGIN
     PUSHBUTTON "Storno", IDCANCEL, 237, 267, 62, 14
 END
 #include "czech-strings.rc2"
+
+IDD_PROFILE_NAME DIALOGEX 0, 0, 200, 58
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Profil:"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "&Název:", -1, 8, 10, 34, 10
+    EDITTEXT IDC_PROFILE_NAME, 44, 7, 148, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON "OK", IDOK, 88, 36, 50, 14
+    PUSHBUTTON "Cancel", IDCANCEL, 142, 36, 50, 14
+END
+STRINGTABLE
+BEGIN
+    IDS_PROFILE_PANELS "Aktuální adresáře panelů"
+    IDS_PROFILE_SAVE_AS "Uložit profil jako..."
+    IDS_PROFILE_RENAME "Přejmenovat profil..."
+    IDS_PROFILE_DELETE "Odstranit profil..."
+    IDS_PROFILE_INVALID_PATH "Před uložením zadejte platné absolutní cesty adresářů a platnou masku."
+    IDS_PROFILE_INVALID_NAME "Zadejte jedinečný název profilu (1–128 znaků)."
+    IDS_PROFILE_DELETE_CONFIRM "Odstranit uložený profil? Soubory ani aktuální výsledky porovnání nebudou odstraněny."
+    IDS_PROFILE_SWITCH_CONFIRM "Změna profilu zahodí neuložené změny profilu a aktuální výsledky porovnání. Pokračovat?"
+    IDS_PROFILE_MANAGE "Správa profilů..."
+    IDS_PROFILE_ON "Zapnuto"
+    IDS_PROFILE_OFF "Vypnuto"
+    IDS_PROFILE_SAVE_TIP "Uložit cesty adresářů, masky, volby porovnání a filtry do aktivního profilu. Obnova a vzhled zůstávají společné."
+    IDS_PROFILE_TIP "Profily: vyberte uložený profil, adresáře panelů nebo správu profilů. Aktivní profil je také v titulku okna; hvězdička označuje neuložené změny. Načtení nespouští porovnání ani synchronizaci."
+END
+
+IDD_PROFILES DIALOGEX 0, 0, 280, 258
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Správa profilů"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "Profily:", -1, 7, 7, 190, 10
+    LISTBOX IDC_PROFILE, 7, 20, 182, 74, LBS_NOTIFY | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON "Uložit aktuální", IDC_PROFILE_SAVE, 195, 20, 78, 14
+    PUSHBUTTON "Uložit jako...", IDC_PROFILE_SAVE_AS, 195, 40, 78, 14
+    PUSHBUTTON "Přejmenovat...", IDC_PROFILE_RENAME, 195, 60, 78, 14
+    PUSHBUTTON "Odstranit...", IDC_PROFILE_DELETE, 195, 80, 78, 14
+    LTEXT "Levý:", -1, 7, 101, 30, 10
+    EDITTEXT IDC_PROFILE_LEFT, 39, 98, 234, 14, ES_AUTOHSCROLL | ES_READONLY
+    LTEXT "Pravý:", -1, 7, 117, 30, 10
+    EDITTEXT IDC_PROFILE_RIGHT, 39, 114, 234, 14, ES_AUTOHSCROLL | ES_READONLY
+    LTEXT "Masky:", -1, 7, 133, 30, 10
+    EDITTEXT IDC_PROFILE_MASK, 39, 130, 234, 14, ES_AUTOHSCROLL | ES_READONLY
+    LTEXT "Porovnání", -1, 7, 151, 126, 10
+    LTEXT "Podadresáře:", -1, 7, 164, 91, 10
+    LTEXT "Vypnuto", 618, 100, 164, 33, 10
+    LTEXT "Obsah:", -1, 7, 177, 91, 10
+    LTEXT "Vypnuto", 619, 100, 177, 33, 10
+    LTEXT "Ignorovat datum:", -1, 7, 190, 91, 10
+    LTEXT "Vypnuto", 620, 100, 190, 33, 10
+    LTEXT "Asymetricky:", -1, 7, 203, 91, 10
+    LTEXT "Vypnuto", 621, 100, 203, 33, 10
+    LTEXT "Prázdné adresáře:", -1, 7, 216, 91, 10
+    LTEXT "Vypnuto", 622, 100, 216, 33, 10
+    LTEXT "Filtry výsledků", -1, 147, 151, 126, 10
+    LTEXT "Shodné:", -1, 147, 164, 91, 10
+    LTEXT "Vypnuto", 623, 240, 164, 33, 10
+    LTEXT "Rozdílné:", -1, 147, 177, 91, 10
+    LTEXT "Vypnuto", 624, 240, 177, 33, 10
+    LTEXT "Jednostranné:", -1, 147, 190, 91, 10
+    LTEXT "Vypnuto", 625, 240, 190, 33, 10
+    LTEXT "Doprava:", -1, 147, 203, 91, 10
+    LTEXT "Vypnuto", 626, 240, 203, 33, 10
+    LTEXT "Doleva:", -1, 147, 216, 91, 10
+    LTEXT "Vypnuto", 627, 240, 216, 33, 10
+    DEFPUSHBUTTON "OK", IDOK, 167, 237, 50, 14
+    PUSHBUTTON "Cancel", IDCANCEL, 223, 237, 50, 14
+END

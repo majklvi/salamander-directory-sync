@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Open Salamander Authors
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "../src/engine.h"
+#include "../src/profiles.h"
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
@@ -429,8 +430,41 @@ void PostScan()
         Check(!Revalidate(r,cancel,p) && blocked(r),"long Unicode mutation invalidates");
     }
 }
+void ProfileStorage()
+{
+    Profiles source;Profile first;first.id=7;first.name=L"Dokumenty 漢字 😀";
+    first.left=L"C:\\test\\"+std::wstring(350,L'漢');first.right=L"D:\\žluťoučký";
+    first.flags=31;first.filters=5;first.mask=L"*.txt;*.md";source.items.push_back(first);source.selected=7;
+    Profile second=first;second.id=2;second.name=L"Archive";second.flags=0;second.filters=0;source.items.push_back(second);
+    auto encoded=EncodeProfiles(source);Profiles decoded;
+    Check(DecodeProfiles(encoded,decoded) && decoded.selected==7 && decoded.items.size()==2,"profile round trip and last selection");
+    Check(SameProfile(decoded.items[0],first) && decoded.items[0].name==first.name,"Unicode long profile paths preserved");
+    Check(SameProfile(decoded.items[1],second),"all unchecked choices preserved");
+    Check(!source.NameAvailable(L"archive") && source.NameAvailable(L"ARCHIVE",2),"profile name case insensitive uniqueness and rename");
+    Check(!source.NameAvailable(L" ") && !source.NameAvailable(L"tab\tname"),"invalid profile names rejected");
+    Check(ProfileName(L"  žlutý  ")==L"žlutý" && ProfileName(L"   ").empty(),"profile name whitespace normalized");
+    Check(source.NextId()==1,"profile IDs independent of order");
+    auto removed=source;
+    Check(removed.Remove(2) && removed.selected==7 && removed.items.size()==1 && !removed.Remove(2),"removing another profile preserves active ID");
+    Check(removed.Remove(7) && !removed.selected && removed.items.empty(),"removing selected profile returns to panel startup");
+    Profiles afterRemoval;Check(DecodeProfiles(EncodeProfiles(removed),afterRemoval) && afterRemoval.items.empty(),"profile removal persists");
+    for(size_t length=0;length<encoded.size();++length) {
+        auto broken=encoded;broken.resize(length);
+        Check(!DecodeProfiles(broken,decoded) && decoded.selected==7 && decoded.items.size()==2,"truncated storage preserves existing profiles");
+    }
+    auto broken=encoded;broken[0]=0;Check(!DecodeProfiles(broken,decoded),"unknown profile storage version rejected");
+    broken=encoded;broken.push_back(0);Check(!DecodeProfiles(broken,decoded),"trailing profile data rejected");
+    broken=encoded;broken[8]=99;Check(DecodeProfiles(broken,decoded) && !decoded.selected,"missing selected ID falls back to panels");
+    broken=encoded;broken[16]=32;Check(!DecodeProfiles(broken,decoded),"unknown option bits rejected");
+    Profiles empty;Check(DecodeProfiles(EncodeProfiles(empty),decoded) && decoded.items.empty(),"empty profile collection round trip");
+    source.items[1].id=7;bool rejected=false;try {EncodeProfiles(source);} catch(...) {rejected=true;}
+    Check(rejected,"duplicate profile ID rejected");
+    source.items[1].id=2;source.items[1].name=first.name;rejected=false;try {EncodeProfiles(source);} catch(...) {rejected=true;}
+    Check(rejected,"duplicate profile name rejected");
+    Check(!ProfileText(std::wstring(1,wchar_t(0xd800)),128) && !ProfileText(std::wstring(L"a\0b",3),128),"invalid UTF16 and embedded NUL rejected");
+}
 int main()
 {
-    try { Matrix(); Masks(); Filesystem(); Cancellation(); PostScan(); std::cout<<assertions<<" assertions passed\n"; return 0; }
+    try { ProfileStorage(); Matrix(); Masks(); Filesystem(); Cancellation(); PostScan(); std::cout<<assertions<<" assertions passed\n"; return 0; }
     catch(const std::exception& error) { std::cerr<<"FAILED: "<<error.what()<<"\n"; return 1; }
 }

@@ -304,3 +304,8 @@ Běžná tolerance v sekundách se již přebírá přes existující SDK a na t
 Primární referencí je oficiální návod referenčního programu a konkrétní odpovědi jeho autora. Komunitní wiki a diskuse dokládají popis funkcí a potřeby jednotlivých uživatelů. FreeFileSync a WinSCP slouží jako zdroje návrhových postupů; jejich chování se nepřipisuje referenčnímu správci souborů. Dokumentace Microsoftu vymezuje vlastnosti Windows API.
 
 Zachované odkazy jsou u příslušných tvrzení; nahrazené zdroje lze dohledat v připnutém archivu původního forku. Data uvedená u historických požadavků nejsou potvrzením, že je dnešní referenční program stále neřeší. Návrh nevychází z převzetí zdrojového kódu, grafiky ani textů nápovědy předlohy. Autoři a projekty jsou uvedeni také v [přehledu poděkování](third_party.md).
+
+
+## Aktualizace profilů pro 0.2.0 (2026-10-18)
+
+Podrobný aktuální návrh a evidence: [Profily](directory-sync-plugin-profiles.md). Podle rozhodnutí uživatele zůstávají uchování originálů i adresář obnovy společné všem profilům; tato volba nahrazuje původní představu adresáře obnovy určeného profilem. Při otevření se načte naposledy použitý uložený profil, bez automatického porovnání nebo synchronizace.

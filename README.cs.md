@@ -20,6 +20,10 @@ Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava ná
 
 Samostatný vývoj a hlášení chyb probíhají v [majklvi/salamander-directory-sync](https://github.com/majklvi/salamander-directory-sync). Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
 
+**Vývojová verze: 0.2.0 ALFA.** Pojmenované profily ukládají dvojici adresářů, masky, volby porovnání a filtry. Obnova a vzhled zůstávají společné; načtení profilu nespouští operaci. Odkaz ke stažení výše nadále vede na vydanou verzi 0.1.6.
+
+[Používání profilů](docs/directory-sync-plugin.md#profily-020)
+
 ## Sestavení ze zdrojů a testy (pro vývojáře)
 
 Windows, Visual Studio 2026 s C++ desktop tools (v145, potřebné x86/x64/ARM64 komponenty), Windows SDK 10 a PowerShell 7.3 nebo novější. Není potřeba checkout ani knihovna Salamanderu, Python, vcpkg, certifikát nebo síťové stahování závislostí. MSBuild se vyhledává pomocí systémového vswhere.

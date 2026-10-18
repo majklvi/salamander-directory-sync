@@ -6,11 +6,19 @@
 
 [Česky](directory-sync-plugin-pilot-guide.md) · [Full user guide](directory-sync-plugin.en.md)
 
-Plugin 0.1.6 ALPHA for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
+Plugin 0.2.0 ALPHA for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
 
 Click a heading to switch ascending/descending sorting within each directory. Right-click a heading or use **Settings → Columns** to hide/show optional columns. Both names, directory paths, and Action remain. Column choices/sorting persist; hiding a column does not exclude files from synchronization.
 
 Results are grouped by relative directory (`\` is the root). Headings are not action rows and do not select descendants. Groups disappear when filtering leaves no visible entries. A directory proposed for deletion has its own row in its parent group.
+
+## Profiles (0.2.0)
+
+Use the **Profiles icon at the far right of the directory inputs**. Its menu lists saved profiles, marks the active one, and offers **Current panel directories** plus **Manage profiles…**. The panel entry restores the directories captured from the host panels when the window opened. Selecting an entry only loads settings; it never starts Compare or synchronization.
+
+The active profile appears in the main window title and the icon's tooltip. An asterisk marks unsaved directory, mask, comparison-option or filter changes. In **Manage profiles…**, select a profile and use **Save current** to replace its settings with the current main-window values, **Save as…** to create a named variant, or Rename/Delete. The complete stored profile appears below the list: both paths, masks, five comparison choices and five result filters, each with an explicit On/Off state. Paths and masks are read-only and can be selected and copied. **OK** applies management changes and loads the selected settings when different; **Cancel** discards all changes made in that management session. Profile deletion never deletes files. Switching away from unsaved settings or existing results requires confirmation; a successful load clears the old comparison. Saving or renaming the current task keeps its comparison results.
+
+The last selected saved profile opens next time. Only explicitly saved values are restored. **Keep originals, recovery directory, appearance, columns, sorting and relative display remain global**; the host's time tolerance is read for each comparison. Panel selection, highlighted rows, results and manual proposals are not saved. Use **Save profile as…** to keep a second variant. Profile management is disabled during an operation. Profiles have no import/export, scheduling or automatic execution in this version.
 
 ## Installation
 

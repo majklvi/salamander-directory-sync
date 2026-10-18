@@ -507,6 +507,64 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t*
         ok &= overlap;SelectObject(memory,oldBitmap);
     }
     if(bitmap) DeleteObject(bitmap);if(memory) DeleteDC(memory);
+    const auto previousProfiles=settings.profiles;
+    for(int id:{IDC_PROFILE_SAVE,IDC_PROFILE_MENU})
+        ok &= CreateWindowExW(0,L"BUTTON",L"",WS_CHILD,0,0,30,15,window,HMENU(INT_PTR(id)),instance,nullptr)!=nullptr;
+    ok &= CreateWindowExW(0,L"COMBOBOX",L"",WS_CHILD|CBS_DROPDOWNLIST,0,0,200,100,window,HMENU(INT_PTR(IDC_PROFILE)),instance,nullptr)!=nullptr;
+    ok &= CreateWindowExW(0,L"EDIT",L"*.*",WS_CHILD,0,0,30,15,window,HMENU(INT_PTR(IDC_MASK)),instance,nullptr)!=nullptr;
+    dirsync::Profile task;task.id=1;task.name=L"Žluťoučký 漢字 😀";task.left=left;task.right=right;task.flags=23;task.filters=10;
+    settings.profiles.items={task};settings.profiles.selected=1;
+    CheckDlgButton(window,IDC_SELECTED,BST_CHECKED);ApplyProfile(p,task);ProfileControls(p);
+    ok &= !p.result.snapshot && p.result.rows.empty() && p.visible.empty() && p.defaults.empty();
+    ok &= dirsync::SameProfile(CaptureProfile(p),task) && !DirtyProfile(p) && !Checked(window,IDC_SELECTED);
+    ok &= !p.running && !p.worker.joinable();
+    SetDlgItemTextW(window,IDC_MASK,L"*.txt");
+    ok &= DirtyProfile(p) && GetWindowTextLengthW(window)>0;
+    settings.profiles.items[0]=CaptureProfile(p);settings.profiles.items[0].id=1;settings.profiles.items[0].name=task.name;
+    ProfileControls(p);ok &= !DirtyProfile(p);
+    p.running=true;Busy(p,true);
+    for(int id:{IDC_PROFILE,IDC_PROFILE_SAVE,IDC_PROFILE_MENU}) ok &= !IsWindowEnabled(GetDlgItem(window,id));
+    p.running=false;Busy(p,false);ok &= IsWindowEnabled(GetDlgItem(window,IDC_PROFILE)) && IsWindowEnabled(GetDlgItem(window,IDC_PROFILE_MENU));
+    ProfileManager manager{p,settings.profiles};
+    const auto storedMask=settings.profiles.items[0].mask;
+    SetDlgItemTextW(window,IDC_MASK,L"*.md");
+    ProfileCommand(p,1,manager.draft,window);
+    ok &= manager.draft.items[0].mask==L"*.md" && settings.profiles.items[0].mask==storedMask;
+    manager.draft.items[0].name=L"Draft name";
+    ok &= settings.profiles.items[0].name==task.name;
+    // Dropping the manager draft (Cancel) leaves both metadata and inputs alone.
+    ok &= CaptureProfile(p).mask==L"*.md" && !p.running && !p.worker.joinable();
+    struct DetailLanguage {
+        HINSTANCE previous=language;
+        HMODULE resources=LoadLibraryExW(L"dirsync_ui_tests.exe",nullptr,LOAD_LIBRARY_AS_DATAFILE|LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+        ~DetailLanguage() {language=previous;if(resources) FreeLibrary(resources);}
+    } detailLanguage;
+    ok &= detailLanguage.resources!=nullptr;language=detailLanguage.resources;
+    HWND details=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&dialog.dialog,nullptr,EmptyDialog,0);
+    ok &= details!=nullptr;
+    CreateWindowExW(0,L"LISTBOX",L"",WS_CHILD|LBS_NOTIFY,0,0,200,100,details,HMENU(INT_PTR(IDC_PROFILE)),instance,nullptr);
+    for(int id:{IDC_PROFILE_LEFT,IDC_PROFILE_RIGHT,IDC_PROFILE_MASK})
+        CreateWindowExW(0,L"EDIT",L"",WS_CHILD|ES_READONLY|ES_AUTOHSCROLL,0,0,200,14,details,HMENU(INT_PTR(id)),instance,nullptr);
+    for(int i=0;i<10;++i)
+        CreateWindowExW(0,L"STATIC",L"",WS_CHILD,0,0,40,14,details,HMENU(INT_PTR(IDC_PROFILE_OPTION_FIRST+i)),instance,nullptr);
+    manager.draft.items[0].mask=L"*.漢字;"+std::wstring(400,L'ž');
+    for(uint32_t bits=0;bits<32;++bits) {
+        manager.draft.items[0].flags=bits;manager.draft.items[0].filters=31-bits;
+        ManagerControls(details,manager);
+        ok &= ControlText(details,IDC_PROFILE_MASK)==manager.draft.items[0].mask &&
+            ControlText(details,IDC_PROFILE_LEFT)==left && ControlText(details,IDC_PROFILE_RIGHT)==right;
+        for(int i=0;i<5;++i) {
+            const auto option=ControlText(details,IDC_PROFILE_OPTION_FIRST+i),filter=ControlText(details,IDC_PROFILE_FILTER_FIRST+i);
+            ok &= !option.empty() && option==Text((bits&(1u<<i))?IDS_PROFILE_ON:IDS_PROFILE_OFF);
+            ok &= !filter.empty() && filter==Text(((31-bits)&(1u<<i))?IDS_PROFILE_ON:IDS_PROFILE_OFF);
+        }
+    }
+    manager.draft.selected=0;ManagerControls(details,manager);
+    for(int id=IDC_PROFILE_MASK;id<=IDC_PROFILE_FILTER_FIRST+4;++id) ok &= ControlText(details,id).empty();
+    ok &= ControlText(details,IDC_PROFILE_LEFT).empty() && ControlText(details,IDC_PROFILE_RIGHT).empty();
+    DestroyWindow(details);
+    settings.profiles=previousProfiles;
+    fprintf(stdout,"Profile controls: load clears results, no worker, dirty title, transient selection, busy lock and isolated manager draft: %d\n",int(ok));
     DestroyWindow(window);p.window=nullptr;return ok;
 } catch(const std::exception& error) {fprintf(stderr,"Preview controls: %s\n",error.what());return FALSE;}
 // Exercise the real SDK configuration callbacks without touching user registry data.
@@ -631,6 +689,16 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeSettingsTest()
         plugin.LoadConfiguration(nullptr,key,&registry); check(settings.recoveryRoot.empty());
         registry.values.clear(); plugin.LoadConfiguration(nullptr,key,&registry);
         check(settings.keepOriginals && settings.recoveryRoot.empty());
+        settings.keepOriginals=false;settings.recoveryRoot=L"C:\\shared-recovery-漢字";settings.colorRows=true;
+        dirsync::Profile task;task.id=9;task.name=L"Dokumenty 😀";task.left=L"C:\\left-漢字";task.right=L"C:\\right-žluťoučký";task.filters=9;task.flags=23;
+        settings.profiles.items.push_back(task);settings.profiles.selected=9;
+        plugin.SaveConfiguration(nullptr,key,&registry);settings={};plugin.LoadConfiguration(nullptr,key,&registry);
+        check(settings.profiles.selected==9 && settings.profiles.items.size()==1 && dirsync::SameProfile(settings.profiles.items[0],task));
+        check(!settings.keepOriginals && settings.colorRows && settings.recoveryRoot==L"C:\\shared-recovery-漢字");
+        registry.values["ProfilesV1"].bytes={1,2,3};plugin.LoadConfiguration(nullptr,key,&registry);
+        check(settings.profiles.items.empty() && !settings.profiles.selected && !settings.keepOriginals && settings.colorRows);
+        registry.values.erase("ProfilesV1");plugin.LoadConfiguration(nullptr,key,&registry);
+        check(settings.profiles.items.empty() && settings.recoveryRoot==L"C:\\shared-recovery-漢字");
         settings=previous; return checks;
     } catch(...) { settings=previous; return 0; }
 }

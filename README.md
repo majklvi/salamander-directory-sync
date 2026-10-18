@@ -16,6 +16,10 @@ Version 0.1.6 disables proposal commands when they would not change any selected
 
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
+**Development version: 0.2.0 ALPHA.** Named profiles save directory pairs, masks, comparison options and result filters. Recovery and appearance remain global; loading a profile never starts an operation. The download above remains the published 0.1.6 release.
+
+[Using profiles](docs/directory-sync-plugin.en.md#profiles-020)
+
 ## Highlights
 
 - Optional relative file sizes and timestamps.
