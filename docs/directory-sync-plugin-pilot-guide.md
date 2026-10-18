@@ -6,7 +6,7 @@
 
 [English](directory-sync-plugin-pilot-guide.en.md)
 
-Alfa verze 0.2.0 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
+Alfa verze 0.2.1 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
 
 Klikáním do záhlaví sloupce přepínáte vzestupné/sestupné řazení souborů uvnitř adresářů. Pravé tlačítko na záhlaví nebo sekce **Sloupce / Columns** v nastavení pluginu skryje či zobrazí volitelné sloupce. Názvy vlevo i vpravo, cesta adresáře a operace zůstávají. Volby sloupců a řazení se pamatují; skrytí sloupce nevynechává soubory ze synchronizace.
 
@@ -15,6 +15,8 @@ Výsledky jsou seskupené podle relativních adresářů (`\` je kořen). Pod z�
 Nejnižší testované verze hostitele: 0.15.1 uživatelsky a nevydaná 0.16 automatizovaně pomocí AI z vlastního vývojářského sestavení.
 
 ## Profily (0.2.0)
+
+Od **0.2.1** se při zavření hlavního okna se změněným uloženým profilem zobrazí tři tlačítka: **Uložit**, **Neukládat** a **Zrušit**. Zrušit ponechá okno i úpravy otevřené. Při ukládání se ověřují cesty a masky; neúspěšné uložení okno nezavře. Nezměněný profil nebo nepojmenovaná úloha se zavřou bez dotazu. Během operace zavření nejprve požádá o Stop a počká na dokončení; Zrušit v následném dotazu na profil již zastavenou práci neobnoví. Nucené uvolnění pluginu interaktivní dotazy vynechává.
 
 Použijte **ikonu Profilů úplně napravo od polí s adresáři**. Nabídka obsahuje uložené profily, označení aktivního profilu, **Aktuální adresáře panelů** a **Správa profilů…**. Položka panelů vrátí adresáře převzaté z hostitele při otevření okna. Výběr pouze načte nastavení; nikdy sám nespustí porovnání ani synchronizaci.
 

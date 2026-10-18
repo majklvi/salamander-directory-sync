@@ -154,11 +154,12 @@ std::wstring Text(int id)
 }
 void Message(HWND parent, int id)
 { DarkModeMessageBoxW(parent, Text(id).c_str(), Text(IDS_NAME).c_str(), MB_OK | MB_ICONINFORMATION); }
-void PersistSettings(HWND parent)
+bool PersistSettings(HWND parent)
 {
     bool saved=false;
     if(general) general->CallLoadOrSaveConfiguration(FALSE,SettingsCallback,&saved);
     if(!saved) Message(parent,IDS_SETTINGS_FAILED);
+    return saved;
 }
 void NotifyPath(const std::wstring& path)
 {
@@ -1198,6 +1199,48 @@ bool DirtyProfile(Preview& p)
     auto* saved=settings.profiles.Find(settings.profiles.selected);
     return saved && !dirsync::SameProfile(*saved,CaptureProfile(p));
 }
+bool ValidProfileInputs(const dirsync::Profile& value)
+{
+    std::wstring root;
+    return dirsync::NormalizeRoot(value.left,root) && dirsync::NormalizeRoot(value.right,root) && dirsync::ValidateMask(value.mask);
+}
+enum class ProfileSaveResult {Saved,Invalid,Failed};
+template<class Persist> ProfileSaveResult SaveClosingProfile(Preview& p,Persist persist)
+{
+    auto* saved=settings.profiles.Find(settings.profiles.selected);
+    auto value=CaptureProfile(p);
+    if(!saved || !ValidProfileInputs(value)) return ProfileSaveResult::Invalid;
+    auto original=*saved;value.id=saved->id;value.name=saved->name;*saved=std::move(value);
+    if(persist()) return ProfileSaveResult::Saved;
+    // Keep the old in-memory profile and the dirty form when persistence fails.
+    *saved=std::move(original);return ProfileSaveResult::Failed;
+}
+INT_PTR CALLBACK ProfileCloseProc(HWND window,UINT message,WPARAM w,LPARAM l)
+{
+    if(message==WM_INITDIALOG) {
+        if(general) {ConfigureDark(window);general->MultiMonCenterWindow(window,GetParent(window),FALSE);}return TRUE;
+    }
+    LRESULT brush=0;if(dark && DarkModeHandleCtlColor(message,w,l,brush)) return brush;
+    if(message==WM_CLOSE || (message==WM_COMMAND && LOWORD(w)==IDCANCEL)) {EndDialog(window,IDCANCEL);return TRUE;}
+    if(message==WM_COMMAND && (LOWORD(w)==IDYES || LOWORD(w)==IDNO)) {
+        EndDialog(window,LOWORD(w));return TRUE;
+    }
+    return FALSE;
+}
+void ClosePreview(Preview& p)
+{
+    if(DirtyProfile(p)) {
+        const auto choice=DialogBoxParamW(language,MAKEINTRESOURCEW(IDD_PROFILE_CLOSE),p.window,ProfileCloseProc,0);
+        if(choice!=IDYES && choice!=IDNO) return;
+        if(choice==IDYES) {
+            const auto result=SaveClosingProfile(p,[&]{return PersistSettings(p.window);});
+            if(result==ProfileSaveResult::Invalid) Message(p.window,IDS_PROFILE_INVALID_PATH);
+            if(result!=ProfileSaveResult::Saved) {ProfileControls(p);return;}
+            EndDialog(p.window,0);return;
+        }
+    }
+    PersistSettings(p.window);EndDialog(p.window,0);
+}
 void ProfileControls(Preview& p)
 {
     if(p.applyingProfile) return;
@@ -1242,8 +1285,8 @@ void ProfileCommand(Preview& p,int command,dirsync::Profiles& profiles,HWND owne
     if(p.running) return;
     auto* existing=profiles.Find(profiles.selected);
     if(command==1 || command==2) {
-        auto value=CaptureProfile(p);std::wstring root;
-        if(!dirsync::NormalizeRoot(value.left,root) || !dirsync::NormalizeRoot(value.right,root) || !dirsync::ValidateMask(value.mask)) {
+        auto value=CaptureProfile(p);
+        if(!ValidProfileInputs(value)) {
             Message(owner,IDS_PROFILE_INVALID_PATH);return;
         }
         if(command==1 && !existing) return;
@@ -2215,7 +2258,12 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
             NotifyPath(p->left);NotifyPath(p->right);
             if(!p->closing) {if(p->failed) Message(window,IDS_FAILED);else ImmediateSummary(*p);}
         }
-        if (p->closing) { PersistSettings(window); EndDialog(window, 0); }
+        if (p->closing) {
+            p->closing=false;p->intent=Preview::Intent::None;
+            Busy(*p,false);Filter(*p);
+            SendMessageW(window,WM_NEXTDLGCTL,WPARAM(GetDlgItem(window,IDC_COMPARE)),TRUE);
+            ClosePreview(*p);
+        }
         else
         {
             HWND focused = GetFocus();
@@ -2239,7 +2287,7 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         return TRUE;
     case WM_CLOSE:
         if (p->running) { p->closing = true; p->Stop(); }
-        else { PersistSettings(window); EndDialog(window, 0); }
+        else ClosePreview(*p);
         return TRUE;
     case WM_SETTINGCHANGE: case WM_THEMECHANGED: ReadPanelFormat(*p);UpdateGroupHeaders(*p);RememberColumns(*p);ConfigureDark(window);ColumnStyle(*p);ButtonIcons(*p);InvalidateRect(GetDlgItem(window,IDC_LIST),nullptr,FALSE); return TRUE;
     case WM_CONTEXTMENU:
@@ -2564,7 +2612,7 @@ CPluginInterfaceAbstract* WINAPI SalamanderPluginEntry(CSalamanderPluginEntryAbs
     if (!language) return nullptr;
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES}; InitCommonControlsEx(&controls);
     ConfigureDark(nullptr);
-    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.2.0", VERSINFO_COPYRIGHT,
+    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.2.1", VERSINFO_COPYRIGHT,
                               general->LoadStr(language, IDS_DESCRIPTION), "DirectorySync");
     entry->SetPluginHomePageURL("https://github.com/majklvi/salamander-directory-sync");
     return &plugin;

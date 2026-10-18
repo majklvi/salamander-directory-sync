@@ -6,11 +6,13 @@
 
 [Česky](directory-sync-plugin.md) · [Pilot instructions and bug reporting](directory-sync-plugin-pilot-guide.en.md)
 
-Current behavior as of 18 October 2026, plugin version 0.2.0 ALPHA for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
+Current behavior as of 18 October 2026, plugin version 0.2.1 ALPHA for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
 
 For pilot use, start with the [short instructions](directory-sync-plugin-pilot-guide.en.md), included in the package as `PILOT.md`. Since 0.1.4, the status bar has separate native sections for the operation state and individual counts/progress values. Widths adapt to their text and the window; tooltips expose the complete values.
 
 ## Profiles (0.2.0)
+
+Since **0.2.1**, closing the main window with a modified saved profile offers three buttons: **Save**, **Don't save** and **Cancel**. Cancel keeps the window and edits open. Save validates directory paths and masks; a failed save keeps the window open. An unchanged profile or an unnamed task closes without this question. If work is running, Close first requests Stop and waits for completion; Cancel at the later profile question cannot resume already stopped work. Forced plugin unload bypasses interactive questions.
 
 Use the **Profiles icon at the far right of the directory inputs**. Its menu lists saved profiles, marks the active one, and offers **Current panel directories** plus **Manage profiles…**. The panel entry restores the directories captured from the host panels when the window opened. Selecting an entry only loads settings; it never starts Compare or synchronization.
 

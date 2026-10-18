@@ -563,6 +563,25 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t*
     for(int id=IDC_PROFILE_MASK;id<=IDC_PROFILE_FILTER_FIRST+4;++id) ok &= ControlText(details,id).empty();
     ok &= ControlText(details,IDC_PROFILE_LEFT).empty() && ControlText(details,IDC_PROFILE_RIGHT).empty();
     DestroyWindow(details);
+    const auto unchanged=settings.profiles;
+    const auto keep=settings.keepOriginals;const auto recovery=settings.recoveryRoot;const auto colors=settings.colors;
+    SetDlgItemTextW(window,IDC_MASK,L"*.close");
+    bool persisted=false;
+    auto failure=SaveClosingProfile(p,[&]{persisted=true;return false;});
+    ok &= failure==ProfileSaveResult::Failed && persisted && DirtyProfile(p) &&
+        dirsync::SameProfile(settings.profiles.items[0],unchanged.items[0]);
+    SetDlgItemTextW(window,IDC_MASK,L"<invalid>");persisted=false;
+    ok &= SaveClosingProfile(p,[&]{persisted=true;return true;})==ProfileSaveResult::Invalid && !persisted;
+    SetDlgItemTextW(window,IDC_MASK,L"*.close");
+    ok &= SaveClosingProfile(p,[&]{persisted=true;return true;})==ProfileSaveResult::Saved && persisted && !DirtyProfile(p);
+    ok &= settings.profiles.items[0].name==task.name && settings.profiles.items[0].id==task.id &&
+        settings.profiles.selected==task.id && settings.keepOriginals==keep && settings.recoveryRoot==recovery && settings.colors==colors;
+    // Real dialog procedure: default Save; Cancel/close do not mutate storage.
+    HWND close=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_PROFILE_CLOSE),window,ProfileCloseProc,0);
+    ok &= close && GetDlgItem(close,IDYES) && GetDlgItem(close,IDNO) && GetDlgItem(close,IDCANCEL) &&
+        (SendMessageW(close,DM_GETDEFID,0,0)&0xffff)==IDYES;
+    if(close) {ProfileCloseProc(close,WM_COMMAND,IDCANCEL,0);DestroyWindow(close);}
+    ok &= !DirtyProfile(p) && settings.profiles.items[0].mask==L"*.close";
     settings.profiles=previousProfiles;
     fprintf(stdout,"Profile controls: load clears results, no worker, dirty title, transient selection, busy lock and isolated manager draft: %d\n",int(ok));
     DestroyWindow(window);p.window=nullptr;return ok;

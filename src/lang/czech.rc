@@ -109,6 +109,17 @@ BEGIN
 END
 #include "czech-strings.rc2"
 
+IDD_PROFILE_CLOSE DIALOGEX 0, 0, 230, 58
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Neuložené změny profilu"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "Aktivní profil obsahuje neuložené změny.", -1, 7, 8, 216, 10
+    DEFPUSHBUTTON "&Uložit", IDYES, 61, 37, 50, 14
+    PUSHBUTTON "&Neukládat", IDNO, 117, 37, 50, 14
+    PUSHBUTTON "Zrušit", IDCANCEL, 173, 37, 50, 14
+END
+
 IDD_PROFILE_NAME DIALOGEX 0, 0, 200, 58
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Profil:"

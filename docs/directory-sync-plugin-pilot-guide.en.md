@@ -6,13 +6,15 @@
 
 [Česky](directory-sync-plugin-pilot-guide.md) · [Full user guide](directory-sync-plugin.en.md)
 
-Plugin 0.2.0 ALPHA for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
+Plugin 0.2.1 ALPHA for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
 
 Click a heading to switch ascending/descending sorting within each directory. Right-click a heading or use **Settings → Columns** to hide/show optional columns. Both names, directory paths, and Action remain. Column choices/sorting persist; hiding a column does not exclude files from synchronization.
 
 Results are grouped by relative directory (`\` is the root). Headings are not action rows and do not select descendants. Groups disappear when filtering leaves no visible entries. A directory proposed for deletion has its own row in its parent group.
 
 ## Profiles (0.2.0)
+
+Since **0.2.1**, closing the main window with a modified saved profile offers three buttons: **Save**, **Don't save** and **Cancel**. Cancel keeps the window and edits open. Save validates directory paths and masks; a failed save keeps the window open. An unchanged profile or an unnamed task closes without this question. If work is running, Close first requests Stop and waits for completion; Cancel at the later profile question cannot resume already stopped work. Forced plugin unload bypasses interactive questions.
 
 Use the **Profiles icon at the far right of the directory inputs**. Its menu lists saved profiles, marks the active one, and offers **Current panel directories** plus **Manage profiles…**. The panel entry restores the directories captured from the host panels when the window opened. Selecting an entry only loads settings; it never starts Compare or synchronization.
 

@@ -120,3 +120,44 @@ After normal shutdown, an independent read-only decoder inspected `ProfilesV1` i
 No plugin defect was found, so this pass changes documentation only. Initial setup issues were corrected locally: the launcher resolved a bare EXE path to the installed application, while the exact `process:` identifier launched the portable host; its RegFile parser required the original UTF-8 format rather than UTF-16. The extra launcher-created instance was closed. Nested modal input worked when targeted through the host's root window rather than the preview window. The minimal test host also displayed its known missing `salmon.exe` warning at startup. These are test-environment limitations, not fixes to plugin or SDK code.
 
 This completes the previously pending multiple-profile, rename, deletion/Cancel, live dark-mode and full-restart checks. Live duplicate-name correction, a second English host, monitor-DPI changes and a successful live resize sweep remain outside this pass; storage/resource tests already cover duplicate names and DPI metrics. The attempted edge drag did not resize the preview and is not counted as a resize test. No SMB testing or SDK modifications were performed. Existing five-suite Debug/Release and build-matrix results apply to the unchanged tested code; remote checks are verified separately for the documentation commit.
+
+## Version 0.2.1: unsaved profile on close — 2026-10-18
+
+Normal closing now checks whether the active saved profile differs from the form. A compact native dialog offers Save changes (selected by default) or Discard changes, confirmed with OK; Cancel, Escape and the prompt's close button keep the main window open. This applies to Close, Escape, Alt+F4 and the main window's close button. An unchanged profile or the default unsaved task closes without this prompt. Saving validates both roots and the mask and persists the current profile without changing its ID/name or shared recovery/appearance preferences. Invalid input or persistence failure leaves the window open; a failed persistence callback restores the old in-memory profile. The SDK persistence callback is not a transactional storage guarantee.
+
+If an operation is running, Close first requests Stop and waits for the worker to finish, then asks about the profile. Cancelling that question leaves an idle usable window; it cannot resume the stopped operation. Forced plugin unloading and host teardown retain the existing noninteractive shutdown path.
+
+All five x64 suites passed in Debug and Release: engine/storage 2,211; copy/recovery 3,729; lifecycle 2,367; English resources/layout 3,938; Czech resources/layout 4,021. Added checks cover successful profile saving, rejected masks, persistence failure/rollback, preservation of shared preferences, and the actual dialog procedure's default choice/Cancel. Both compiled language resources were measured at 96, 120, 144, 192 and 240 DPI. Debug Win32/x64/ARM64 and Release x64 builds passed. Resource measurements are not live monitor-DPI tests.
+
+Computer Use verified the Release x64 build on the isolated Czech/dark Samandarin 0.16 developer host described above:
+
+| GUI scenario | Observed result |
+|---|---|
+| Change B's By content setting and click Close | Dirty asterisk and compact localized prompt; Save selected by default. |
+| Escape in the prompt | Main window stayed open with the unsaved form unchanged. |
+| Alt+F4, then default Save + OK | Plugin closed. Reopening restored By content OFF with no dirty asterisk. |
+| Change By content back ON, Escape from the main window, select Discard + OK | Plugin closed. Reopening retained the previously saved OFF setting, with no dirty asterisk. |
+| Close the unchanged profile | Closed immediately without a profile question. |
+
+The test host then exited normally and disappeared from the window inventory. Independent decoding of its portable configuration found profiles A/B, selected ID 2, both flags 1 and filters 31, with the original Unicode names/roots and masks. The fixture retained SHA-256 `5a3b501918917aa4d0a1ae00106c6bd8f9bce3f3232ff60b219371ed8bf01411`; right/recovery directories remained empty. The user's installed instance was left open. This pass did not run comparison or synchronization. Live persistence-failure injection and closing a dirty profile during a worker operation were not exercised in the host GUI; the helper regression tests and existing worker lifecycle tests provide narrower automated coverage.
+
+Local working-tree package: `out/packages/profile-close-0.2.1-local-20261018/dirsync-0.2.1-x64.zip`, SHA-256 `b634c9d7d248c0a5a33545c9e0fae4200dc43f55509f320d6d795b53315e2999`. Packaging verified 14 manifest payload entries, extracted hashes, x64/version metadata and local guide links. This is an unpublished local build based on the working tree after `70b9581`; its NOTICE records that base commit, not a committed revision of these changes. No remote CI result is claimed. Public README download links continue to point to released 0.2.0. No SMB testing or SDK changes were made.
+
+### Conventional close buttons — 2026-10-18
+
+The user requested the standard Save / Don't save / Cancel interaction. The radio choices and separate OK were replaced with three direct buttons (Czech: Uložit / Neukládat / Zrušit). Save is the default; Escape and the close button cancel. The dialog is now 230 × 58 DLU instead of 230 × 88. Earlier GUI observations above describe the superseded radio layout. Storage, validation and worker shutdown behavior are unchanged. The previous local package predates this correction.
+
+All five x64 Debug/Release suites passed again: 2,211 engine/storage, 3,729 file-operation, 2,367 lifecycle, 3,907 English and 3,991 Czech resource/layout checks. The native-control test verifies the three button IDs and Save as the default; compiled resource checks cover 96–240 DPI. Debug Win32/ARM64 and Debug/Release x64 plugin builds passed. The new layout has not yet been inspected live in the host GUI. Updated local package: `out/packages/profile-close-buttons-0.2.1-local-20261018/dirsync-0.2.1-x64.zip`, SHA-256 `c32a4eb18cf8c197e9891eae5d05f9ba3c0a1f53bb389481faed34455106793e`; all 14 manifest entries and extracted hashes verified. No publication, SMB test or SDK change.
+
+### Three-button live GUI verification — 2026-10-18
+
+Computer Use loaded the corrected Release x64 plugin into the same isolated Czech/dark Samandarin 0.16 developer host. Installed and build binary SHA-256 matched: `f2604965b602ff88a52136ab4cbc9bb0b77ae9970a71e40f2d32cf23c5e272e2`. The compact dialog displayed all three complete captions, aligned in one row: Uložit / Neukládat / Zrušit. No defect was found.
+
+| Scenario | Observed result |
+|---|---|
+| Set profile B's By content ON, Close, click Zrušit | Main window stayed open, By content remained ON and the dirty asterisk remained. |
+| Alt+F4, click Uložit | Plugin closed. Reopening restored By content ON with no dirty asterisk. |
+| Set By content OFF, Escape from main window, click Neukládat | Plugin closed. Reopening retained the saved ON value with no dirty asterisk. |
+| Close unchanged profile | Immediate close without the profile question. |
+
+After normal host shutdown, decoding its portable configuration confirmed selected profile 2, profile A flags 1 and profile B flags 3, both filters 31, unchanged names/roots/masks. Fixture hash remained `5a3b501918917aa4d0a1ae00106c6bd8f9bce3f3232ff60b219371ed8bf01411`; right and recovery directories remained empty. No comparison or synchronization ran. The installed user's instance was left open. The first Ctrl+I after startup had no last plugin command to repeat; launching through Plugins initialized that command and later Ctrl+I reopened it normally. The known missing crash-helper warning was dismissed. Live verification here covers Czech/dark at the current desktop DPI; English and other DPI values retain the compiled-resource coverage above. No SMB tests or SDK changes.

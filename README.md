@@ -14,6 +14,8 @@ A native directory comparison and synchronization plugin for **Samandarin**, wit
 
 **Since version 0.2.0, the plugin supports named profiles.** Save directory pairs, masks, comparison options and result filters, then switch tasks from the star button beside the directory inputs. The last selected profile opens next time; loading a profile never starts comparison or synchronization. Recovery and appearance remain shared across profiles. [Using profiles](docs/directory-sync-plugin.en.md#profiles-020).
 
+**Development version: 0.2.1 ALPHA.** Closing a modified saved profile now offers Save, Don't save and Cancel. The download above remains the published 0.2.0 release.
+
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
 ## Highlights
