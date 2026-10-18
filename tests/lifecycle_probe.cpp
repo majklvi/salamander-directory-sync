@@ -151,6 +151,11 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeProposalRules(const wchar_
         for(size_t row=0;row<6;++row) for(int command=0;command<7;++command)
             check(Proposal(p,row,command,action)==allowed[row][command]);
         check(!Proposal(p,99,0,action));
+        p.result.rows[5].left.empty=true;
+        check(Proposal(p,5,0,action) && action==A::None);
+        check(Proposal(p,5,1,action) && action==A::CopyRight);
+        check(Proposal(p,5,RestoreProposal,action) && action==A::CopyRight);
+        p.result.rows[5].left.empty=false;
         // Menu commands need a valid change for at least one selected row.
         check(!CanChangeProposals(p,{0,1,2,3,4,5},RestoreProposal));
         check(!CanChangeProposals(p,{0,1},int(A::CopyRight)));
@@ -600,17 +605,17 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeStopControls()
     auto enabled=[&](int id) {return IsWindowEnabled(GetDlgItem(window,id))!=FALSE;};
     Busy(p,false);ok &= !enabled(IDC_STOP) && !enabled(IDC_STOP_SYNC) && enabled(IDC_COMPARE) && enabled(IDC_SYNCHRONIZE) && enabled(IDC_SETTINGS);
     for(auto intent:{Preview::Intent::None,Preview::Intent::Apply,Preview::Intent::Summary,Preview::Intent::Copy,
-        Preview::Intent::Save,Preview::Intent::Overwrite,Preview::Intent::Delete,Preview::Intent::ImmediateDelete}) {
+        Preview::Intent::Save,Preview::Intent::Overwrite,Preview::Intent::Delete,Preview::Intent::ImmediateDelete,Preview::Intent::Sync}) {
         p.running=true;p.validating=intent!=Preview::Intent::None;p.intent=intent;p.cancel=false;
         Busy(p,true);int activeStop=StopControl(p),inactiveStop=activeStop==IDC_STOP?IDC_STOP_SYNC:IDC_STOP;
-        const bool files=intent==Preview::Intent::Copy || intent==Preview::Intent::Save || intent==Preview::Intent::Overwrite || intent==Preview::Intent::Delete || intent==Preview::Intent::ImmediateDelete;
+        const bool files=intent==Preview::Intent::Copy || intent==Preview::Intent::Save || intent==Preview::Intent::Overwrite || intent==Preview::Intent::Delete || intent==Preview::Intent::ImmediateDelete || intent==Preview::Intent::Sync;
         ok &= activeStop==(files?IDC_STOP_SYNC:IDC_STOP) && enabled(activeStop) && !enabled(inactiveStop);
         ok &= !enabled(IDC_COMPARE) && !enabled(IDC_SYNCHRONIZE) && !enabled(IDC_SETTINGS);
         DialogBody(window,WM_COMMAND,inactiveStop,0);ok &= !p.cancel;
         DialogBody(window,WM_COMMAND,activeStop,0);ok &= p.cancel;
     }
     p.validating=false;p.intent=Preview::Intent::None;
-    for(bool* flag:{&p.copying,&p.saving,&p.overwriting,&p.deleting,&p.immediateDeleting}) {
+    for(bool* flag:{&p.copying,&p.saving,&p.overwriting,&p.deleting,&p.immediateDeleting,&p.synchronizing}) {
         *flag=true;Busy(p,true);ok &= enabled(IDC_STOP_SYNC) && !enabled(IDC_STOP);*flag=false;
     }
     p.running=false;p.cancel=false;Busy(p,false);

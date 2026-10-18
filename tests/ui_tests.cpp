@@ -279,6 +279,7 @@ int main()
             Check(!text(id).empty(),"plan menu explanations and recovery/scope details localized");
         for(int id=IDS_IMMEDIATE_MENU;id<=IDS_IMMEDIATE_EMPTY;++id) Check(!text(id).empty(),"immediate removal strings localized");
         for(int id=IDS_PROFILE_PANELS;id<=IDS_PROFILE_TIP;++id) Check(!text(id).empty(),"profile interface fully localized");
+        for(int id=IDS_SYNC_COMMAND;id<=IDS_SYNC_REPLACED;++id) Check(!text(id).empty(),"combined synchronization strings localized");
         Test(IDD_PREVIEW); Test(IDD_INFORMATION);Test(IDD_APPEARANCE);Test(IDD_PROFILE_NAME);Test(IDD_PROFILES);Test(IDD_PROFILE_CLOSE); std::cout << checks << " resource/layout checks passed\n"; return 0;
     }
     catch (const std::exception& e) { std::cerr << "FAILED: " << e.what() << "\n"; return 1; }

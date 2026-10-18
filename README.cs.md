@@ -14,7 +14,7 @@ ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není 
 
 **Od verze 0.2.0 plugin podporuje pojmenované profily.** Uložte dvojici adresářů, masky, volby porovnání a filtry výsledků a přepínejte úlohy tlačítkem s hvězdou vedle adresářů. Při příštím otevření se načte naposledy vybraný profil; načtení nikdy samo nespustí porovnání ani synchronizaci. Obnova a vzhled zůstávají společné pro všechny profily. [Používání profilů](docs/directory-sync-plugin.md#profily-020).
 
-**Vývojová verze: 0.2.1 ALFA.** Při zavírání změněného uloženého profilu lze změny uložit, zahodit nebo zavření zrušit. Odkaz ke stažení výše nadále vede na vydanou verzi 0.2.0.
+**Vývojová verze: 0.2.1 ALFA.** Přidává kopírování prázdných adresářů, import/export profilů a volby Uložit / Neukládat / Zrušit při zavírání změněného profilu. Souhrnný příkaz provede viditelné kopie, přepisy a mazání po jednom potvrzení. Odkaz ke stažení výše nadále vede na vydanou verzi 0.2.0.
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 

@@ -26,6 +26,7 @@ struct CopyReport {
     size_t omitted = 0;
 };
 bool IsNewFileCopy(const Row& row);
+bool IsNewCopy(const Row& row);
 CopyReport CopyNewFiles(Result snapshot, const std::vector<size_t>& visible,
                        std::atomic<bool>& cancel, Progress& checking, CopyProgress& progress);
 #if defined(DIRSYNC_ENGINE_TEST) || defined(DIRSYNC_COPY_TEST_HOOKS)

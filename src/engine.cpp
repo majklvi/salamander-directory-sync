@@ -631,6 +631,34 @@ bool SnapshotRoots(const Result& result, std::wstring& left, std::wstring& right
 }
 bool SnapshotAsymmetric(const Result& result)
 { return result.snapshot && !result.stale && !result.cancelled && result.snapshot->options.asymmetric; }
+bool AdvanceExecutionSnapshot(Result& result,const std::vector<size_t>& pending,std::atomic<bool>& cancel,Progress& progress)
+{
+    if(!result.snapshot || result.stale || result.cancelled || cancel) return false;
+    const auto& old=*result.snapshot;Options options=old.options;options.content=false;
+    auto current=Compare(old.left,old.right,options,cancel,progress);
+    if(!current.snapshot || current.cancelled || cancel) return false;
+    const auto& now=*current.snapshot;
+    auto stable=[](const Entry& a,const Entry& b) {return Identity(a,b) && a.directory==b.directory && a.attributes==b.attributes;};
+    if(!Same(old.canonicalLeft,now.canonicalLeft) || !Same(old.canonicalRight,now.canonicalRight) ||
+        !stable(old.a.root,now.a.root) || !stable(old.b.root,now.b.root)) return false;
+    for(const auto pair:{std::pair<const Tree*,const Tree*>{&old.a,&now.a},{&old.b,&now.b}})
+        for(const auto& parent:pair.first->parents) {
+            auto found=pair.second->parents.find(parent.first);
+            if(found==pair.second->parents.end() || !stable(parent.second,found->second)) return false;
+        }
+    for(size_t index:pending) {
+        if(index>=result.rows.size()) return false;const auto& row=result.rows[index];
+        for(int side=0;side<2;++side) {
+            const auto& tree=side?now.b:now.a;const auto found=tree.entries.find(row.path);
+            const bool present=side?row.hasRight:row.hasLeft;
+            if(present!=(found!=tree.entries.end())) return false;
+            if(present && !Stamp(side?row.right:row.left,found->second)) return false;
+        }
+    }
+    // Keep the confirmed row model and indices. Only the validation baseline
+    // advances, after matching every remaining source/target to its old stamp.
+    result.snapshot=std::move(current.snapshot);return true;
+}
 bool Revalidate(Result& result, std::atomic<bool>& cancel, Progress& progress)
 {
     bool valid = result.snapshot && !result.cancelled && !result.stale && !cancel;

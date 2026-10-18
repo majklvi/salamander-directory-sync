@@ -7,6 +7,7 @@
 #include "recovery.h"
 #include "overwrite.h"
 #include "delete.h"
+#include "sync.h"
 #include <aclapi.h>
 #include <objbase.h>
 #include <algorithm>
@@ -276,6 +277,15 @@ bool IsNewFileCopy(const Row& r)
     if (r.action==Action::CopyLeft && r.hasRight && !r.hasLeft) e=&r.right;
     return e && e->identified && !e->directory && !e->error && !Unsupported(e->attributes) && Relative(r.path);
 }
+bool IsNewCopy(const Row& r)
+{
+    if(IsNewFileCopy(r)) return true;
+    if(r.state==State::Blocked || r.state==State::Conflict || !Relative(r.path)) return false;
+    const Entry* e=nullptr;
+    if(r.action==Action::CopyRight && r.hasLeft && !r.hasRight) e=&r.left;
+    if(r.action==Action::CopyLeft && r.hasRight && !r.hasLeft) e=&r.right;
+    return e && e->identified && e->directory && e->empty && !e->error && !Unsupported(e->attributes);
+}
 bool IsOriginalToSave(const Row& r)
 {
     if (r.state==State::Blocked || r.state==State::Conflict || !r.hasLeft || !r.hasRight ||
@@ -375,6 +385,65 @@ void DirectoryStreams(const std::wstring& path)
     // Directory ADS recovery is not supported. Never discard it, even with
     // Keep originals OFF; surface the unsupported item before any deletion.
     throw Failure{ERROR_NOT_SUPPORTED};
+}
+void EmptyDirectory(const std::wstring& path)
+{
+    WIN32_FIND_DATAW data{};
+    HANDLE find=FindFirstFileW(ApiPath(Join(path,L"*")).c_str(),&data);
+    if(find==INVALID_HANDLE_VALUE) {if(GetLastError()==ERROR_FILE_NOT_FOUND) return;throw Failure{GetLastError()};}
+    bool occupied=false;
+    do {if(wcscmp(data.cFileName,L".") && wcscmp(data.cFileName,L"..")) {occupied=true;break;}} while(FindNextFileW(find,&data));
+    const auto error=GetLastError();FindClose(find);
+    if(occupied) throw Failure{ERROR_DIR_NOT_EMPTY};
+    if(error!=ERROR_NO_MORE_FILES) throw Failure{error};
+}
+void CopyEmptyDirectory(const std::wstring& sourceRoot,const std::wstring& targetRoot,const Row& row,
+    CopyOutcome& outcome,std::atomic<bool>& cancel,CopyProgress& progress)
+{
+    const auto& expected=row.action==Action::CopyRight?row.left:row.right;
+    const auto source=Join(sourceRoot,row.path),target=Join(targetRoot,row.path);
+    Stop(cancel);Parents(sourceRoot,source,false,cancel);
+    File original(Open(source,FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE));Need(original.h!=INVALID_HANDLE_VALUE);
+    auto check=[&]{if(!Unchanged(expected,Info(original.h))) throw Failure{ERROR_FILE_INVALID};EmptyDirectory(source);DirectoryStreams(source);};
+    check();Parents(targetRoot,target,true,cancel);Absent(target);
+    const auto parent=target.substr(0,target.find_last_of(L'\\'));
+    std::wstring stage;Entry owned;
+    try {
+        for(int attempt=0;attempt<16;++attempt) {
+            GUID guid{};if(CoCreateGuid(&guid)!=S_OK) throw Failure{ERROR_GEN_FAILURE};
+            wchar_t token[48]{};if(!StringFromGUID2(guid,token,int(std::size(token)))) throw Failure{ERROR_GEN_FAILURE};
+            stage=Join(parent,L".dirsync-"+std::wstring(token)+L".tmp");
+            if(!CreateDirectoryW(ApiPath(stage).c_str(),nullptr)) {if(GetLastError()==ERROR_ALREADY_EXISTS) continue;throw Failure{GetLastError()};}
+            File file(Open(stage,FILE_READ_ATTRIBUTES));Need(file.h!=INVALID_HANDLE_VALUE);owned=Info(file.h);break;
+        }
+        if(!owned.identified) throw Failure{ERROR_FILE_EXISTS};
+        Security inherited(stage);Phase(progress,CopyPhase::Preparing,stage);Stop(cancel);
+        File file(Open(stage,FILE_READ_ATTRIBUTES|FILE_WRITE_ATTRIBUTES));Need(file.h!=INVALID_HANDLE_VALUE);
+        FILETIME time{DWORD(expected.time),DWORD(expected.time>>32)};
+        Need(SetFileTime(file.h,nullptr,nullptr,&time));
+        Need(SetFileAttributesW(ApiPath(stage).c_str(),(expected.attributes&selectedAttrs)|FILE_ATTRIBUTE_DIRECTORY));
+        Phase(progress,CopyPhase::Verifying,stage);Stop(cancel);check();EmptyDirectory(stage);
+        const auto prepared=Info(file.h);
+        if(!SameId(owned,prepared) || prepared.time!=expected.time ||
+            (prepared.attributes&selectedAttrs)!=(expected.attributes&selectedAttrs) || !inherited.Matches(stage)) throw Failure{ERROR_INVALID_DATA};
+        Phase(progress,CopyPhase::Publishing,stage);Stop(cancel);check();Parents(targetRoot,target,false,cancel);Absent(target);
+        file.Close();Need(MoveFileExW(ApiPath(stage).c_str(),ApiPath(target).c_str(),0));outcome.published=true;
+        Phase(progress,CopyPhase::Published,target);
+        File published(Open(target,FILE_READ_ATTRIBUTES));Need(published.h!=INVALID_HANDLE_VALUE);
+        const auto final=Info(published.h);EmptyDirectory(target);
+        if(!SameId(owned,final) || final.time!=expected.time || (final.attributes&selectedAttrs)!=(expected.attributes&selectedAttrs) ||
+            !inherited.Matches(target)) throw Failure{ERROR_INVALID_DATA};
+        outcome.status=CopyStatus::Copied;progress.completed.fetch_add(1);
+    } catch(...) {
+        if(owned.identified && !outcome.published) {
+            File file(Open(stage,FILE_READ_ATTRIBUTES));
+            if(file.h!=INVALID_HANDLE_VALUE && SameId(owned,Info(file.h))) {
+                file.Close();SetFileAttributesW(ApiPath(stage).c_str(),FILE_ATTRIBUTE_NORMAL);
+                if(!RemoveDirectoryW(ApiPath(stage).c_str())) outcome.remainingStage=stage;
+            } else outcome.remainingStage=stage;
+        }
+        throw;
+    }
 }
 void SaveDirectory(const std::wstring& root,const Entry& expected,RecoveryItem& item,
                    std::atomic<bool>& cancel,CopyProgress& progress)
@@ -699,7 +768,7 @@ CopyReport CopyNewFiles(Result snapshot,const std::vector<size_t>& visible,std::
     for (size_t i:visible) {
         if (i>=snapshot.rows.size() || !unique.insert(i).second) continue;
         const auto& r=snapshot.rows[i];
-        if (IsNewFileCopy(r)) report.items.push_back({i});
+        if (IsNewCopy(r)) report.items.push_back({i});
         else if (r.action!=Action::None) ++report.omitted;
     }
     if (report.items.empty()) return report;
@@ -709,7 +778,11 @@ CopyReport CopyNewFiles(Result snapshot,const std::vector<size_t>& visible,std::
     for (size_t n=0;n<report.items.size();++n) {
         auto& outcome=report.items[n]; const auto& row=snapshot.rows[outcome.row];
         bool toRight=row.action==Action::CopyRight; outcome.target=Join(toRight?right:left,row.path); progress.item=n;
-        try { Stop(cancel); CopyOne(toRight?left:right,toRight?right:left,row,outcome,cancel,progress); }
+        try {
+            Stop(cancel);
+            if((toRight?row.left:row.right).directory) CopyEmptyDirectory(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
+            else CopyOne(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
+        }
         catch (const Failure& e) {
             outcome.error=e.error; report.cancelled=cancel.load() || e.error==ERROR_CANCELLED || e.error==ERROR_REQUEST_ABORTED || e.error==ERROR_OPERATION_ABORTED;
             outcome.status=report.cancelled?CopyStatus::Cancelled:CopyStatus::Failed; break;
@@ -717,6 +790,67 @@ CopyReport CopyNewFiles(Result snapshot,const std::vector<size_t>& visible,std::
         catch (...) { outcome.error=ERROR_NOT_ENOUGH_MEMORY; outcome.status=CopyStatus::Failed; break; }
     }
     Phase(progress,CopyPhase::Finished,L""); return report;
+}
+SyncPlan BuildSyncPlan(const Result& snapshot,const std::vector<size_t>& visible)
+{
+    SyncPlan plan;plan.deletions=DeletionRows(snapshot,visible);
+    std::set<size_t> unique,deletions(plan.deletions.begin(),plan.deletions.end());
+    for(size_t i:visible) if(i<snapshot.rows.size() && unique.insert(i).second) {
+        if(IsNewCopy(snapshot.rows[i])) plan.copies.push_back(i);
+        else if(IsFileOverwrite(snapshot.rows[i])) plan.overwrites.push_back(i);
+        else if(!deletions.count(i)) ++plan.omitted;
+    }
+    return plan;
+}
+SyncReport Synchronize(Result snapshot,const std::vector<size_t>& visible,bool keepOriginals,
+    const std::wstring& recoveryRoot,std::atomic<bool>& cancel,Progress& checking,CopyProgress& progress,std::atomic<SyncStage>& stage)
+{
+    SyncReport report;report.plan=BuildSyncPlan(snapshot,visible);report.keepOriginals=keepOriginals;stage=SyncStage::Checking;
+    auto finish=[&]() {report.cancelled=report.cancelled || cancel.load();stage=SyncStage::Finished;Phase(progress,CopyPhase::Finished,L"");return report;};
+    try {
+        if(!report.plan.Count()) {report.complete=true;return finish();}
+        if(!Revalidate(snapshot,cancel,checking)) {report.stale=true;report.error=ERROR_FILE_INVALID;return finish();}
+        if(keepOriginals && (!report.plan.overwrites.empty() || !report.plan.deletions.empty())) {
+            std::wstring root,left,right;
+            if(!NormalizeRoot(recoveryRoot,root) || !SnapshotRoots(snapshot,left,right)) throw Failure{ERROR_INVALID_NAME};
+            root=RecoveryCanonical(root,cancel);
+            for(const auto& input:{RecoveryCanonical(left,cancel),RecoveryCanonical(right,cancel)})
+                if(RecoveryWithin(root,input) || RecoveryWithin(input,root)) throw Failure{ERROR_INVALID_PARAMETER};
+        }
+        auto checkpoint=[&](const std::vector<size_t>& pending) {
+            if(cancel) {report.cancelled=true;report.error=ERROR_CANCELLED;return false;}
+            if(!AdvanceExecutionSnapshot(snapshot,pending,cancel,checking)) {
+                report.stale=true;report.error=ERROR_FILE_INVALID;return false;
+            }
+            return true;
+        };
+        if(!report.plan.copies.empty()) {
+            stage=SyncStage::NewItems;
+            report.copies=CopyNewFiles(snapshot,report.plan.copies,cancel,checking,progress);
+            report.stale=report.copies.stale;report.cancelled=report.copies.cancelled;
+            for(const auto& item:report.copies.items) if(item.error) {report.error=item.error;break;}
+            if(report.stale || report.cancelled || std::any_of(report.copies.items.begin(),report.copies.items.end(),
+                [](const CopyOutcome& item){return item.status!=CopyStatus::Copied;})) {
+                if(!report.error) report.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;return finish();
+            }
+        }
+        if(!report.plan.overwrites.empty()) {
+            auto pending=report.plan.overwrites;pending.insert(pending.end(),report.plan.deletions.begin(),report.plan.deletions.end());
+            if(!checkpoint(pending)) return finish();stage=SyncStage::Overwrites;
+            report.overwrites=OverwriteFiles(snapshot,report.plan.overwrites,keepOriginals,recoveryRoot,cancel,checking,progress);
+            report.stale=report.overwrites.stale;report.cancelled=report.overwrites.cancelled;
+            if(!report.overwrites.complete) {report.error=report.overwrites.error?report.overwrites.error:ERROR_FILE_INVALID;return finish();}
+        }
+        if(!report.plan.deletions.empty()) {
+            if(!checkpoint(report.plan.deletions)) return finish();stage=SyncStage::Deletions;
+            report.deletions=DeleteFiles(snapshot,report.plan.deletions,keepOriginals,recoveryRoot,cancel,checking,progress);
+            report.stale=report.deletions.stale;report.cancelled=report.deletions.cancelled;
+            if(!report.deletions.complete) {report.error=report.deletions.error?report.deletions.error:ERROR_FILE_INVALID;return finish();}
+        }
+        report.complete=!cancel.load();if(!report.complete) report.error=ERROR_CANCELLED;
+    } catch(const Failure& failure) {report.error=failure.error;}
+    catch(...) {report.error=ERROR_NOT_ENOUGH_MEMORY;}
+    return finish();
 }
 #if defined(DIRSYNC_ENGINE_TEST) || defined(DIRSYNC_COPY_TEST_HOOKS)
 void SetCopyHook(std::function<void(CopyPhase,const std::wstring&)> value) { hook=std::move(value); }

@@ -97,4 +97,25 @@ inline bool DecodeProfiles(const std::vector<BYTE>& bytes,Profiles& output) {
         output=std::move(draft);return true;
     } catch(...) {return false;}
 }
+// Portable, versioned profile collection. Import is additive and transactional
+// in memory; IDs/active selection belong to the destination configuration.
+inline bool ImportProfiles(const std::vector<BYTE>& bytes,Profiles& destination) {
+    Profiles incoming;
+    if(!DecodeProfiles(bytes,incoming) || incoming.items.empty() ||
+        incoming.items.size()+destination.items.size()>ProfileCountLimit) return false;
+    Profiles draft=destination;
+    for(auto item:incoming.items) {
+        const auto base=item.name;
+        for(size_t suffix=2;!draft.NameAvailable(item.name);++suffix) {
+            auto tail=L" ("+std::to_wstring(suffix)+L")";
+            auto prefix=base.substr(0,128-tail.size());
+            if(!prefix.empty() && prefix.back()>=0xd800 && prefix.back()<=0xdbff) prefix.pop_back();
+            item.name=prefix+tail;
+        }
+        item.id=draft.NextId();if(!item.id) return false;
+        draft.items.push_back(std::move(item));
+    }
+    try {EncodeProfiles(draft);} catch(...) {return false;}
+    destination=std::move(draft);return true;
+}
 }

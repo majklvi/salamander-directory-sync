@@ -457,6 +457,13 @@ void ProfileStorage()
     broken=encoded;broken[8]=99;Check(DecodeProfiles(broken,decoded) && !decoded.selected,"missing selected ID falls back to panels");
     broken=encoded;broken[16]=32;Check(!DecodeProfiles(broken,decoded),"unknown option bits rejected");
     Profiles empty;Check(DecodeProfiles(EncodeProfiles(empty),decoded) && decoded.items.empty(),"empty profile collection round trip");
+    Profiles imported=source;
+    Check(ImportProfiles(encoded,imported) && imported.items.size()==4 && imported.selected==7,"import adds profiles and preserves active selection");
+    Check(imported.items[2].id!=first.id && imported.items[2].name==first.name+L" (2)" && SameProfile(imported.items[2],first),"import assigns local ID and unique Unicode name");
+    Check(ImportProfiles(encoded,imported) && imported.items[4].name==first.name+L" (3)","repeated import never overwrites names");
+    const auto importedBytes=EncodeProfiles(imported);
+    Check(!ImportProfiles({0,1,2},imported) && EncodeProfiles(imported)==importedBytes,"broken import is atomic");
+    Check(!ImportProfiles(EncodeProfiles(empty),imported),"empty import refused without changes");
     source.items[1].id=7;bool rejected=false;try {EncodeProfiles(source);} catch(...) {rejected=true;}
     Check(rejected,"duplicate profile ID rejected");
     source.items[1].id=2;source.items[1].name=first.name;rejected=false;try {EncodeProfiles(source);} catch(...) {rejected=true;}

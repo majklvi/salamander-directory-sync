@@ -76,6 +76,10 @@ bool Revalidate(Result& result, std::atomic<bool>& cancel, Progress& progress);
 // Internal plugin API; retrieves only the roots belonging to this snapshot.
 bool SnapshotRoots(const Result& result, std::wstring& left, std::wstring& right);
 bool SnapshotAsymmetric(const Result& result);
+// Between confirmed execution phases: keep pending row identities/stamps and
+// original roots/ancestors, while accepting our completed writes elsewhere.
+bool AdvanceExecutionSnapshot(Result& result,const std::vector<size_t>& pending,
+    std::atomic<bool>& cancel,Progress& progress);
 #ifdef DIRSYNC_ENGINE_TEST
 void SetAfterScanHook(std::function<void()> hook);
 void SetBeforeReadHook(std::function<void()> hook);

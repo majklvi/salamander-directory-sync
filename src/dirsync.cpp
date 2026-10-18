@@ -6,6 +6,7 @@
 #include "engine.h"
 #include "profiles.h"
 #include "copy.h"
+#include "sync.h"
 #include "recovery.h"
 #include "overwrite.h"
 #include "delete.h"
@@ -436,7 +437,7 @@ bool InformationBox(HWND parent,int title,InfoRows rows,const std::wstring& note
 }
 struct Preview
 {
-    enum class Intent { None, Apply, Summary, Copy, Save, Overwrite, Delete, ImmediateDelete };
+    enum class Intent { None, Apply, Summary, Copy, Save, Overwrite, Delete, ImmediateDelete, Sync };
     HWND window = nullptr;
     int sizeFormat=0,nameFormat=4;
     std::wstring left, right;
@@ -470,6 +471,9 @@ struct Preview
     bool saving = false, hasRecoveryReport = false;
     bool overwriting=false,hasOverwriteReport=false;
     bool deleting=false,hasDeleteReport=false;
+    bool synchronizing=false,hasSyncReport=false;
+    dirsync::SyncReport syncReport;
+    std::atomic<dirsync::SyncStage> syncStage{dirsync::SyncStage::Checking};
     uint64_t transferCount=0;
     std::thread worker;
     SIZE initialClient{}, minimumWindow{};
@@ -931,10 +935,13 @@ void Status(Preview& p)
     std::wstring state;std::vector<std::wstring> metrics;
     auto metric=[&](int id,uint64_t value) {wchar_t text[128]{};swprintf_s(text,Text(id).c_str(),value);metrics.emplace_back(text);};
     if(p.running) {
-        if(p.copying || p.saving || p.overwriting || p.deleting || p.immediateDeleting) {
+        if(p.synchronizing || p.copying || p.saving || p.overwriting || p.deleting || p.immediateDeleting) {
             state=Text((p.deleting || p.immediateDeleting)?IDS_UI_OP_DELETE:p.overwriting?IDS_UI_OP_OVERWRITE:p.saving?IDS_UI_OP_SAVE:IDS_UI_OP_COPY);
-            wchar_t item[128]{};uint64_t total=(p.overwriting || p.deleting || p.immediateDeleting)?p.transferCount:uint64_t(p.copyRows.size());
-            swprintf_s(item,Text(IDS_UI_TRANSFER).c_str(),std::min(p.copyProgress.item.load()+1,total),total);
+            if(p.synchronizing) state=Text(p.syncStage==dirsync::SyncStage::Checking?IDS_UI_VALIDATE:
+                p.syncStage==dirsync::SyncStage::Overwrites?IDS_UI_OP_OVERWRITE:
+                p.syncStage==dirsync::SyncStage::Deletions?IDS_UI_OP_DELETE:IDS_UI_OP_COPY);
+            wchar_t item[128]{};uint64_t total=(p.synchronizing || p.overwriting || p.deleting || p.immediateDeleting)?p.transferCount:uint64_t(p.copyRows.size());
+            swprintf_s(item,Text(IDS_UI_TRANSFER).c_str(),std::min((p.synchronizing?p.copyProgress.completed.load():p.copyProgress.item.load())+1,total),total);
             metrics.emplace_back(item);
             metric(IDS_STATUS_COPIED,p.copyProgress.copied.load());metric(IDS_STATUS_VERIFIED,p.copyProgress.verified.load());
             metric(IDS_STATUS_DONE,p.copyProgress.completed.load());
@@ -946,7 +953,7 @@ void Status(Preview& p)
         }
         if(p.cancel) state=Text(IDS_UI_STOPPING);
     } else {
-        if(p.hasCopyReport || p.hasRecoveryReport || p.hasOverwriteReport || p.hasDeleteReport) state=Text(IDS_UI_FINISHED);
+        if(p.hasSyncReport || p.hasCopyReport || p.hasRecoveryReport || p.hasOverwriteReport || p.hasDeleteReport) state=Text(IDS_UI_FINISHED);
         else if(p.result.stale && !p.result.cancelled) state=Text(IDS_STALE);
         else if(p.failed || p.result.cancelled) state=Text(p.failed?IDS_FAILED:IDS_CANCELLED);
         else state=Text(PendingOptions(p)?IDS_OPTIONS_PENDING:p.result.snapshot?IDS_UI_COMPLETE:IDS_UI_READY);
@@ -1150,9 +1157,9 @@ void Filter(Preview& p)
 }
 int StopControl(const Preview& p)
 {
-    const bool files=p.copying || p.saving || p.overwriting || p.deleting || p.immediateDeleting ||
+    const bool files=p.synchronizing || p.copying || p.saving || p.overwriting || p.deleting || p.immediateDeleting ||
         (p.validating && (p.intent==Preview::Intent::Copy || p.intent==Preview::Intent::Save ||
-            p.intent==Preview::Intent::Overwrite || p.intent==Preview::Intent::Delete || p.intent==Preview::Intent::ImmediateDelete));
+            p.intent==Preview::Intent::Overwrite || p.intent==Preview::Intent::Delete || p.intent==Preview::Intent::ImmediateDelete || p.intent==Preview::Intent::Sync));
     return files?IDC_STOP_SYNC:IDC_STOP;
 }
 void ProfileControls(Preview& p);
@@ -1182,6 +1189,7 @@ void InvalidatePlan(Preview& p)
     p.hasRecoveryReport = false;
     p.hasOverwriteReport = false;
     p.hasDeleteReport = false;
+    p.hasSyncReport = false;
     ListView_DeleteAllItems(GetDlgItem(p.window,IDC_LIST));ListView_RemoveAllGroups(GetDlgItem(p.window,IDC_LIST));
     Status(p);
 }
@@ -1322,7 +1330,53 @@ void SelectProfile(Preview& p,uint32_t id)
     else if(id) return;
     settings.profiles.selected=id;ApplyProfile(p,value);ProfileControls(p);PersistSettings(p.window);
 }
-struct ProfileManager {Preview& preview;dirsync::Profiles draft;};
+struct ProfileManager {Preview& preview;dirsync::Profiles draft;bool imported=false,activated=false;};
+void TransferProfiles(HWND owner,dirsync::Profiles& profiles,bool importing)
+{
+    IFileDialog* dialog=nullptr;
+    HRESULT hr=CoCreateInstance(importing?CLSID_FileOpenDialog:CLSID_FileSaveDialog,nullptr,CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(&dialog));
+    if(FAILED(hr)) {Message(owner,IDS_PROFILE_TRANSFER_ERROR);return;}
+    COMDLG_FILTERSPEC filter{nullptr,L"*.dsprofiles"};const auto type=Text(IDS_PROFILE_FILE_TYPE);filter.pszName=type.c_str();
+    dialog->SetFileTypes(1,&filter);dialog->SetDefaultExtension(L"dsprofiles");
+    dialog->SetTitle(Text(importing?IDS_PROFILE_IMPORT_TITLE:IDS_PROFILE_EXPORT_TITLE).c_str());
+    DWORD options=0;dialog->GetOptions(&options);
+    dialog->SetOptions(options|FOS_FORCEFILESYSTEM|FOS_PATHMUSTEXIST|(importing?FOS_FILEMUSTEXIST:FOS_OVERWRITEPROMPT));
+    hr=dialog->Show(owner);IShellItem* item=nullptr;PWSTR path=nullptr;
+    if(SUCCEEDED(hr)) hr=dialog->GetResult(&item);
+    if(SUCCEEDED(hr)) hr=item->GetDisplayName(SIGDN_FILESYSPATH,&path);
+    if(SUCCEEDED(hr)) {
+        HANDLE file=INVALID_HANDLE_VALUE;std::wstring stage;
+        try {
+            if(importing) {
+                file=CreateFileW(dirsync::ApiPath(path).c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+                LARGE_INTEGER size{};
+                if(file==INVALID_HANDLE_VALUE || !GetFileSizeEx(file,&size) || size.QuadPart<12 || size.QuadPart>dirsync::ProfileDataLimit) throw std::runtime_error("Read profiles");
+                std::vector<BYTE> bytes(size_t(size.QuadPart));DWORD read=0;
+                if(!ReadFile(file,bytes.data(),DWORD(bytes.size()),&read,nullptr) || read!=bytes.size()) throw std::runtime_error("Read profiles");
+                dirsync::Profiles incoming;
+                if(!dirsync::DecodeProfiles(bytes,incoming)) throw std::runtime_error("Invalid profiles");
+                for(const auto& profile:incoming.items) if(!ValidProfileInputs(profile)) throw std::runtime_error("Invalid inputs");
+                if(!dirsync::ImportProfiles(bytes,profiles)) throw std::runtime_error("Import profiles");
+            } else {
+                auto portable=profiles;portable.selected=0;const auto bytes=dirsync::EncodeProfiles(portable);
+                GUID guid{};wchar_t token[48]{};
+                if(FAILED(CoCreateGuid(&guid)) || !StringFromGUID2(guid,token,int(std::size(token)))) throw std::runtime_error("Export name");
+                stage=std::wstring(path)+L".dirsync-"+token+L".tmp";
+                file=CreateFileW(dirsync::ApiPath(stage).c_str(),GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
+                if(file==INVALID_HANDLE_VALUE) {stage.clear();throw std::runtime_error("Create profiles");}
+                DWORD written=0;
+                if(file==INVALID_HANDLE_VALUE || !WriteFile(file,bytes.data(),DWORD(bytes.size()),&written,nullptr) || written!=bytes.size() || !FlushFileBuffers(file)) throw std::runtime_error("Write profiles");
+                CloseHandle(file);file=INVALID_HANDLE_VALUE;
+                if(!MoveFileExW(dirsync::ApiPath(stage).c_str(),dirsync::ApiPath(path).c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)) throw std::runtime_error("Publish profiles");
+                stage.clear();
+            }
+        } catch(...) {Message(owner,IDS_PROFILE_TRANSFER_ERROR);}
+        if(file!=INVALID_HANDLE_VALUE) CloseHandle(file);
+        if(!stage.empty()) DeleteFileW(dirsync::ApiPath(stage).c_str());
+    } else if(hr!=HRESULT_FROM_WIN32(ERROR_CANCELLED)) Message(owner,IDS_PROFILE_TRANSFER_ERROR);
+    CoTaskMemFree(path);if(item) item->Release();dialog->Release();
+}
 void ManagerControls(HWND window,ProfileManager& manager)
 {
     HWND list=GetDlgItem(window,IDC_PROFILE);SendMessageW(list,LB_RESETCONTENT,0,0);
@@ -1334,6 +1388,7 @@ void ManagerControls(HWND window,ProfileManager& manager)
     const auto* selected=manager.draft.Find(manager.draft.selected);
     EnableWindow(GetDlgItem(window,IDC_PROFILE_SAVE),selected && !dirsync::SameProfile(*selected,CaptureProfile(manager.preview)));
     for(int id:{IDC_PROFILE_RENAME,IDC_PROFILE_DELETE}) EnableWindow(GetDlgItem(window,id),selected!=nullptr);
+    EnableWindow(GetDlgItem(window,IDC_PROFILE_EXPORT),!manager.draft.items.empty());
     SetDlgItemTextW(window,IDC_PROFILE_LEFT,selected?selected->left.c_str():L"");
     SetDlgItemTextW(window,IDC_PROFILE_RIGHT,selected?selected->right.c_str():L"");
     SetDlgItemTextW(window,IDC_PROFILE_MASK,selected?selected->mask.c_str():L"");
@@ -1356,13 +1411,19 @@ INT_PTR CALLBACK ProfileManagerProc(HWND window,UINT message,WPARAM w,LPARAM l)
     if(message==WM_COMMAND) {
         int id=LOWORD(w);
         if(id==IDC_PROFILE && HIWORD(w)==LBN_SELCHANGE) {
+            data->activated=true;
             int index=int(SendDlgItemMessageW(window,IDC_PROFILE,LB_GETCURSEL,0,0));
             data->draft.selected=index<0?0:uint32_t(SendDlgItemMessageW(window,IDC_PROFILE,LB_GETITEMDATA,index,0));
             ManagerControls(window,*data);return TRUE;
         }
         if(id==IDOK || id==IDCANCEL) {EndDialog(window,id);return TRUE;}
+        if(id==IDC_PROFILE_IMPORT || id==IDC_PROFILE_EXPORT) {
+            TransferProfiles(window,data->draft,id==IDC_PROFILE_IMPORT);
+            if(id==IDC_PROFILE_IMPORT) data->imported=true;
+            ManagerControls(window,*data);return TRUE;
+        }
         int command=id==IDC_PROFILE_SAVE?1:id==IDC_PROFILE_SAVE_AS?2:id==IDC_PROFILE_RENAME?3:id==IDC_PROFILE_DELETE?4:0;
-        if(command) {ProfileCommand(data->preview,command,data->draft,window);ManagerControls(window,*data);return TRUE;}
+        if(command) {data->activated=true;ProfileCommand(data->preview,command,data->draft,window);ManagerControls(window,*data);return TRUE;}
     }
     return FALSE;
 }
@@ -1373,7 +1434,7 @@ void ManageProfiles(Preview& p)
     const auto* selected=manager.draft.Find(manager.draft.selected);
     // Renaming, saving the current form or deleting its profile does not clear
     // an existing comparison. Loading different inputs always invalidates it.
-    bool load=selected && !dirsync::SameProfile(*selected,CaptureProfile(p));
+    bool load=selected && (!manager.imported || manager.activated) && !dirsync::SameProfile(*selected,CaptureProfile(p));
     if(load && !ConfirmProfileSwitch(p)) return;
     settings.profiles=std::move(manager.draft);
     if(load) ApplyProfile(p,*settings.profiles.Find(settings.profiles.selected));
@@ -1487,8 +1548,8 @@ bool Proposal(const Preview& p,size_t index,int command,dirsync::Action& action)
     const auto& row=p.result.rows[index];
     if(row.state==dirsync::State::Blocked || row.state==dirsync::State::Conflict) return false;
     const bool directory=(row.hasLeft && row.left.directory) || (row.hasRight && row.right.directory);
-    if(directory && (!row.hasRight || row.hasLeft || !p.options.asymmetric ||
-        (command!=RestoreProposal && command!=int(dirsync::Action::None) && command!=int(dirsync::Action::DeleteRight)))) return false;
+    if(directory && !((row.hasLeft && !row.hasRight && row.left.empty) ||
+        (row.hasRight && !row.hasLeft && (row.right.empty || p.options.asymmetric)))) return false;
     if(command==RestoreProposal) {
         if(index>=p.defaults.size()) return false;action=p.defaults[index];
     } else if(command==ReverseProposal) {
@@ -1502,6 +1563,8 @@ bool Proposal(const Preview& p,size_t index,int command,dirsync::Action& action)
     if(action==dirsync::Action::CopyRight && !row.hasLeft) return false;
     if(action==dirsync::Action::CopyLeft && (!row.hasRight || p.options.asymmetric)) return false;
     if(action==dirsync::Action::DeleteRight && (!p.options.asymmetric || !row.hasRight || row.hasLeft)) return false;
+    if(directory && action==dirsync::Action::CopyRight && (!row.left.empty || row.hasRight)) return false;
+    if(directory && action==dirsync::Action::CopyLeft && (!row.right.empty || row.hasLeft)) return false;
     return action!=dirsync::Action::Blocked;
 }
 bool CanChangeProposals(const Preview& p,const std::vector<size_t>& rows,int command)
@@ -1543,7 +1606,7 @@ std::wstring RowPaths(const Preview& p,const std::vector<size_t>& rows,int side)
     return text;
 }
 // These commands always use the visible plan, even with no highlighted rows.
-constexpr int PlanSummary=30,PlanSave=31,PlanCopy=32,PlanOverwrite=33,PlanDelete=34;
+constexpr int PlanSummary=30,PlanSave=31,PlanCopy=32,PlanOverwrite=33,PlanDelete=34,PlanSync=35;
 constexpr UINT_PTR MenuHelpTimer=2;
 std::wstring PlanHelp(int command)
 {
@@ -1554,6 +1617,7 @@ std::wstring PlanHelp(int command)
     case PlanCopy:id=IDS_PLAN_HELP_COPY;break;
     case PlanOverwrite:id=IDS_PLAN_HELP_OVERWRITE;break;
     case PlanDelete:id=IDS_PLAN_HELP_DELETE;break;
+    case PlanSync:id=IDS_SYNC_HELP;break;
     default:return {};
     }
     auto text=Text(id);
@@ -1600,30 +1664,33 @@ Preview::Intent PlanIntent(int command)
     switch(command) {
     case PlanSummary:return Preview::Intent::Summary;case PlanSave:return Preview::Intent::Save;
     case PlanCopy:return Preview::Intent::Copy;case PlanOverwrite:return Preview::Intent::Overwrite;
-    case PlanDelete:return Preview::Intent::Delete;default:return Preview::Intent::None;
+    case PlanDelete:return Preview::Intent::Delete;case PlanSync:return Preview::Intent::Sync;default:return Preview::Intent::None;
     }
 }
 bool PlanEnabled(const Preview& p,int command)
 {
     if(p.running || !p.result.snapshot || p.result.stale || p.result.cancelled || p.failed) return false;
     if(command==PlanSummary) return true;
+    if(command==PlanSync) return dirsync::BuildSyncPlan(p.result,p.visible).Count()!=0;
     if(command==PlanSave && !settings.keepOriginals) return false;
     if(command==PlanDelete) return !dirsync::DeletionRows(p.result,p.visible).empty();
     for(size_t index:p.visible) if(index<p.result.rows.size()) {
         const auto& row=p.result.rows[index];
-        if(command==PlanCopy && dirsync::IsNewFileCopy(row)) return true;
+        if(command==PlanCopy && dirsync::IsNewCopy(row)) return true;
         if((command==PlanOverwrite || command==PlanSave) && dirsync::IsFileOverwrite(row)) return true;
     }
     return false;
 }
 void EnablePlanMenu(CGUIMenuPopupAbstract* menu,const Preview& p)
 {
-    for(int command=PlanSummary;command<=PlanDelete;++command) menu->EnableItem(command+1,FALSE,PlanEnabled(p,command));
+    for(int command=PlanSummary;command<=PlanSync;++command) menu->EnableItem(command+1,FALSE,PlanEnabled(p,command));
 }
 void SynchronizeMenu(Preview& p)
 {
     if(!gui || p.running) return;
     MENU_TEMPLATE_ITEM items[]={{MNTT_PB,0,0,0,-1,0,nullptr},
+        {MNTT_IT,IDS_SYNC_COMMAND,MNTS_B|MNTS_I|MNTS_A,PlanSync+1,-1,0,nullptr},
+        {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
         {MNTT_IT,IDS_MENU_COPY_NEW,MNTS_B|MNTS_I|MNTS_A,PlanCopy+1,-1,0,nullptr},
         {MNTT_IT,IDS_MENU_OVERWRITE,MNTS_B|MNTS_I|MNTS_A,PlanOverwrite+1,-1,0,nullptr},
         {MNTT_IT,IDS_MENU_DELETE_FILES,MNTS_B|MNTS_I|MNTS_A,PlanDelete+1,-1,0,nullptr},
@@ -1733,6 +1800,7 @@ void PreviewMenu(Preview& p,LPARAM position)
         {MNTT_PE,0,0,0,-1,0,nullptr},
         {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
         {MNTT_PB,IDS_MENU_PLAN,MNTS_B|MNTS_I|MNTS_A,21,-1,0,nullptr},
+        {MNTT_IT,IDS_SYNC_COMMAND,MNTS_B|MNTS_I|MNTS_A,PlanSync+1,-1,0,nullptr},
         {MNTT_IT,IDS_MENU_SUMMARY,MNTS_B|MNTS_I|MNTS_A,PlanSummary+1,-1,0,nullptr},
         {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
         {MNTT_IT,IDS_MENU_COPY_NEW,MNTS_B|MNTS_I|MNTS_A,PlanCopy+1,-1,0,nullptr},
@@ -1834,6 +1902,81 @@ void Summary(Preview& p)
     Field(rows,IDS_UI_BLOCKED,blocked);Field(rows,IDS_UI_HIDDEN,uint64_t(p.result.rows.size()-p.visible.size()));
     InformationBox(p.window,IDS_UI_PLAN,std::move(rows),Text(IDS_UI_PLAN_NOTE));
 }
+void SyncSummary(Preview& p)
+{
+    const auto& report=p.syncReport;uint64_t copied=0,replaced=0,deleted=0,failed=0;std::wstring details;
+    auto copies=[&](const auto& items,uint64_t& completed) {
+        for(const auto& item:items) {
+            if(item.status==dirsync::CopyStatus::Copied) ++completed;
+            else if(item.status!=dirsync::CopyStatus::NotStarted) ++failed;
+            if(item.error && details.empty()) details=item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error)+
+                (item.published?L"\n"+Text(IDS_COPY_PUBLISHED_ERROR):L"");
+            if(!item.remainingStage.empty()) details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.remainingStage;
+        }
+    };
+    copies(report.copies.items,copied);copies(report.overwrites.items,replaced);
+    for(const auto& item:report.deletions.items) {
+        if(item.status==dirsync::DeleteStatus::Deleted) ++deleted;
+        else if(item.status!=dirsync::DeleteStatus::NotStarted) ++failed;
+        if(item.error && details.empty()) details=item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error);
+    }
+    InfoRows fields;Field(fields,IDS_SYNC_NEW,Number(copied)+L" / "+Number(report.plan.copies.size()));
+    Field(fields,IDS_SYNC_REPLACED,Number(replaced)+L" / "+Number(report.plan.overwrites.size()));
+    Field(fields,IDS_SYNC_DELETE,Number(deleted)+L" / "+Number(report.plan.deletions.size()));
+    Field(fields,IDS_UI_ERRORS,failed+(report.error && !failed?1:0));Field(fields,IDS_UI_PENDING,uint64_t(report.plan.Count())-copied-replaced-deleted-failed);
+    Field(fields,IDS_UI_OMITTED,uint64_t(report.plan.omitted));Field(fields,IDS_UI_RECOVERY,Text(report.keepOriginals?IDS_UI_ON:IDS_UI_OFF));
+    for(const auto* recovery:{&report.overwrites.recovery,&report.deletions.recovery}) {
+        if(!recovery->journal.empty()) Field(fields,IDS_UI_MANIFEST,recovery->journal);
+        for(const auto& item:recovery->items) if(!item.copy.remainingStage.empty()) details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.copy.remainingStage;
+    }
+    for(const auto* journal:{&report.overwrites.journal,&report.deletions.journal}) if(!journal->empty()) Field(fields,IDS_UI_JOURNAL,*journal);
+    if(report.error && details.empty()) details=Text(IDS_COPY_ERROR)+Number(report.error);
+    if(!details.empty()) Field(fields,IDS_UI_ERROR_DETAILS,details);
+    auto notes=Text(IDS_UI_RESULT_NOTE);if(report.stale) notes+=L"\n"+Text(IDS_STALE);if(report.cancelled) notes+=L"\n"+Text(IDS_COPY_STOPPED);
+    InformationBox(p.window,IDS_SYNC_RESULT,std::move(fields),notes);
+}
+void SyncAll(Preview& p)
+{
+    const auto plan=dirsync::BuildSyncPlan(p.result,p.visible);
+    if(!plan.Count()) {Message(p.window,IDS_COPY_EMPTY);return;}
+    const bool keep=settings.keepOriginals;const auto root=settings.recoveryRoot;
+    if(keep && (!plan.overwrites.empty() || !plan.deletions.empty()) && root.empty()) {Message(p.window,IDS_SAVE_ROOT);return;}
+    uint64_t left=0,right=0,leftBytes=0,rightBytes=0,copyDirs=0,deleteDirs=0,originalBytes=0;
+    for(const auto* selected:{&plan.copies,&plan.overwrites}) for(size_t index:*selected) {
+        const auto& row=p.result.rows[index];const bool toRight=row.action==dirsync::Action::CopyRight;
+        const auto& entry=toRight?row.left:row.right;
+        if(toRight) {++right;if(!entry.directory) rightBytes+=entry.size;}
+        else {++left;if(!entry.directory) leftBytes+=entry.size;}
+        if(entry.directory) ++copyDirs;
+    }
+    for(size_t index:plan.deletions) if(p.result.rows[index].right.directory) ++deleteDirs;
+    for(size_t index:plan.overwrites) {const auto& row=p.result.rows[index];originalBytes+=(row.action==dirsync::Action::CopyRight?row.right:row.left).size;}
+    for(size_t index:plan.deletions) if(!p.result.rows[index].right.directory) originalBytes+=p.result.rows[index].right.size;
+    InfoRows fields;Field(fields,IDS_SYNC_NEW_COUNTS,Number(plan.copies.size()-copyDirs)+L" / "+Number(copyDirs));
+    Field(fields,IDS_SYNC_OVERWRITE,uint64_t(plan.overwrites.size()));
+    Field(fields,IDS_SYNC_DELETE_COUNTS,Number(plan.deletions.size()-deleteDirs)+L" / "+Number(deleteDirs));
+    Field(fields,IDS_UI_TO_RIGHT,Number(right)+L" / "+Number(rightBytes));Field(fields,IDS_UI_TO_LEFT,Number(left)+L" / "+Number(leftBytes));
+    Field(fields,IDS_UI_ORIGINAL_BYTES,originalBytes);
+    Field(fields,IDS_UI_OMITTED,uint64_t(plan.omitted));Field(fields,IDS_UI_HIDDEN,uint64_t(p.result.rows.size()-p.visible.size()));
+    Field(fields,IDS_UI_RECOVERY,Text(keep?IDS_UI_ON:IDS_UI_OFF));if(keep) Field(fields,IDS_UI_RECOVERY_FOLDER,root);
+    if(!InformationBox(p.window,IDS_SYNC_CONFIRM,std::move(fields),Text(IDS_SYNC_POLICY),true)) return;
+    p.cancel=false;p.failed=false;p.running=true;p.synchronizing=true;p.syncReport={};p.syncStage=dirsync::SyncStage::Checking;
+    p.hasSyncReport=p.hasCopyReport=p.hasRecoveryReport=p.hasOverwriteReport=p.hasDeleteReport=false;
+    p.copyProgress.copied=0;p.copyProgress.verified=0;p.copyProgress.completed=0;p.copyProgress.item=0;p.copyProgress.phase=dirsync::CopyPhase::Checking;
+    p.transferCount=plan.Count()+(keep?plan.overwrites.size()+plan.deletions.size():0);
+    Busy(p,true);SendMessageW(p.window,WM_NEXTDLGCTL,WPARAM(GetDlgItem(p.window,StopControl(p))),TRUE);
+    try {
+        const auto rows=p.visible;
+        p.worker=std::thread([&p,rows,keep,root] {
+            try {p.syncReport=dirsync::Synchronize(p.result,rows,keep,root,p.cancel,p.progress,p.copyProgress,p.syncStage);}
+            catch(...) {p.failed=true;}
+            PostMessageW(p.window,Done,0,0);
+        });SetTimer(p.window,1,150,nullptr);
+    } catch(...) {
+        p.failed=true;p.running=false;p.synchronizing=false;Busy(p,false);Status(p);
+        SendMessageW(p.window,WM_NEXTDLGCTL,WPARAM(GetDlgItem(p.window,IDC_COMPARE)),TRUE);
+    }
+}
 void CopySummary(Preview& p)
 {
     uint64_t copied=0, failed=0, pending=0; std::wstring details;
@@ -1858,14 +2001,14 @@ void CopySummary(Preview& p)
 }
 void CopyNew(Preview& p)
 {
-    p.copyRows.clear(); uint64_t bytes=0,omitted=0;
+    p.copyRows.clear(); uint64_t bytes=0,omitted=0,directories=0;
     for (size_t i:p.visible) {
         const auto& r=p.result.rows[i];
-        if (dirsync::IsNewFileCopy(r)) { p.copyRows.push_back(i); bytes+=(r.action==dirsync::Action::CopyRight?r.left:r.right).size; }
+        if (dirsync::IsNewCopy(r)) { p.copyRows.push_back(i); const auto& e=r.action==dirsync::Action::CopyRight?r.left:r.right;if(e.directory) ++directories;else bytes+=e.size; }
         else if (r.action!=dirsync::Action::None) ++omitted;
     }
     if (p.copyRows.empty()) { Message(p.window,IDS_COPY_EMPTY); return; }
-    InfoRows fields;Field(fields,IDS_UI_FILES,uint64_t(p.copyRows.size()));Field(fields,IDS_UI_BYTES,bytes);Field(fields,IDS_UI_OMITTED,omitted);
+    InfoRows fields;Field(fields,IDS_UI_FILES,uint64_t(p.copyRows.size())-directories);Field(fields,IDS_UI_DIRECTORIES,directories);Field(fields,IDS_UI_BYTES,bytes);Field(fields,IDS_UI_OMITTED,omitted);
     if(!InformationBox(p.window,IDS_UI_COPY_CONFIRM,std::move(fields),Text(IDS_UI_COPY_POLICY),true)) return;
     p.cancel=false; p.failed=false; p.copying=true; p.running=true; p.hasCopyReport=false;
     p.copyProgress.copied=0; p.copyProgress.verified=0; p.copyProgress.completed=0; p.copyProgress.item=0;
@@ -2223,10 +2366,16 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         return TRUE;
     case Done:
         p->Join(); p->running = false; KillTimer(window, 1);
-        if(!p->validating && !p->copying && !p->saving && !p->overwriting && !p->deleting && !p->immediateDeleting) {
+        if(!p->validating && !p->synchronizing && !p->copying && !p->saving && !p->overwriting && !p->deleting && !p->immediateDeleting) {
             p->defaults.clear();for(const auto& row:p->result.rows) p->defaults.push_back(row.action);
         }
         if (p->validating) { p->result = std::move(p->checkedResult); p->validating = false; }
+        if(p->synchronizing) {
+            p->synchronizing=false;p->hasSyncReport=true;p->result.stale=true;p->result.snapshot.reset();Status(*p);
+            for(const auto& path:{p->left,p->right}) NotifyPath(path);
+            if(!p->syncReport.overwrites.recovery.runDirectory.empty() || !p->syncReport.deletions.recovery.runDirectory.empty()) NotifyPath(settings.recoveryRoot);
+            if(!p->closing) {if(p->failed) Message(window,IDS_FAILED);else SyncSummary(*p);}
+        }
         if (p->copying) {
             p->copying=false; p->hasCopyReport=true; p->result.stale=true; p->result.snapshot.reset();
             Status(*p);
@@ -2282,6 +2431,7 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
                 else if (intent == Preview::Intent::Overwrite) Overwrite(*p);
                 else if (intent == Preview::Intent::Delete) DeleteFiles(*p);
                 else if(intent==Preview::Intent::ImmediateDelete) ImmediateDeleteSelection(*p);
+                else if(intent==Preview::Intent::Sync) SyncAll(*p);
             }
         }
         return TRUE;

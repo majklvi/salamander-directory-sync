@@ -4,6 +4,7 @@
 #include "../src/recovery.h"
 #include "../src/overwrite.h"
 #include "../src/delete.h"
+#include "../src/sync.h"
 #include "copy_space_faults.h"
 #include <sddl.h>
 #include <winioctl.h>
@@ -811,10 +812,114 @@ void DiskSpace() {
     }
 }
 }
+void EmptyDirectoryCopies() {
+    for(bool reverse:{false,true}) {
+        Fixture f;const auto source=reverse?f.right:f.left,target=reverse?f.left:f.right;
+        f.Dir(source+L"\\empty-漢字");f.Dir(source+L"\\skip");f.Dir(source+L"\\hidden");
+        Options options;options.emptyDirectories=true;
+        auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);
+        std::vector<size_t> visible;
+        uint64_t time=0;
+        for(size_t i=0;i<snapshot.rows.size();++i) {
+            auto& row=snapshot.rows[i];
+            if(row.path==L"skip") row.action=Action::None;
+            if(row.path!=L"hidden") visible.push_back(i);
+            if(row.path==L"empty-漢字") time=(reverse?row.right:row.left).time;
+        }
+        const auto report=CopyNewFiles(snapshot,visible,f.cancel,f.checking,f.progress);
+        Check(report.items.size()==1 && report.items[0].status==CopyStatus::Copied,"empty Unicode directory copies both directions");
+        WIN32_FILE_ATTRIBUTE_DATA data{};
+        Check(GetFileAttributesExW(ApiPath(target+L"\\empty-漢字").c_str(),GetFileExInfoStandard,&data)!=FALSE &&
+            (data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY) && ((uint64_t(data.ftLastWriteTime.dwHighDateTime)<<32)|data.ftLastWriteTime.dwLowDateTime)==time,"empty directory timestamp verified");
+        for(auto name:{L"skip",L"hidden"}) Check(GetFileAttributesW(ApiPath(target+L"\\"+name).c_str())==INVALID_FILE_ATTRIBUTES,"Skip and hidden directory not copied");
+        f.NoStaging(target);
+    }
+    for(auto phase:{CopyPhase::Preparing,CopyPhase::Verifying,CopyPhase::Publishing,CopyPhase::Published}) {
+        Fixture f;f.Dir(f.left+L"\\empty");Options options;options.emptyDirectories=true;
+        auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);
+        SetCopyHook([&](CopyPhase at,const std::wstring&){if(at==phase) f.cancel=true;});
+        auto report=CopyNewFiles(snapshot,{0},f.cancel,f.checking,f.progress);SetCopyHook({});
+        Check(report.items.size()==1,"empty directory cancellation outcome exists");
+        if(phase==CopyPhase::Published) Check(report.items[0].status==CopyStatus::Copied && report.items[0].published,"completed directory remains after Stop");
+        else Check(report.cancelled && !report.items[0].published && GetFileAttributesW(ApiPath(f.right+L"\\empty").c_str())==INVALID_FILE_ATTRIBUTES,"Stop before directory publication leaves no target");
+        f.NoStaging(f.right);
+    }
+    for(int scenario=0;scenario<3;++scenario) {
+        Fixture f;f.Dir(f.left+L"\\empty");Options options;options.emptyDirectories=true;
+        if(scenario==2) Put(f.left+L"\\empty:note","ADS");
+        auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);
+        if(scenario==0) Put(f.left+L"\\empty\\late.txt","KEEP");
+        if(scenario==1) f.Dir(f.right+L"\\empty");
+        const auto report=CopyNewFiles(snapshot,{0},f.cancel,f.checking,f.progress);
+        Check(report.stale || (!report.items.empty() && report.items[0].status==CopyStatus::Failed),"changed source, occupied target and directory ADS refused");
+        f.NoStaging(f.right);
+    }
+}
+void CombinedSynchronization() {
+    for(bool keep:{false,true}) {
+        Fixture f;f.Dir(f.root+L"\\recovery");f.Dir(f.left+L"\\new-empty");f.Dir(f.right+L"\\old-empty");
+        Put(f.left+L"\\new.txt","NEW");Put(f.left+L"\\overwrite.txt","REPLACEMENT");Put(f.right+L"\\overwrite.txt","ORIGINAL");
+        Put(f.right+L"\\delete.txt","DELETE");Put(f.left+L"\\same.txt","KEEP");Put(f.right+L"\\same.txt","KEEP");
+        Options options;options.asymmetric=true;options.emptyDirectories=true;
+        auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);std::vector<size_t> visible;
+        for(size_t i=0;i<snapshot.rows.size();++i) {visible.push_back(i);auto& row=snapshot.rows[i];if(row.path==L"overwrite.txt") row.action=Action::CopyRight;}
+        const auto plan=BuildSyncPlan(snapshot,visible);Check(plan.copies.size()==2 && plan.overwrites.size()==1 && plan.deletions.size()==2,"combined plan separates all operation kinds");
+        std::atomic<SyncStage> stage{SyncStage::Checking};
+        auto report=Synchronize(snapshot,visible,keep,f.root+L"\\recovery",f.cancel,f.checking,f.progress,stage);
+        if(report.error) std::cerr<<"combined error "<<report.error<<" stale "<<report.stale<<"\n";
+        Check(report.complete && !report.error && !report.stale && stage==SyncStage::Finished,"combined phases accept only their own completed changes");
+        Check(Read(f.right+L"\\new.txt")=="NEW" && Read(f.right+L"\\overwrite.txt")=="REPLACEMENT","combined copy and overwrite data");
+        Check(GetFileAttributesW(ApiPath(f.right+L"\\new-empty").c_str())!=INVALID_FILE_ATTRIBUTES &&
+            GetFileAttributesW(ApiPath(f.right+L"\\old-empty").c_str())==INVALID_FILE_ATTRIBUTES &&
+            GetFileAttributesW(ApiPath(f.right+L"\\delete.txt").c_str())==INVALID_FILE_ATTRIBUTES,"combined directory copies and deletions");
+        Check(report.overwrites.recovery.complete==keep && report.deletions.recovery.complete==keep,"combined recovery follows frozen ON/OFF");
+        if(keep) Check(Read(report.overwrites.recovery.items[0].saved)=="ORIGINAL","combined overwrite has independent original");
+    }
+    for(int scenario=0;scenario<5;++scenario) {
+        Fixture f;Put(f.left+L"\\new.txt","NEW");Put(f.left+L"\\overwrite.txt","NEW CONTENT");Put(f.right+L"\\overwrite.txt","ORIGINAL");Put(f.right+L"\\delete.txt","KEEP");
+        Options options;options.asymmetric=true;auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);std::vector<size_t> visible;
+        for(size_t i=0;i<snapshot.rows.size();++i) {visible.push_back(i);if(snapshot.rows[i].path==L"overwrite.txt") snapshot.rows[i].action=Action::CopyRight;}
+        std::atomic<SyncStage> stage{SyncStage::Checking};
+        SetCopyHook([&](CopyPhase phase,const std::wstring& path) {
+            if(stage==SyncStage::NewItems && phase==CopyPhase::Publishing && scenario==0) throw std::runtime_error("copy fault");
+            if(stage==SyncStage::NewItems && phase==CopyPhase::Published) {
+                if(scenario==1) f.cancel=true;
+                if(scenario==2) Put(f.right+L"\\overwrite.txt","EXTERNAL-CHANGE",false);
+            }
+            if(stage==SyncStage::Overwrites && phase==CopyPhase::Published && path==f.right+L"\\overwrite.txt") {
+                if(scenario==3) f.cancel=true;
+                if(scenario==4) Put(f.right+L"\\delete.txt","EXTERNAL",false);
+            }
+        });
+        auto report=Synchronize(snapshot,visible,false,L"",f.cancel,f.checking,f.progress,stage);SetCopyHook({});
+        if(report.complete || !report.error || !report.deletions.items.empty()) std::cerr<<"combined scenario "<<scenario<<" complete="<<report.complete<<" error="<<report.error<<" deletes="<<report.deletions.items.size()<<" cancel="<<report.cancelled<<"\n";
+        Check(!report.complete && report.error && report.deletions.items.empty(),"failure, Stop or changed pending item prevents later deletion phase");
+        if(scenario<=2) Check(report.overwrites.items.empty(),"copy failure/Stop and changed overwrite prevent overwrite phase");
+        Check(Read(f.right+L"\\delete.txt")== (scenario==4?"EXTERNAL":"KEEP"),"unexecuted deletion target retained");
+        if(scenario==2 || scenario==4) Check(report.stale,"external pending mutation invalidates combined batch");
+    }
+    {
+        Fixture f;Put(f.left+L"\\left.txt","LEFT");Put(f.right+L"\\right.txt","RIGHT");
+        auto snapshot=f.Scan();std::atomic<SyncStage> stage{SyncStage::Checking};
+        auto skipped=snapshot;skipped.rows[0].action=Action::None;
+        auto scoped=BuildSyncPlan(skipped,{0,1,1});
+        Check(scoped.copies.size()==1 && scoped.omitted==1 && BuildSyncPlan(snapshot,{1}).Count()==1,"combined scope honors Skip, visibility and unique rows");
+        auto report=Synchronize(snapshot,{0,1},false,L"",f.cancel,f.checking,f.progress,stage);
+        Check(report.complete && Read(f.right+L"\\left.txt")=="LEFT" && Read(f.left+L"\\right.txt")=="RIGHT","combined new copies work both directions");
+    }
+    {
+        Fixture f;Put(f.left+L"\\new.txt","NEW");Put(f.left+L"\\overwrite.txt","NEW CONTENT");Put(f.right+L"\\overwrite.txt","ORIGINAL");
+        auto snapshot=f.Scan();std::vector<size_t> visible;
+        for(size_t i=0;i<snapshot.rows.size();++i) {visible.push_back(i);if(snapshot.rows[i].path==L"overwrite.txt") snapshot.rows[i].action=Action::CopyRight;}
+        std::atomic<SyncStage> stage{SyncStage::Checking};
+        auto report=Synchronize(snapshot,visible,true,f.right,f.cancel,f.checking,f.progress,stage);
+        Check(report.error && !report.complete && GetFileAttributesW(ApiPath(f.right+L"\\new.txt").c_str())==INVALID_FILE_ATTRIBUTES,"invalid recovery root stops whole batch before any writes");
+    }
+}
 int main() {
     try { Success(); Scope(); ModifyOnlyDestination(); Boundaries(); Paths(); AfterPublication(); DiskSpace();
         RecoverySuccess(); RecoveryFailures(); RecoveryPaths(); OverwriteSuccess(); OverwriteFailures(); OverwritePaths();
-        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion();
+        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();
         std::cout<<checks<<" copy/recovery/overwrite/delete assertions passed\n"; return 0; }
     catch(const std::exception& e) { std::cerr<<"FAILED: "<<e.what()<<"\n"; return 1; }
 }
