@@ -9,7 +9,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 > No warranty is provided. Test only on disposable copies with an independent, verified backup.
 > Recovery copies do not provide automatic rollback. Runtime validation covers local NTFS x64; SMB remains untested.
 
-## [Unreleased] — 0.2.1
+## [0.2.1] — 2026-10-19
 
 ### Added
 
@@ -25,7 +25,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 - Empty-directory copies use staging and verification, inherit destination permissions, and preserve supported attributes and modification time. Existing targets are never replaced by the new-copy command; directory ADS are refused.
 - Extend English/Czech guides, operation explanations and regression coverage for profile transfer, directory copies and combined execution.
 
-These changes are committed to development but have **not** been published as a 0.2.1 release. The latest public release is 0.2.0.
+Published as an **ALPHA** prerelease with a ready-to-install, unsigned x64 package and English/Czech language modules and guides. Test only on disposable copies with an independent backup; completed operations are not rolled back.
 
 ## [0.2.0] — 2026-10-18
 
@@ -133,7 +133,7 @@ The versions below were development milestones, not separate published GitHub re
 
 - Document the comparison/synchronization design, SDK constraints, recovery approach and verification plan before implementation in the original fork. Plugin development later moved to this standalone repository; the [migration records and commit map](docs/migration/repository-migration.md) preserve that provenance.
 
-[Unreleased]: https://github.com/majklvi/salamander-directory-sync/compare/v0.2.0...main
+[0.2.1]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.1
 [0.2.0]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.0
 [0.1.6]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.1.6
 [0.1.5]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.1.5

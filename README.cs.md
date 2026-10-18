@@ -4,17 +4,17 @@
 > **ALFA VERZE — NEBEZPEČÍ ZTRÁTY DAT. NENÍ URČENO PRO PRODUKČNÍ POUŽITÍ.**
 > Použití výhradně na vlastní nebezpečí. Autoři a přispěvatelé neposkytují **ŽÁDNOU ZÁRUKU A NENESOU ODPOVĚDNOST ZA JAKOUKOLI ZTRÁTU NEBO POŠKOZENÍ DAT**. Testujte pouze na postradatelných kopiích a mějte nezávislou ověřenou zálohu. Uchování originálů nezajišťuje automatické vrácení změn ani neodstraňuje riziko ztráty dat.
 
-**[Stáhnout hotový plugin 0.2.0 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/dirsync-0.2.0-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/package-sha256.txt)
+**[Stáhnout hotový plugin 0.2.1 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/dirsync-0.2.1-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/package-sha256.txt)
 
 ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není potřeba nic kompilovat, instalovat Visual Studio ani SDK.**
 
 [English](README.md)
 
-**Verze 0.2.0 ALFA · místní NTFS pilot · x64.**
+**Verze 0.2.1 ALFA · místní NTFS pilot · x64.**
 
 **Od verze 0.2.0 plugin podporuje pojmenované profily.** Uložte dvojici adresářů, masky, volby porovnání a filtry výsledků a přepínejte úlohy tlačítkem s hvězdou vedle adresářů. Při příštím otevření se načte naposledy vybraný profil; načtení nikdy samo nespustí porovnání ani synchronizaci. Obnova a vzhled zůstávají společné pro všechny profily. [Používání profilů](docs/directory-sync-plugin.md#profily-020).
 
-**Vývojová verze: 0.2.1 ALFA.** Přidává kopírování prázdných adresářů, import/export profilů a volby Uložit / Neukládat / Zrušit při zavírání změněného profilu. Souhrnný příkaz provede viditelné kopie, přepisy a mazání po jednom potvrzení. Odkaz ke stažení výše nadále vede na vydanou verzi 0.2.0.
+**Novinky v 0.2.1 ALFA.** Přidává kopírování prázdných adresářů, import/export profilů a volby Uložit / Neukládat / Zrušit při zavírání změněného profilu. Souhrnný příkaz provede viditelné kopie, přepisy a mazání po jednom potvrzení.
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
@@ -78,7 +78,7 @@ Otevřete **Settings… / Nastavení…** v náhledu nebo **Plugins Manager → 
 
 ## Stažení a instalace alfa verze
 
-Stáhněte [hotový x64 ZIP z release 0.2.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.0/dirsync-0.2.0-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
+Stáhněte [hotový x64 ZIP z release 0.2.1](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/dirsync-0.2.1-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
 
 ## Běžný postup a rozsah operací
 
