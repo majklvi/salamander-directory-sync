@@ -125,10 +125,29 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeProposalRules(const wchar_
         for(size_t row=0;row<6;++row) for(int command=0;command<7;++command)
             check(Proposal(p,row,command,action)==allowed[row][command]);
         check(!Proposal(p,99,0,action));
+        // Menu commands need a valid change for at least one selected row.
+        check(!CanChangeProposals(p,{0,1,2,3,4,5},RestoreProposal));
+        check(!CanChangeProposals(p,{0,1},int(A::CopyRight)));
+        check(!CanChangeProposals(p,{2},int(A::CopyLeft)));
+        check(CanChangeProposals(p,{0,2},int(A::CopyLeft)));
+        check(!CanChangeProposals(p,{0,2,4,5},int(A::CopyRight)));
+        check(CanChangeProposals(p,{1,2,3,4,5},int(A::CopyRight)));
+        check(!CanChangeProposals(p,{1,4,5,99},int(A::CopyLeft)));
+        check(!CanChangeProposals(p,{},RestoreProposal));
+        check(!CanChangeProposals(p,{99},int(A::CopyRight)));
+        check(!CanChangeProposals(p,{3},int(A::None)));
+        check(CanChangeProposals(p,{0,3,4,5},int(A::None)));
         auto counts=ChangeProposals(p,{0,4,5},0);
         check(counts.first==1 && counts.second==2);
         check(p.result.rows[0].action==A::None && p.result.rows[1].action==A::CopyRight && p.result.rows[4].action==A::Blocked);
+        check(CanChangeProposals(p,{0,1,2,4,5},RestoreProposal));
+        check(CanChangeProposals(p,{0,1,4,5},int(A::CopyRight)));
         counts=ChangeProposals(p,{0},RestoreProposal);check(counts.first==1 && p.result.rows[0].action==A::CopyRight);
+        check(!CanChangeProposals(p,{0,1,2,4,5},RestoreProposal));
+        counts=ChangeProposals(p,{0,1,2,4,5},int(A::CopyLeft));
+        check(counts.first==1 && counts.second==4 && p.result.rows[0].action==A::CopyLeft);
+        counts=ChangeProposals(p,{0,1,2,4,5},RestoreProposal);
+        check(counts.first==1 && counts.second==4 && p.result.rows[0].action==A::CopyRight);
         counts=ChangeProposals(p,{0},ReverseProposal);check(counts.first==1 && p.result.rows[0].action==A::CopyLeft);
         p.options.asymmetric=true;
         check(!Proposal(p,0,2,action) && !Proposal(p,0,ReverseProposal,action));

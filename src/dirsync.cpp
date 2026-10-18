@@ -1242,6 +1242,13 @@ bool Proposal(const Preview& p,size_t index,int command,dirsync::Action& action)
     if(action==dirsync::Action::DeleteRight && (!p.options.asymmetric || !row.hasRight || row.hasLeft)) return false;
     return action!=dirsync::Action::Blocked;
 }
+bool CanChangeProposals(const Preview& p,const std::vector<size_t>& rows,int command)
+{
+    return std::any_of(rows.begin(),rows.end(),[&](size_t index) {
+        dirsync::Action action{};
+        return Proposal(p,index,command,action) && p.result.rows[index].action!=action;
+    });
+}
 std::pair<uint64_t,uint64_t> ChangeProposals(Preview& p,const std::vector<size_t>& rows,int command)
 {
     uint64_t changed=0,unchanged=0;
@@ -1477,9 +1484,8 @@ void PreviewMenu(Preview& p,LPARAM position)
     if(menu->LoadFromTemplate(language,items,nullptr,nullptr,nullptr)) {
         if(auto* plan=menu->GetSubMenu(21,FALSE)) EnablePlanMenu(plan,p);
         for(int proposal:{0,1,2,3,RestoreProposal,ReverseProposal}) {
-            bool enabled=false;dirsync::Action action{};
-            if(p.result.snapshot && !p.result.stale && !p.result.cancelled && !p.failed)
-                for(size_t index:rows) if(Proposal(p,index,proposal,action)) {enabled=true;break;}
+            bool enabled=p.result.snapshot && !p.result.stale && !p.result.cancelled && !p.failed &&
+                CanChangeProposals(p,rows,proposal);
             menu->EnableItem(proposal+1,FALSE,enabled);
         }
         if(auto* remove=menu->GetSubMenu(22,FALSE))
@@ -2323,7 +2329,7 @@ CPluginInterfaceAbstract* WINAPI SalamanderPluginEntry(CSalamanderPluginEntryAbs
     if (!language) return nullptr;
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES}; InitCommonControlsEx(&controls);
     ConfigureDark(nullptr);
-    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.1.5", "Copyright (c) 2026 Open Salamander Authors",
+    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.1.6", "Copyright (c) 2026 Open Salamander Authors",
                               general->LoadStr(language, IDS_DESCRIPTION), "DirectorySync");
     return &plugin;
 }

@@ -10,7 +10,7 @@ ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není 
 
 [English](README.md)
 
-**Verze 0.1.5 ALFA · místní NTFS pilot · x64.** Přidává volitelné barvení textu řádků a vysvětlení synchronizačních operací ve stavovém řádku. Výše odkazovaný balíček obsahuje hotový plugin 0.1.5.
+**Verze zdrojového kódu 0.1.6 ALFA · místní NTFS pilot · x64.** Příkazy pro změnu návrhu jsou neaktivní, pokud by nezměnily žádnou vybranou položku. U smíšeného výběru zůstanou dostupné, pokud lze změnit alespoň jednu položku. Výše odkazovaný zveřejněný balíček je release 0.1.5, který přidal volitelné barvení textu řádků a vysvětlení operací ve stavovém řádku.
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
