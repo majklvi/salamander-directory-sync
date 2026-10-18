@@ -1,0 +1,140 @@
+# Changelog
+
+Notable changes to **Directory Synchronization for Samandarin**, newest first.
+This history was reconstructed from Git commits, published release notes and dated development records.
+Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
+
+> [!CAUTION]
+> **All releases listed here are ALPHA software with a risk of data loss.**
+> No warranty is provided. Test only on disposable copies with an independent, verified backup.
+> Recovery copies do not provide automatic rollback. Runtime validation covers local NTFS x64; SMB remains untested.
+
+## [Unreleased] — 0.2.1
+
+### Added
+
+- Copy physically empty directories in either direction through **Copy visible new items…**, alongside new files. Visible filters and Skip apply; progress and Stop use the existing transfer worker.
+- Import and export named profiles through **Manage profiles…**, using versioned `.dsprofiles` files. Import adds profiles with new local IDs and numeric suffixes for duplicate names; it preserves existing profiles and the active selection and never starts an operation.
+- **Execute visible plan…** combines new copies, overwrites and asymmetric deletions under one confirmation. The summary shows counts, directions, data sizes and the frozen recovery preference.
+- Ask whether to **Save / Don't save / Cancel** when closing a modified saved profile. Invalid inputs or a failed save keep the window open; unchanged profiles close without a question.
+
+### Changed
+
+- Combined execution creates new targets first, overwrites existing files second, and deletes right-only files followed by empty directories deepest first. The first error or Stop ends all remaining phases; completed changes stay in place.
+- Validate pending source/target identities and metadata between phases without treating completed writes as external changes or adopting new proposals. Reject an invalid recovery-directory location before any writes when destructive phases need recovery.
+- Empty-directory copies use staging and verification, inherit destination permissions, and preserve supported attributes and modification time. Existing targets are never replaced by the new-copy command; directory ADS are refused.
+- Extend English/Czech guides, operation explanations and regression coverage for profile transfer, directory copies and combined execution.
+
+These changes are committed to development but have **not** been published as a 0.2.1 release. The latest public release is 0.2.0.
+
+## [0.2.0] — 2026-10-18
+
+### Added
+
+- Named synchronization profiles storing directory pairs, masks, comparison options and result filters.
+- A compact profile manager with a complete saved-settings preview, Save current, Save as, Rename and Delete, plus a card/star menu button beside the directory inputs.
+- Remember the last selected profile across plugin openings and host restarts. Loading a profile never starts comparison or synchronization; recovery and appearance remain global.
+- A dirty-profile marker in the window title and confirmation before switching away from unsaved inputs or current results.
+
+### Changed
+
+- Read the host's enabled/disabled timestamp tolerance and configured seconds for each comparison. Enabled tolerance uses inclusive whole-second comparisons; disabled tolerance requires exact timestamps. Retain the legacy three-second fallback when the host setting is unavailable.
+
+The host's separate daylight-saving-time adjustment is not exposed by the current SDK and is not implemented by this change.
+
+## [0.1.6] — 2026-10-18
+
+### Changed
+
+- Disable proposal-menu commands that cannot change any selected eligible row, including restoring an already-default proposal or marking an already-selected copy direction. Mixed selections retain useful commands.
+- Display an item's name only on the side where it exists; paired entries show both names. File/directory conflicts retain the correct type on each side.
+- **Package refresh, 2026-10-18:** add Michal Várady, the project URL and shorter English/Czech descriptions to Plugin Manager/About and author details to binary properties. The release package was refreshed from commit [`1b156f5`](https://github.com/majklvi/salamander-directory-sync/commit/1b156f5410bec508f15f3dae8a47be34e9bf61a0); the original release tag was retained.
+
+## [0.1.5] — 2026-10-18
+
+### Added
+
+- Optional **Color row text** using the configured operation colors, remembered across sessions. Skipped rows remain gray and highlighted rows retain native selection colors.
+- Context-sensitive explanations in the left status pane while choosing synchronization operations, including visible-plan scope and the current recovery choice.
+
+### Changed
+
+- Update English/Czech user documentation for row colors and operation help.
+
+## [0.1.4] — 2026-10-17
+
+**First public alpha release**, including the features developed in 0.1.0–0.1.3 below.
+
+### Added
+
+- Separate native status-bar panes for row counts and transfer/comparison metrics instead of one long delimiter-separated string.
+- A standalone development repository with preserved plugin history, documentation and migration provenance; pinned SDK/support snapshots; independent build, test and package scripts; and build/test/package and CodeQL workflows.
+- Ready-to-install, unsigned x64 binaries with English/Czech language modules, installation instructions, pilot guidance and SHA-256 checksums.
+- An English project README and development rules, retaining the Czech README as `README.cs.md`.
+
+### Changed
+
+- **Package documentation refresh, 2026-10-17:** bundle English and Czech full/pilot guides, keep development records online instead of including a `docs` directory, and verify extracted package hashes and guide links. The refreshed package records commit [`4a09d45`](https://github.com/majklvi/salamander-directory-sync/commit/4a09d45e65a2e4183db99c9998072a2955152d78); the original release tag was retained.
+
+## Before the first public release
+
+The versions below were development milestones, not separate published GitHub releases. Their dates come from the commits that introduced the version numbers. Later development within a milestone is included under that version.
+
+## 0.1.3 — 2026-10-17 (development)
+
+### Added
+
+- Independently optional relative sizes and timestamps for paired files: larger/smaller byte differences and newer/older elapsed-time differences. Absolute display remains the default; comparison and sorting still use actual values.
+- Symmetric columns: left name, size and date; operation; right date, size and name. Side names in headings are optional.
+- Direct removal of highlighted visible items on the left, right or both sides through the context menu: normally to the Windows Recycle Bin, or permanently when Shift is held while activating the side command. This command has its own confirmation and does not use synchronization recovery copies.
+
+## 0.1.2 — 2026-10-17 (development)
+
+### Added
+
+- Ascending/descending column-header sorting within directory groups, preserving group boundaries and selection.
+- Configurable visibility of state, reason, error, size and date columns, while retaining names and the operation column.
+- Mirrored file-name columns for easier orientation on both sides.
+
+### Fixed
+
+- Disappearing column headers while scrolling long grouped results.
+
+## 0.1.1 — 2026-10-16 (development)
+
+### Added
+
+- Group comparison results by relative directory, including an explicit root group. File rows show their final name; copied paths remain complete. Filters remove groups with no visible rows, and group headers do not select or execute their contents.
+
+## 0.1.0 — 2026-10-15–2026-10-16 (development)
+
+### Added
+
+- Native directory comparison and a reviewable, initially read-only proposal preview: recursive scanning, masks and exclusions, optional content comparison, timestamp handling, panel-selection scope, and asymmetric mode using the left tree as the source.
+- Verified copying to new file targets with sibling staging, supported data-stream/metadata verification, inherited target permissions, progress and Stop.
+- Optional, remembered **Keep originals** and a recovery directory outside both compared trees, with verified independent original copies and manifests for manual recovery.
+- Existing-file overwrites preserving destination permissions, plus asymmetric deletion of right-only files and explicitly planned directories. Directory removal is nonrecursive and proceeds only when empty; retained, skipped or filtered children protect their parents.
+- English/Czech interfaces, a small synchronization icon, host-controlled light/dark appearance, custom operation colors, compact native dialogs and directory pickers.
+- Selected-row proposal editing and Unicode path copying, structured operation summaries with clipboard commands, and clearly separated visible-plan execution commands.
+- Independent, combinable icon filters that wrap with available width, paired start/Stop controls, a native status bar and a compact results-focused layout.
+- Host panel size/name formatting and regional number formatting, long/Unicode path support, clean-configuration registration/restart checks and local NTFS pilot packages.
+- Automated and GUI validation of cancellation, forced unloading/shutdown, path changes after scanning, recovery, and disk-space failures, including an isolated NTFS VHD run.
+
+### Fixed
+
+- Keyboard focus during work, filter toggle/repainting behavior on resize, plugin registration reload, tooltip/layout issues, and new-copy behavior with ordinary Modify permissions.
+
+### Changed
+
+- Comparison-option changes apply to the next Compare and preserve current results; path/mask changes invalidate the current plan.
+- Keep recovery/appearance preferences global. Completed operations remain after cancellation or an error; require a fresh Compare before another execution.
+
+## Origins — 2026-10-14
+
+- Document the comparison/synchronization design, SDK constraints, recovery approach and verification plan before implementation in the original fork. Plugin development later moved to this standalone repository; the [migration records and commit map](docs/migration/repository-migration.md) preserve that provenance.
+
+[Unreleased]: https://github.com/majklvi/salamander-directory-sync/compare/v0.2.0...main
+[0.2.0]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.0
+[0.1.6]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.1.6
+[0.1.5]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.1.5
+[0.1.4]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.1.4

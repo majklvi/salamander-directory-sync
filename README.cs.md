@@ -102,4 +102,4 @@ Ověřen je místní NTFS a x64. SMB je neotestované. Skryté a systémové pol
 
 Chyby hlaste přes [Issues](https://github.com/majklvi/salamander-directory-sync/issues): verze a hash balíčku, prostředí/jazyk/schéma/DPI, masky/volby/filtry, obnova ON/OFF, přesný postup a očekávaný/skutečný výsledek. Souhrn lze kopírovat Ctrl+Shift+C, relativní cesty vybraných řádků Ctrl+C. Z přiložených kopií protokolů odstraňte soukromé údaje; ideální je malá syntetická reprodukce. Při neočekávané změně dat zastavte další zápisy a ponechte souhrn i obnovovací běh.
 
-[English README](README.md) · [Licence GPL-2.0-or-later](LICENSE) · [Atribuce závislostí](docs/third_party.md)
+[Historie změn (anglicky)](CHANGELOG.md) · [English README](README.md) · [Licence GPL-2.0-or-later](LICENSE) · [Atribuce závislostí](docs/third_party.md)
