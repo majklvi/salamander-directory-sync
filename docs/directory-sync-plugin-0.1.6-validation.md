@@ -34,3 +34,20 @@ All five x64 suites passed in both Debug and Release before GUI validation; the 
 The local x64 package passed manifest and binary validation. The working ZIP is a local test artifact, not a published 0.1.6 release. README download links intentionally continue to target the available 0.1.5 release.
 
 This change does not modify dialog geometry, file executors or the SDK. This report claims no new dark-mode, live DPI, SMB or file-operation coverage. Current-head hosted build/test/package and CodeQL results are available in GitHub Actions for the commit containing this report.
+
+## Follow-up: names reflect presence on each side
+
+Also validated on 2026-10-18 after rebuilding Debug and Release x64. Name cells now remain empty on an absent side. The directory suffix and name casing use the entry type on that specific side, including file/directory conflicts. The regression probe checks left-only, right-only, paired and conflicting entries. All five suites passed again in both configurations with the counts listed above.
+
+For live validation, the plugin was unloaded in the installed Samandarin 0.15.1 x64 host, its configuration saved and its Release binary and language modules replaced. All three deployed files matched the corresponding build outputs by SHA-256. The loaded `dirsync.spl` hash was `1e7e78ba22a7699c8b4b078fd17decd8487eebb8bd256cdec81b480fc5ce5fb1`.
+
+The existing isolated fixture was extended with the four-byte right-only `f-right-only-漢字.txt`. The new comparison displayed six rows in the Czech light-mode GUI:
+
+| Item | Left name | Right name |
+| --- | --- | --- |
+| Left-only file | `c-left-only.txt` | Empty |
+| Right-only Unicode file | Empty | `f-right-only-漢字.txt` |
+| Paired files, including equal files | Present | Present |
+| File/directory conflict | `e-conflict` | `e-conflict\` |
+
+All six rows were visible and the conflict remained blocked. Only Compare was run; the preview was left open without synchronization. After comparison, all nine fixture files retained their hashes, sizes and write timestamps, with no additional files in either tree. SMB was not tested and the SDK was not changed.

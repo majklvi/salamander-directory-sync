@@ -553,8 +553,10 @@ std::wstring Cell(const dirsync::Row& row, int column,const Preview& p)
     switch (column)
     {
     case 0: case 9: {
+        const bool left=column==0;
+        if(!(left?row.hasLeft:row.hasRight)) return L"";
         const auto separator=row.path.find_last_of(L'\\');
-        const bool directory=(row.hasLeft && row.left.directory) || (row.hasRight && row.right.directory);
+        const bool directory=left?row.left.directory:row.right.directory;
         return PanelName(row.path.substr(separator==std::wstring::npos?0:separator+1),p.nameFormat,directory)+(directory?L"\\":L"");
     }
     case 1: return row.hasLeft && !row.left.directory ? PanelSize(row.left.size,p.sizeFormat) : L"";

@@ -354,7 +354,12 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t*
     Filter(p);
     ok &= p.visible.size()==5 && ListView_GetItemCount(list)==5 && ListView_GetGroupCount(list)==4;
     ok &= p.groups==std::vector<std::wstring>{L"",L"alpha",L"alpha\\nested",L"beta-漢字"};
-    ok &= Cell(p.result.rows[1],0,p)==L"same.txt" && Cell(p.result.rows[1],9,p)==L"same.txt" && Cell(p.result.rows[4],0,p)==L"delete-dir\\";
+    ok &= Cell(p.result.rows[1],0,p)==L"same.txt" && Cell(p.result.rows[1],9,p).empty();
+    ok &= Cell(p.result.rows[4],0,p).empty() && Cell(p.result.rows[4],9,p)==L"delete-dir\\";
+    auto paired=p.result.rows[1];paired.hasRight=true;
+    ok &= Cell(paired,0,p)==L"same.txt" && Cell(paired,9,p)==L"same.txt";
+    paired.right.directory=true;
+    ok &= Cell(paired,0,p)==L"same.txt" && Cell(paired,9,p)==L"same.txt\\";
     for(size_t i=0;i<p.visible.size();++i) {
         LVITEMW item{};item.mask=LVIF_GROUPID;item.iItem=int(i);
         ok &= SendMessageW(list,LVM_GETITEMW,0,LPARAM(&item))!=FALSE;
