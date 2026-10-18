@@ -10,6 +10,7 @@
 #include "delete.h"
 #include "shell_delete.h"
 #include "resource.h"
+#include "versinfo.rh2"
 #include "previewlayout.h"
 #include "displayformat.h"
 #include "spl_gui.h"
@@ -2260,7 +2261,13 @@ public:
 class Plugin final : public CPluginInterfaceAbstract
 {
 public:
-    void WINAPI About(HWND parent) override { ConfigureDark(nullptr); Message(parent, IDS_DESCRIPTION); }
+    void WINAPI About(HWND parent) override {
+        ConfigureDark(nullptr);
+        const std::wstring copyright=L"" VERSINFO_COPYRIGHT;
+        const auto info=Text(IDS_DESCRIPTION)+L"\n\n"+copyright+
+            L"\nhttps://github.com/majklvi/salamander-directory-sync";
+        DarkModeMessageBoxW(parent,info.c_str(),Text(IDS_NAME).c_str(),MB_OK|MB_ICONINFORMATION);
+    }
     BOOL WINAPI Release(HWND, BOOL force) override
     {
         if (active)
@@ -2331,7 +2338,8 @@ CPluginInterfaceAbstract* WINAPI SalamanderPluginEntry(CSalamanderPluginEntryAbs
     if (!language) return nullptr;
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES}; InitCommonControlsEx(&controls);
     ConfigureDark(nullptr);
-    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.1.6", "Copyright (c) 2026 Open Salamander Authors",
+    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.1.6", VERSINFO_COPYRIGHT,
                               general->LoadStr(language, IDS_DESCRIPTION), "DirectorySync");
+    entry->SetPluginHomePageURL("https://github.com/majklvi/salamander-directory-sync");
     return &plugin;
 }

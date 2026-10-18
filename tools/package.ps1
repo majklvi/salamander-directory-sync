@@ -71,7 +71,7 @@ NO WARRANTY. Authors and contributors accept NO RESPONSIBILITY OR LIABILITY
 FOR ANY LOSS OR CORRUPTION OF DATA. Use only on disposable test copies with
 an independent verified backup. Keep originals does not provide rollback.
 ALFA VERZE -- NEBEZPECI ZTRATY DAT. BEZ ZARUKY A ODPOVEDNOSTI ZA ZTRATU DAT.
-Copyright (c) 2026 Open Salamander Authors. GPL-2.0-or-later.
+Copyright (c) 2026 Michal Várady; Open Salamander Authors. GPL-2.0-or-later.
 Source revision: $revision
 Source: https://github.com/majklvi/salamander-directory-sync/tree/$revision
 Includes darkmodelib by ozone10; licenses are in licenses/.

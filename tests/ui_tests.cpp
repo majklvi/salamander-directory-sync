@@ -182,6 +182,12 @@ void Test(int dialog)
             { std::wcerr << L"DPI " << dpi << L": clipped caption " << c.text << L"\n"; fits = false; }
         }
         if(dialog==IDD_PREVIEW) {
+            // The host's Plugin Manager has a single 273-DLU description field.
+            const wchar_t* description=nullptr;
+            const int length=LoadStringW(nullptr,IDS_DESCRIPTION,reinterpret_cast<LPWSTR>(&description),0);
+            SIZE descriptionSize{};
+            Check(length>0 && GetTextExtentPoint32W(dc,description,length,&descriptionSize),"plugin description metrics");
+            Check(descriptionSize.cx<=MulDiv(273,baseX,4),"localized description fits native Plugin Manager width");
             auto box=[&](DWORD id) {
                 for(size_t i=0;i<controls.size();++i) if(controls[i].id==id) return bounds[i];
                 throw std::runtime_error("missing responsive layout control");

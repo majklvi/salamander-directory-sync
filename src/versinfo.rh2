@@ -6,9 +6,9 @@
 #define VERSINFO_MINORA 1
 #define VERSINFO_MINORB 6
 #include "spl_vers.h"
-#define VERSINFO_COPYRIGHT "Copyright (c) 2026 Open Salamander Authors"
-#define VERSINFO_COMPANY "Open Salamander"
-#define VERSINFO_DESCRIPTION "Directory Synchronization preview plugin"
+#define VERSINFO_COPYRIGHT "© 2026 Michal Várady; Open Salamander Authors"
+#define VERSINFO_COMPANY "Michal Várady"
+#define VERSINFO_DESCRIPTION "Directory Synchronization for Samandarin"
 #ifdef _LANG
 #ifdef DIRSYNC_CZECH
 #define VERSINFO_INTERNAL "CZECH"

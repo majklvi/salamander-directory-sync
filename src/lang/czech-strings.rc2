@@ -156,7 +156,7 @@ BEGIN
     IDS_SAVE_FAILED "Vlákno uchování selhalo. Originály zůstanou beze změny. Před opakováním zkontrolujte adresář obnovy a manifest."
     IDS_SAVE_PUBLISHED_ERROR "Kopie pro obnovu byla zveřejněna, ale závěrečná kontrola selhala. Před obnovením ji zkontrolujte."
     IDS_NAME "Synchronizace adresářů"
-    IDS_DESCRIPTION "Porovnávání a synchronizace adresářů Windows. Samostatné kopírování, přepis a mazání souborů a adresářů pouze vpravo s volitelnou obnovou."
+    IDS_DESCRIPTION "Porovnávání a synchronizace adresářů."
     IDS_MENU "Synchronizace adresářů..."
     IDS_INPUT_ERROR "Oba panely musí obsahovat adresáře Windows s úplnými cestami a dekódovatelnými vybranými názvy. Současné SDK pro tyto panely neposkytuje použitelný vstup."
     IDS_SCAN "Skenování: %llu položek; porovnáno: %llu"

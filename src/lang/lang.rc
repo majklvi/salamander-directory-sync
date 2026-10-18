@@ -261,7 +261,7 @@ BEGIN
     IDS_SAVE_FAILED "The recovery worker failed. Originals remain unchanged. Inspect the recovery folder and manifest before retrying."
     IDS_SAVE_PUBLISHED_ERROR "The recovery copy was published, but final checks failed. Inspect it before restoring."
     IDS_NAME "Directory Synchronization"
-    IDS_DESCRIPTION "Compare and synchronize Windows folders. Separately copy, overwrite or delete right-only files and directories with optional recovery. Directories require all descendants in the visible deletion plan."
+    IDS_DESCRIPTION "Directory comparison and synchronization."
     IDS_MENU "Directory synchronization..."
     IDS_INPUT_ERROR "Both panels must contain Windows folders with complete paths and decodable selected names. The current SDK cannot provide a usable input for these panels."
     IDS_SCAN "Scanning: %llu entries; compared: %llu"
