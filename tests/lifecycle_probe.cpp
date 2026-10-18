@@ -20,6 +20,32 @@ bool RecoveryLogged()
 }
 }
 // Exercise the same Unicode path expansion used by the native folder picker.
+extern "C" __declspec(dllexport) BOOL WINAPI ProbeTimeComparison()
+{
+    dirsync::Options options;bool ok=true;
+    auto read=[&](int enabled,int seconds,bool present=true) {
+        ReadTimeComparison(options,[&](int id,int& value) {
+            if(id==SALCFG_COMPDIRSUSETIMERES) {value=enabled;return present;}
+            if(id==SALCFG_COMPDIRTIMERES) {value=seconds;return present;}
+            return false;
+        });
+    };
+    read(1,2);ok &= options.tolerance==20000000 && options.wholeSecondTolerance;
+    const auto snapshot=options;
+    read(0,2);ok &= options.tolerance==0 && !options.wholeSecondTolerance;
+    ok &= snapshot.tolerance==20000000 && snapshot.wholeSecondTolerance;
+    for(int seconds:{0,1,5,3600}) {
+        read(1,seconds);ok &= options.tolerance==uint64_t(seconds)*10000000 && options.wholeSecondTolerance;
+    }
+    for(int seconds:{-1,3601}) {
+        read(1,seconds);ok &= options.tolerance==30000000 && !options.wholeSecondTolerance;
+    }
+    read(2,2);ok &= options.tolerance==30000000 && !options.wholeSecondTolerance;
+    read(1,2,false);ok &= options.tolerance==30000000 && !options.wholeSecondTolerance;
+    ReadTimeComparison(options,[](int id,int& value) {value=1;return id==SALCFG_COMPDIRSUSETIMERES;});
+    ok &= options.tolerance==30000000 && !options.wholeSecondTolerance;
+    return ok;
+}
 extern "C" __declspec(dllexport) unsigned WINAPI ProbeDisplayFormatting()
 {
     unsigned checks=0;

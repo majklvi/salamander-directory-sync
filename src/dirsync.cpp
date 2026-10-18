@@ -473,6 +473,17 @@ struct Preview
 };
 Preview* active = nullptr;
 std::wstring Number(uint64_t n) { return std::to_wstring(n); }
+template<class Query> void ReadTimeComparison(dirsync::Options& options,Query query)
+{
+    // Re-read on the UI thread for each new comparison, never mutate a running snapshot.
+    options.tolerance=30000000;options.wholeSecondTolerance=false;
+    int enabled=0,seconds=0;
+    if(!query(SALCFG_COMPDIRSUSETIMERES,enabled) || (enabled!=0 && enabled!=1)) return;
+    if(!enabled) {options.tolerance=0;return;}
+    if(!query(SALCFG_COMPDIRTIMERES,seconds) || seconds<0 || seconds>3600) return;
+    options.tolerance=uint64_t(seconds)*10000000;
+    options.wholeSecondTolerance=true;
+}
 void ReadPanelFormat(Preview& p)
 {
     if(!general) return;
@@ -1162,6 +1173,9 @@ void Start(Preview& p)
     p.options.asymmetric = Checked(p.window, IDC_ASYMMETRIC);
     p.options.emptyDirectories = Checked(p.window, IDC_EMPTY);
     p.options.onlySelected = Checked(p.window, IDC_SELECTED);
+    ReadTimeComparison(p.options,[](int id,int& value) {
+        return general && general->GetConfigParameter(id,&value,sizeof(value),nullptr);
+    });
     InvalidatePlan(p);
     p.validating = false; p.intent = Preview::Intent::None;
     p.cancel = false; p.progress.scanned = 0; p.progress.compared = 0; p.progress.readBytes = 0;

@@ -515,7 +515,9 @@ Row Classify(const Entry* left, const Entry* right, const Options& o, bool conte
     if (left->directory) return row;
     if (Identity(*left, *right))
     { row.state = State::Blocked; row.action = Action::Blocked; row.reason = Reason::Aliased; row.error = ERROR_INVALID_PARAMETER; return row; }
-    uint64_t delta = left->time > right->time ? left->time - right->time : right->time - left->time;
+    const uint64_t unit=o.wholeSecondTolerance?10000000:1;
+    const uint64_t leftTime=left->time/unit,rightTime=right->time/unit;
+    uint64_t delta = (leftTime>rightTime?leftTime-rightTime:rightTime-leftTime)*unit;
     if (!o.ignoreDate && delta > o.tolerance)
     {
         row.state = State::Different;

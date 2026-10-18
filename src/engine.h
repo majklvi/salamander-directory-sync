@@ -38,7 +38,8 @@ struct Options
     bool emptyDirectories = false, onlySelected = false;
     std::wstring mask = L"*.*";
     std::vector<Selection> selection;
-    uint64_t tolerance = 30000000; // FILETIME ticks; approved inclusive 3 seconds.
+    uint64_t tolerance = 30000000; // FILETIME ticks; legacy fallback if host settings are unavailable.
+    bool wholeSecondTolerance = false; // Host's enabled time-resolution mode compares whole seconds.
 };
 struct Row
 {

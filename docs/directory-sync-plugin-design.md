@@ -291,6 +291,14 @@ Budoucí API musí umožnit propojit společný přenos a jeho výsledky s potvr
 
 **Není to podmínka první verze ani aktuální implementační úkol.** Do té doby zůstává vlastní přenosový adaptér pluginu a kompatibilita se současným Samandarinem 0.16. Toto rozhodnutí nepovoluje nynější změny SDK/hostitele ani implementaci vlastní kopie fronty, rychlostního limitu či přenosového okna.
 
+## Navazující plán — převzetí ignorování hodinových posunů
+
+**Schválený podmíněný krok, 18. října 2026:** pokud upstream přijme zpřístupnění `IgnoreDSTShifts` pluginům (například do verze 0.16), implementovat automatické převzetí této volby až po skutečném vydání odpovídající verze hostitele a SDK. Přijetí požadavku nebo dostupnost jen ve vývojovém sestavení není spouštěčem implementace. Číslo 0.16 je příklad, nikoli příslib upstreamu; skutečnou minimální podporovanou verzi určit podle vydaného kontraktu API.
+
+Po vydání ověřit nové API, kompatibilitu se staršími hostiteli a přiměřené testy obou směrů posunu jedné/dvou hodin v kombinaci s tolerancí v sekundách, velikostí a obsahem. Pokud volba není dostupná, hodinové posuny automaticky neignorovat. Skutečné časy zachovat pro zobrazení i ověřování plánu. Bez nové virtuální metody, pokud bude stačit nový parametr stávajícího `GetConfigParameter`; žádné nynější změny SDK ani čtení soukromých registrů hostitele.
+
+Běžná tolerance v sekundách se již přebírá přes existující SDK a na tento krok nečeká. Podrobnosti rozlišení obou voleb a současného stavu jsou v [průzkumu porovnání časů](directory-sync-plugin-daylight-saving.md). Návrh upstream Feature Requestu je zatím pouze místní dokument ke schválení; nebyl odeslán na GitHub.
+
 ## Zdrojová základna a její meze
 
 Primární referencí je oficiální návod referenčního programu a konkrétní odpovědi jeho autora. Komunitní wiki a diskuse dokládají popis funkcí a potřeby jednotlivých uživatelů. FreeFileSync a WinSCP slouží jako zdroje návrhových postupů; jejich chování se nepřipisuje referenčnímu správci souborů. Dokumentace Microsoftu vymezuje vlastnosti Windows API.

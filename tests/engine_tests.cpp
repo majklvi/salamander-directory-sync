@@ -52,6 +52,23 @@ void Matrix()
     ++a.time; Check(Classify(&a,&b,o).action == Action::CopyRight,"one tick past positive tolerance");
     a.time=base-3*second; Check(Classify(&a,&b,o).state==State::Equal,"inclusive negative tolerance");
     --a.time; Check(Classify(&a,&b,o).action==Action::CopyLeft,"one tick past negative tolerance");
+    for(uint64_t seconds:{0ULL,1ULL,2ULL,5ULL,3600ULL}) {
+        o.tolerance=seconds*second;o.wholeSecondTolerance=true;
+        b.time=base+second-1;a.time=base+seconds*second;
+        Check(Classify(&a,&b,o).state==State::Equal,"host whole-second tolerance inclusive boundary");
+        a.time=base+(seconds+1)*second;
+        Check(Classify(&a,&b,o).action==Action::CopyRight,"next whole second exceeds host tolerance");
+        std::swap(a.time,b.time);
+        Check(Classify(&a,&b,o).action==Action::CopyLeft,"host tolerance applies in both directions");
+    }
+    o.tolerance=0;o.wholeSecondTolerance=false;a.time=base+1;b.time=base;
+    Check(Classify(&a,&b,o).action==Action::CopyRight,"disabled time resolution compares exact timestamps");
+    o.tolerance=2*second;o.wholeSecondTolerance=true;a.time=base+2*second;
+    a.size=5;Check(Classify(&a,&b,o).state==State::Different,"tolerance preserves size differences");
+    a.size=4;o.content=true;
+    Check(Classify(&a,&b,o,false).state==State::Different,"tolerance preserves content differences");
+    o.ignoreDate=true;a.time=base+100*second;
+    Check(Classify(&a,&b,o,true).state==State::Equal,"ignore date overrides inherited tolerance");
     a.error=ERROR_ACCESS_DENIED; a.reason=Reason::ScanError;
     Check(Classify(nullptr,&a,o).action==Action::Blocked,"error is not absence");
     a.error=0; a.directory=true;
