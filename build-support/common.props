@@ -24,4 +24,7 @@
   </Link>
   <ResourceCompile><PreprocessorDefinitions>WINVER=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)'=='Debug'">_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)'=='Release'">NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions><AdditionalIncludeDirectories>$(RepoRoot)src;$(RepoRoot)vendor\samandarin-sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><Culture>0x0409</Culture></ResourceCompile>
  </ItemDefinitionGroup>
+ <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
+  <ResourceCompile><PreprocessorDefinitions>_WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions></ResourceCompile>
+ </ItemDefinitionGroup>
 </Project>

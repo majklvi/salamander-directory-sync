@@ -25,6 +25,10 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 - Empty-directory copies use staging and verification, inherit destination permissions, and preserve supported attributes and modification time. Existing targets are never replaced by the new-copy command; directory ADS are refused.
 - Extend English/Czech guides, operation explanations and regression coverage for profile transfer, directory copies and combined execution.
 
+### Fixed
+
+- Correct the architecture suffix in Windows file-version resources for x64 builds; packaging now verifies both the actual PE architecture and the x64 version label.
+
 Published as an **ALPHA** prerelease with a ready-to-install, unsigned x64 package and English/Czech language modules and guides. Test only on disposable copies with an independent backup; completed operations are not rolled back.
 
 ## [0.2.0] — 2026-10-18

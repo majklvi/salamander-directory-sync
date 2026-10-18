@@ -18,6 +18,7 @@ foreach($relative in $inputs){
  }finally{$reader.Dispose()}
  $version=[Diagnostics.FileVersionInfo]::GetVersionInfo($path)
  if($version.FileMajorPart -ne 0 -or $version.FileMinorPart -ne 2 -or $version.FileBuildPart -ne 1){throw "Expected 0.2.1: $relative"}
+ if($version.FileVersion -notmatch '\(x64\)'){throw "Expected x64 version label: $relative"}
 }
 $payload=Join-Path $output 'payload\dirsync'
 [void][IO.Directory]::CreateDirectory((Join-Path $payload 'lang'))
