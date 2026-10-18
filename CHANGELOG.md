@@ -9,6 +9,12 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 > No warranty is provided. Test only on disposable copies with an independent, verified backup.
 > Recovery copies do not provide automatic rollback. Runtime validation covers local NTFS x64; SMB remains untested.
 
+## [Unreleased]
+
+### Verification
+
+- Verify combined new-copy/overwrite/deletion batches in the live GUI with recovery ON and OFF, plus Stop (ON) and Close (OFF) during a large-file transfer. Confirm later phases remain unstarted, completed copies remain, staging is cleaned, and recovery contents match the selected mode. Record the separate large-list automation limitation and exact coverage in the [GUI verification report](docs/directory-sync-plugin-combined-gui.md). No production code or SDK change was required.
+
 ## [0.2.1] — 2026-10-19
 
 ### Added
@@ -137,6 +143,7 @@ The versions below were development milestones, not separate published GitHub re
 
 - Document the comparison/synchronization design, SDK constraints, recovery approach and verification plan before implementation in the original fork. Plugin development later moved to this standalone repository; the [migration records and commit map](docs/migration/repository-migration.md) preserve that provenance.
 
+[Unreleased]: https://github.com/majklvi/salamander-directory-sync/compare/v0.2.1...main
 [0.2.1]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.1
 [0.2.0]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.0
 [0.1.6]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.1.6
