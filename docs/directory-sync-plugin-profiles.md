@@ -2,6 +2,8 @@
 
 Plan and explicit user decisions recorded on 2026-10-18; implementation follows in the standalone plugin, without SDK changes or SMB testing.
 
+Latest verification: [multiple profiles, dark GUI and full host restarts](#multiple-profiles-dark-gui-and-full-restarts--2026-10-18). The dated records below retain the scope and limitations of their individual stages.
+
 ## Scope and decisions
 
 - A named profile stores the absolute left/right directory paths, masks, Subfolders, By content, Ignore date, Asymmetric, Empty directories and the five result filters.
@@ -94,3 +96,27 @@ The user selected proposal 3: a saved-profile card with a star. It replaces the 
 The star-icon build subsequently passed all five x64 suites in Debug and Release (2,211 engine/storage assertions; 3,729 file-operation assertions; 2,367 lifecycle checks; 3,684 English and 3,770 Czech resource/layout checks). Debug Win32/x64/ARM64 and Release x64 builds passed. Initial sandboxed build attempts encountered a timeout and an MSPDB linker error; rerunning outside the sandbox completed successfully.
 
 Computer Use then unloaded the old plugin with configuration saved in the installed Czech/light Samandarin 0.15.1 x64. The registered local `dirsync.spl` was replaced by the Release x64 binary, and matching SHA-256 hashes were verified. Reopening restored the last profile and showed the card/star icon at the right of the directory row. The window was left open with no comparison or synchronization started. This verifies the light-mode live rendering; dark artwork previews are not a live dark-host test. The remaining pilot checks above still apply. No SMB testing or SDK changes were made.
+
+## Multiple profiles, dark GUI and full restarts — 2026-10-18
+
+Verified commit `da8d00e7701f01c469c1465b6b0111d18a938036` using Computer Use on a separate **Samandarin 0.16 x64 developer build**, Czech interface, actual dark appearance. The host, plugin, portable configuration and NTFS fixture are under `C:\Samandarin\builds\dirsync-profiles-gui-20261018`. This is an isolated test configuration seeded from an earlier portable-host test, not a fresh first-install test. The installed user's instance and its profiles were left untouched.
+
+Host EXE SHA-256: `f0b2a56885b363dc0f75926fedd3036bb1954b775753348cbca0fc4d48574dd`. Plugin SHA-256: `6ade50f6089b1780ba7c6bc08198a70b6616be714c4659608f2c3c547569676b` (matches the Release x64 build).
+
+| GUI scenario | Observed result |
+|---|---|
+| Save profile A with Czech, CJK and supplementary Unicode characters | `Pilot A – žluťoučký 漢字 😀` saved with Unicode left/right paths, `*.*`, Subfolders ON and By content OFF. All manager fields were readable in dark mode. |
+| Change masks and By content, then Save as B | A acquired the dirty asterisk. B saved `*.txt;*.md` and By content ON; A retained its original values. |
+| Rename B | `Pilot B – přejmenováno & 漢字` appeared in the manager, window title and quick menu. The literal ampersand remained visible. |
+| Three profiles together | A, B and temporary C were listed separately; selection changed the saved-details preview. OK committed the manager draft and selected B without starting a comparison. |
+| Cancel deletion of C | The confirmation closed and C remained in the manager. No profile was removed. |
+| First full host restart | Closed the plugin, exited the test host normally and verified its window disappeared. Relaunched the exact test EXE. Plugin registration remained available; opening restored renamed B, Unicode roots, masks and By content. Status stayed Ready with zero rows. A, B and C remained in the menu. |
+| Confirm deletion of C | After explicit user approval, removed only `Pilot C – dočasný`. A/B remained, details cleared when the deleted selection disappeared, and Rename/Delete became disabled until another profile was selected. |
+| Load A through the manager, then B through the quick menu | A restored `*.*` and By content OFF; B restored `*.txt;*.md` and By content ON. Neither selection started Compare or a file operation. C disappeared from the quick menu. |
+| Second full host restart, after committing deletion | B reopened as the active profile with the correct settings. The menu contained A/B and no C. Dark appearance and the profile star icon remained readable. |
+
+After normal shutdown, an independent read-only decoder inspected `ProfilesV1` in the portable `config.reg`: exactly two profiles, IDs 1/2, active ID 2, flags 1/3 and filters 31 for both, exact Unicode names/paths and masks. Local evidence is `storage-verification.json` with the decoder `verify-storage.py`, outside Git beside the test host. The fixture `alpha.txt` retained SHA-256 `5a3b501918917aa4d0a1ae00106c6bd8f9bce3f3232ff60b219371ed8bf01411`; right and recovery directories stayed empty. No comparison, synchronization or filesystem-deletion command was invoked during this pass. The test host was closed; the original installed instance remained open.
+
+No plugin defect was found, so this pass changes documentation only. Initial setup issues were corrected locally: the launcher resolved a bare EXE path to the installed application, while the exact `process:` identifier launched the portable host; its RegFile parser required the original UTF-8 format rather than UTF-16. The extra launcher-created instance was closed. Nested modal input worked when targeted through the host's root window rather than the preview window. The minimal test host also displayed its known missing `salmon.exe` warning at startup. These are test-environment limitations, not fixes to plugin or SDK code.
+
+This completes the previously pending multiple-profile, rename, deletion/Cancel, live dark-mode and full-restart checks. Live duplicate-name correction, a second English host, monitor-DPI changes and a successful live resize sweep remain outside this pass; storage/resource tests already cover duplicate names and DPI metrics. The attempted edge drag did not resize the preview and is not counted as a resize test. No SMB testing or SDK modifications were performed. Existing five-suite Debug/Release and build-matrix results apply to the unchanged tested code; remote checks are verified separately for the documentation commit.
