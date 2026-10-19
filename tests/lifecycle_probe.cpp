@@ -77,6 +77,18 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= p.transferDetails.find(L"1 / 4")!=std::wstring::npos;
             ok &= p.transferDetails.find(L'{')==std::wstring::npos &&
                 p.transferDetails.find(L"0:00:")!=std::wstring::npos;
+            // Limited copying and unrestricted verification have different
+            // rates: do not project the slow copy rate over remaining reads.
+            p.transferBytesTotal=1000;p.transferWorkTotal=3000;
+            p.transferSampleTick=GetTickCount64();p.transferWorkRate=1000;p.copyProgress.copied=500;
+            const auto eta=InsertTextValues(Text(IDS_TRANSFER_LEFT),{{L"{time}",TransferTime(3)}});
+            UpdateTransfer(p);const auto unlimitedLine=ControlText(progress,IDC_TRANSFER_PHASE);
+            p.copyProgress.bytesPerSecond=1024;UpdateTransfer(p);
+            const auto limitedLine=ControlText(progress,IDC_TRANSFER_PHASE);
+            ok &= unlimitedLine.find(eta)!=std::wstring::npos && limitedLine.find(eta)==std::wstring::npos;
+            p.copyProgress.copied=1000;UpdateTransfer(p);
+            ok &= ControlText(progress,IDC_TRANSFER_PHASE).find(eta)!=std::wstring::npos;
+            p.copyProgress.bytesPerSecond=0;p.transferBytesTotal=p.transferWorkTotal=0;
             p.copyProgress.VerifyDisplay(1000);p.copyProgress.VerifiedDisplay(250);p.copyProgress.phase=dirsync::CopyPhase::Verifying;
             UpdateTransfer(p);ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_FILE_BAR,PBM_GETPOS,0,0)==250;
             ok &= ControlText(progress,IDC_TRANSFER_PHASE).find(Text(IDS_PROGRESS_VERIFY))!=std::wstring::npos;

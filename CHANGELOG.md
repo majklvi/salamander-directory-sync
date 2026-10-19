@@ -27,6 +27,9 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### Verification
 
+- Live modeless synchronization on isolated local NTFS: host-panel navigation during copying, Pause/Resume, changing the active speed limit from 4 to 8 MB/s, successful verification of all three targets, Stop from a paused copy, and preview Close during copying. Completed targets remain; unpublished staging and subsequent work are absent after cancellation. See the [modeless-window report](docs/directory-sync-plugin-modeless.md#live-modeless-transfer-verification).
+- Suppress the misleading time estimate while speed-limited copying remains: unrestricted verification cannot be extrapolated from the limited copy rate. Keep byte counts, speed and progress visible; cover the estimate policy in both language dialog probes.
+
 - Verify the 0.3.0 modeless lifetime, dialog keyboard routing, host responsiveness, monitor bounds and safe Close/forced unload. A live Czech/dark host remained usable while the preview was open and while switching away from content comparison. See the [modeless-window report](docs/directory-sync-plugin-modeless.md) for exact coverage and limitations.
 
 - Verify the native transfer window with English/Czech resources, long Unicode paths/tooltips, copy/verification bars, Stop/Escape/close and worker teardown. All five x64 suites and the plugin matrix pass; see the [progress-window report](docs/directory-sync-plugin-transfer-progress.md) for automated coverage and remaining live-host checks.

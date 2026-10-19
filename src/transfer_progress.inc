@@ -112,7 +112,12 @@ void UpdateTransfer(Preview& p) {
         line=copiedBytes<=p.transferBytesTotal?InsertTextValues(Text(IDS_TRANSFER_COPIED),{{L"{copied}",copied},{L"{total}",TransferSize(p.transferBytesTotal)}}):copied;
         if(p.transferRate){const auto limit=p.copyProgress.bytesPerSecond.load();
             line+=InsertTextValues(Text(limit?IDS_TRANSFER_RATE_LIMIT:IDS_TRANSFER_RATE),{{L"{rate}",TransferSize(p.transferRate)},{L"{limit}",TransferSize(limit)}});}
-        if(total>work && p.transferWorkRate)line+=InsertTextValues(Text(IDS_TRANSFER_LEFT),{{L"{time}",TransferTime((total-work)/p.transferWorkRate+1)}});
+        // A copy limit does not throttle verification. Extrapolating weighted
+        // copy throughput over both phases can overstate the ETA by minutes.
+        // Wait until all planned copying has finished before estimating reads.
+        if(total>work && p.transferWorkRate &&
+            (!p.copyProgress.bytesPerSecond.load() || copiedBytes>=p.transferBytesTotal))
+            line+=InsertTextValues(Text(IDS_TRANSFER_LEFT),{{L"{time}",TransferTime((total-work)/p.transferWorkRate+1)}});
         if(phase==dirsync::CopyPhase::Verifying)line+=L" — "+Text(IDS_PROGRESS_VERIFY);
     }else line=status+L" — "+Number(completed)+L" / "+Number(count);
     TransferText(p.transferWindow,IDC_TRANSFER_PHASE,line);
