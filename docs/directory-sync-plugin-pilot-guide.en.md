@@ -8,7 +8,7 @@
 
 Plugin 0.3.0 ALPHA development build for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
 
-New in the 0.3.0 development build: **Settings → Stored originals…** shows existing recovery runs without changing them, even with Keep originals off. Select a run, double-click an item for details, copy original/saved paths or open their directories. Ctrl+C / Ctrl+Shift+C copy the original/saved path in the items list; Refresh rereads records. Recorded success is not a new content verification. This browser offers no automatic restore or cleanup. See the [full guide](directory-sync-plugin.en.md#stored-originals-030).
+New in the 0.3.0 development build: **Settings → Stored originals…** shows existing recovery sessions without changing them, even with Keep originals off. Select a session, double-click an item for details, copy original/saved paths or open their directories. Ctrl+C / Ctrl+Shift+C copy the original/saved path in the items list; Refresh rereads records. Recorded success is not a new content verification. This browser offers no automatic restore or cleanup. See the [full guide](directory-sync-plugin.en.md#stored-originals-030).
 
 Click a heading to switch ascending/descending sorting within each directory. Right-click a heading or use **Settings → Columns** to hide/show optional columns. Both names, directory paths, and Action remain. Column choices/sorting persist; hiding a column does not exclude files from synchronization.
 
@@ -52,11 +52,11 @@ Upper **Mark for copy… / Mark to skip** commands only change proposals. The se
 ## Recovery and main limits
 
 - ON saves and verifies included originals before overwriting/deleting. The summary names `manifest.jsonl` and the execution journal. With OFF, synchronization commands **create no new backup or persistent execution journal and do not use the Recycle Bin**. Older backups are not automatically cleaned and continue to occupy space.
-- Manual recovery: use `saved` on a successfully saved manifest item. Recreate directory structure in a new checking directory first, then copy files from their saved paths with ordinary F5. Do not copy the entire auxiliary run tree into the original root. Verified recovery covers structure, file data, ADS, and file times. F7 creates directories with new timestamps; exact directory metadata and original permissions are not automatically restored.
+- Manual recovery: use `saved` on a successfully saved manifest item. Recreate directory structure in a new checking directory first, then copy files from their saved paths with ordinary F5. Do not copy the entire auxiliary session tree into the original root. Verified recovery covers structure, file data, ADS, and file times. F7 creates directories with new timestamps; exact directory metadata and original permissions are not automatically restored.
 - Hidden/System entries are included by mask/scope even if the main panels hide them. H/S attributes are in row tooltips. By content compares only main data, not ADS; timestamp tolerance follows Configuration → General at each Compare (normally 2 seconds; exact timestamps when disabled). Hourly DST shifts are not inherited.
 - Standalone copying of empty directories is not supported. Reparse/junction/symlink, EFS, and unsupported cloud/offline entries are blocked. Directories with their own ADS are rejected before deletion. Read-only attributes are not bypassed for overwrite/deletion.
 - The first error stops remaining work. This is not transactional backup or a complete NTFS backup tool. Do not modify either test tree through another program during a run. Created empty parents, incomplete journals, or reported staging residue may remain.
-- Transfers use the plugin's own worker, without the core's shared queue, background transfer, or speed limit. Runtime verification is x64. Live runs at other system DPI and cross-monitor moves remain to be checked; accessibility enumeration of thousands of rows previously caused delays.
+- Transfers use the plugin's own window with Pause/Resume and a per-batch speed limit; they do not join the core's shared queue. Host panels remain usable in modeless mode. Runtime verification is x64. Live runs at other system DPI and cross-monitor moves remain to be checked; accessibility enumeration of thousands of rows previously caused delays.
 
 See the [full guide](directory-sync-plugin.en.md), included as `README.md` in the ZIP. Detailed development records remain on GitHub and are not bundled.
 
@@ -70,7 +70,7 @@ Report in [Issues](https://github.com/majklvi/salamander-directory-sync/issues).
 - Expected/actual results, counts, and exact errors from the summary, optionally a screenshot. For delays, include row count, waiting time, and whether UI Automation was active.
 - With ON, relevant `manifest.jsonl`, `delete.jsonl`, or `overwrite.jsonl` if present. Their absence with OFF is not a bug. Remove sensitive paths/names from copies before sharing; retain original journals for recovery. Do not send private file contents. A small synthetic reproducer is best.
 
-After unexpected data changes, stop further writes, retain the summary and recovery run, and inspect copies in a separate directory first.
+After unexpected data changes, stop further writes, retain the summary and recovery session, and inspect copies in a separate directory first.
 
 Since 0.1.3, **Settings → Columns** offers independent relative-size and relative-time display, both off by default. Differing paired values show differences from the other side; equal values and missing counterparts retain absolute display. Sorting still uses actual sizes/times. See the full guide.
 

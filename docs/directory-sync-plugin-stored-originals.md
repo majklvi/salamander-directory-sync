@@ -66,3 +66,34 @@ Computer Use exposes the owned browser under its disabled Preferences owner rath
 Preferences changes were cancelled, the browser/preview/private host were closed normally, and the private host's original file-backed configuration was restored byte-for-byte after confirming its process had exited. The temporary light theme therefore does not replace its earlier test configuration. No installed user host or existing editor document was changed. No SMB test or SDK change was performed.
 
 Both existing x64 test configurations were rerun with `tools/test.ps1`: all five suites passed in Debug and Release (engine 2,216; copy/recovery 4,460; lifecycle 2,369; English resource/layout 5,147; Czech resource/layout 5,277). This follow-up changes documentation only; it does not rebuild or replace the tested binary. Cloud build-matrix, test, package and CodeQL results must be checked for the published documentation commit separately.
+
+## User-assisted completion and terminology — 2026-10-19
+
+The narrow input checks left open above were completed with the user operating the live Czech GUI in the same isolated private host. This is **user-assisted GUI verification**, not a claim that Computer Use successfully injected every action. The executable logic is unchanged from the earlier check.
+
+| Input | Evidence and result |
+| --- | --- |
+| F5 with list focus | The operator temporarily renamed the isolated saved `overwrite.txt` to `.held` outside the GUI. The browser showed **Missing / unavailable**. After the file was returned, the user clicked the selected upper-list row and pressed **F5**, explicitly confirming that availability changed back to **Saved according to record**. The recorded overwrite result remained. An initial ambiguous attempt was not counted as a pass. |
+| Upper menu: open session directory | The user selected the command and confirmed the directory containing `manifest.jsonl`, `overwrite.jsonl` and `right`. Computer Use's subsequent Explorer inventory independently showed the exact `run-{7FE408B0-1168-4750-8CE4-F0083A447348}` path under the isolated `recovery-漢字` root. |
+| Lower menu: open original/saved directories | The user invoked each menu entry for `overwrite.txt` and confirmed the original `on\right-漢字` and the saved `right\1\data` directory. This completes separate menu-entry activation coverage in addition to the earlier button-handler checks. |
+| Upper menu: copy session/manifest paths | The user invoked both commands and pasted their results into a new Notepad document, confirming the complete session path and the same path ending in `\manifest.jsonl`, including `recovery-漢字`. The final host capture also showed the two full pasted Unicode paths in that test document. |
+
+No synchronization, restoration, backup deletion, SMB access or SDK change was involved. The temporary `.held` name was reversed before finishing; no recovery record was rewritten by the browser.
+
+### Focus investigation
+
+The target exposed by Computer Use is **Preferences**, with **Stored originals** nested below it in the accessibility tree. Captures after injected input repeatedly report focus on the disabled Preferences owner; popup selection can then dismiss the menu without executing its command. Re-selecting the returned window through `get_window` still resolves to Preferences. Consequently, a dismissed popup or unchanged clipboard is not evidence that a menu handler ran.
+
+Source inspection finds the normal native `DialogBoxParamW` loop and `TrackPopupMenuEx` owner in the browser. F5 is handled by `LVN_KEYDOWN` from either list, deliberately requiring list focus. The modeless preview's keyboard hook calls `IsDialogMessageW` only for the preview or transfer window roots, not this separate owned dialog. A native regression in `ProbeModelessPreview` now exercises an owned popup with its parent disabled, verifies that F5 reaches its own procedure, and that Tab navigation is handled by its own dialog loop. This is a controlled message-routing test, separate from the live manual evidence.
+
+Windows' [modal-dialog documentation](https://learn.microsoft.com/en-us/windows/win32/dlgbox/about-dialog-boxes) describes disabling the owner while the modal dialog has its own message loop. No activation workaround, extra taskbar window or ownership change was added to production solely to accommodate an automation target. The successful user-operated checks do not reproduce a plugin focus fault. The exact internal activation behavior of the external automation helper is not diagnosed by these observations.
+
+### Terminology
+
+The UI and current English/Czech guides now use **Sessions / Relace**, with **recovery sessions / relace uchování originálů** in explanatory prose. One manifest represents one preservation attempt, not a complete synchronization or the lifetime of the open plugin window. The separate [terminology analysis](directory-sync-plugin-terminology.md) compares the alternatives and explains why **sync sessions** is too broad. Existing directory names, schema fields and internal IDs remain unchanged; old backups need no migration. Historical reports above retain their wording as evidence of the interface actually tested at that time.
+
+After restarting the private host with the rebuilt language modules, Computer Use confirmed the Czech **Relace** list/column heading, **Relace: 3** summary, feminine **Neúplná** state, and the complete renamed upper-menu captions. The existing schema-1 records still load normally with Keep originals OFF. The main SPL remains 713,728 bytes with its earlier SHA-256; only language-module resources changed in production. English and Czech resources passed geometry/caption metrics at 96/120/144/192/240 font DPI; this follow-up does not claim a separate live English-host or multi-monitor test.
+
+Final local checks: all five x64 suites pass in both Debug and Release (engine 2,216; copy/recovery 4,460; lifecycle 2,369, including the added owned-dialog checks within the existing modeless probe; English resource/layout 5,151; Czech 5,279). The full plugin build matrix passes: Debug Win32/x64/ARM64 and Release x64. ARM64 is build-only coverage.
+
+All six baseline recovery files retain their original lengths and SHA-256 hashes; no `.held` files remain, and the original roots still contain zero files. Local `completion.json` records the user-assisted checks. The private host was closed normally after the language check and its original configuration restored byte-for-byte. The user's test Notepad document was left untouched. Cloud CI must be checked for the resulting commit independently of these local results.

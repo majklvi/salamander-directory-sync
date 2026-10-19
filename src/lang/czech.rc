@@ -216,7 +216,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICK
 CAPTION "Uložené originály"
 FONT 8, "MS Shell Dlg"
 BEGIN
-    LTEXT "Běhy:", -1, 7, 7, 486, 10
+    LTEXT "Relace:", -1, 7, 7, 486, 10
     CONTROL "", IDC_STORED_RUNS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 19, 486, 66
     LTEXT "Položky (podrobnosti dvojklikem):", -1, 7, 91, 486, 10
     CONTROL "", IDC_STORED_ITEMS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 103, 486, 138
@@ -231,7 +231,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_STORED_DATE "Vytvořeno"
-    IDS_STORED_RUN "Běh"
+    IDS_STORED_RUN "Relace"
     IDS_STORED_STATE "Stav"
     IDS_STORED_ORIGINAL "Původní cesta"
     IDS_STORED_SAVED "Uložená cesta"
@@ -240,15 +240,15 @@ BEGIN
     IDS_STORED_OPERATION "Výsledek operace"
     IDS_STORED_NOTE "Pouze čtení. Kopie se znovu neověřují."
     IDS_STORED_LOADING "Načítání záznamů obnovy..."
-    IDS_STORED_EMPTY "Nenalezeny žádné běhy obnovy."
-    IDS_STORED_INCOMPLETE "Neúplný"
+    IDS_STORED_EMPTY "Nenalezeny žádné relace uchování originálů."
+    IDS_STORED_INCOMPLETE "Neúplná"
     IDS_STORED_COMPLETE "Manifest dokončen"
-    IDS_STORED_DAMAGED "Nečitelný / poškozený"
+    IDS_STORED_DAMAGED "Nečitelná / poškozená"
     IDS_STORED_UNKNOWN "Nepotvrzeno"
     IDS_STORED_RECORDED "Uloženo podle záznamu"
     IDS_STORED_MISSING "Chybí / nedostupné"
     IDS_STORED_DIFFERENT "Jiná velikost / typ"
-    IDS_STORED_UNSAFE "Mimo běh / reparse"
+    IDS_STORED_UNSAFE "Mimo relaci / reparse"
     IDS_STORED_REPLACED "Přepsáno podle záznamu"
     IDS_STORED_DELETED "Smazáno podle záznamu"
     IDS_STORED_NOT_STARTED "Nezahájeno podle záznamu"
@@ -256,11 +256,11 @@ BEGIN
     IDS_STORED_CANCELLED "Zastaveno podle záznamu"
     IDS_STORED_LIMIT "Dosažen limit zobrazení."
     IDS_STORED_OPEN_ERROR "Adresář není dostupný nebo obsahuje reparse bod. Cestu lze zkopírovat pro ruční kontrolu."
-    IDS_STORED_COPY_RUN "Kopírovat cestu běhu do schránky"
-    IDS_STORED_OPEN_RUN "Otevřít adresář běhu v Průzkumníku"
+    IDS_STORED_COPY_RUN "Kopírovat cestu relace do schránky"
+    IDS_STORED_OPEN_RUN "Otevřít adresář relace v Průzkumníku"
     IDS_STORED_COPY_MANIFEST "Kopírovat cestu manifestu do schránky"
     IDS_STORED_UNSUPPORTED "Nepodporovaná verze záznamu"
-    IDS_STORED_COUNTS "Běhy: {runs}; položky: {items}"
+    IDS_STORED_COUNTS "Relace: {runs}; položky: {items}"
     IDS_STORED_LEFT "Levý adresář"
     IDS_STORED_RIGHT "Pravý adresář"
     IDS_STORED_MANIFEST "Manifest"

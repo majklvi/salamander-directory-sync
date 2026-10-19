@@ -409,6 +409,26 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeModelessPreview() try {
     MSG message{};for(int iteration=0;iteration<20 && !GetWindowLongPtrW(host,DWLP_USER);++iteration)
         if(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}
     ok &= GetFocus()==second && GetWindowLongPtrW(host,DWLP_USER)==1 && IsWindowEnabled(host);
+    // An owned modal dialog has its own message loop. The preview's hook must
+    // leave both its F5 input and its Tab navigation to that loop.
+    auto popupProcedure=+[](HWND popup,UINT msg,WPARAM key,LPARAM)->INT_PTR {
+        if(msg==WM_KEYDOWN && key==VK_F5){SetWindowLongPtrW(popup,DWLP_USER,1);return TRUE;}
+        if(msg==WM_APP+28){SetWindowLongPtrW(popup,DWLP_USER,GetWindowLongPtrW(popup,DWLP_USER)|2);return TRUE;}
+        return FALSE;
+    };
+    HWND popup=CreateDialogIndirectParamW(instance,&layout.dialog,window,popupProcedure,0);
+    if(popup) {
+        HWND popupFirst=CreateWindowExW(0,L"BUTTON",L"First",WS_CHILD|WS_VISIBLE|WS_TABSTOP,5,5,50,20,popup,HMENU(17),instance,nullptr);
+        HWND popupSecond=CreateWindowExW(0,L"BUTTON",L"Second",WS_CHILD|WS_VISIBLE|WS_TABSTOP,60,5,50,20,popup,HMENU(18),instance,nullptr);
+        EnableWindow(window,FALSE);ShowWindow(popup,SW_SHOW);SetFocus(popupFirst);
+        PostMessageW(popupFirst,WM_KEYDOWN,VK_TAB,0);PostMessageW(popup,WM_KEYDOWN,VK_F5,0);PostMessageW(popup,WM_APP+28,0,0);
+        for(int iteration=0;iteration<30 && !(GetWindowLongPtrW(popup,DWLP_USER)&2);++iteration)
+            if(PeekMessageW(&message,nullptr,0,0,PM_REMOVE) && !IsDialogMessageW(popup,&message)){
+                TranslateMessage(&message);DispatchMessageW(&message);}
+        ok &= GetWindow(popup,GW_OWNER)==window && !IsWindowEnabled(window) &&
+            GetFocus()==popupSecond && GetWindowLongPtrW(popup,DWLP_USER)==3;
+        EnableWindow(window,TRUE);DestroyWindow(popup);SetActiveWindow(window);SetFocus(second);
+    }else ok=false;
     p.running=true;p.worker=std::thread([&]{while(!p.cancel)Sleep(1);ended=true;});
     SendMessageW(window,WM_CLOSE,0,0);
     ok &= p.cancel && p.closing && IsWindow(window) && IsWindowEnabled(host);

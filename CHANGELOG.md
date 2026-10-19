@@ -13,6 +13,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### Added — 0.3.0 development
 
+- Use **Sessions / Relace** for groups of stored-originals records. Update the session menu, counts and current English/Czech guides; preserve existing `run-*` paths and manifest schema. See the [terminology analysis](docs/directory-sync-plugin-terminology.md) for the distinction from profiles, window lifetime and complete synchronizations.
 - Match the host's native speed-limit dialog: compact two-radio layout, B/s through GB/s units, OK/Cancel/Help, and exact byte-rate loading. Retain the plugin's per-batch 64-bit limit and avoid overlapping Czech labels. See the [source comparison and verification](docs/directory-sync-plugin-speed-dialog.md).
 
 - Open the synchronization preview as an independent modeless window. Keep the host panels available while the plugin is open, comparing or transferring files; reopening the command activates the existing preview. Local confirmations/settings are owned by the plugin window. Keep captured paths fixed, retain safe Close/Stop and join workers before forced unload. Route dialog keyboard navigation on the host UI thread without requiring an SDK extension.
@@ -29,6 +30,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### Verification
 
+- Complete the remaining Stored originals menu and F5 checks with user-operated GUI input after reproducing the automation's disabled-owner focus limitation. Verify session/manifest clipboard paths, all three directory-open menu entries and F5 after an external copy change. Add a native owned-dialog keyboard-routing regression; do not alter production ownership for the automation helper. See the [completion report](docs/directory-sync-plugin-stored-originals.md#user-assisted-completion-and-terminology--2026-10-19).
 - Live Stored originals follow-up in the Czech/light host: item-menu copying of full Unicode paths, directory-open handlers and missing-location feedback, Refresh after missing/restored copies and an added incomplete run, maximize/restore, and Close during visible catalog loading followed by successful reopening. Baseline recovery files remain unchanged. The [follow-up report](docs/directory-sync-plugin-stored-originals.md#live-gui-follow-up--2026-10-19-030-development) explicitly retains the narrow menu/F5 input checks limited by automation focus.
 - Live modeless synchronization on isolated local NTFS: host-panel navigation during copying, Pause/Resume, changing the active speed limit from 4 to 8 MB/s, successful verification of all three targets, Stop from a paused copy, and preview Close during copying. Completed targets remain; unpublished staging and subsequent work are absent after cancellation. See the [modeless-window report](docs/directory-sync-plugin-modeless.md#live-modeless-transfer-verification).
 - Suppress the misleading time estimate while speed-limited copying remains: unrestricted verification cannot be extrapolated from the limited copy rate. Keep byte counts, speed and progress visible; cover the estimate policy in both language dialog probes.

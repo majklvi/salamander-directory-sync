@@ -8,7 +8,7 @@
 
 Vývojová alfa verze 0.3.0 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
 
-Novinka vývojového sestavení 0.3.0: **Nastavení → Uložené originály…** zobrazí existující běhy obnovy bez jejich změny, také při vypnutém uchování originálů. Vyberte běh, dvojklikem otevřete podrobnosti položky, zkopírujte původní či uloženou cestu nebo otevřete její adresář. Ctrl+C / Ctrl+Shift+C kopírují původní/uloženou cestu ze seznamu položek; Aktualizovat znovu načte záznamy. Zaznamenaný úspěch není novým ověřením obsahu. Přehled neobsahuje automatickou obnovu ani úklid. Podrobnosti v [úplném návodu](directory-sync-plugin.md#uložené-originály-030).
+Novinka vývojového sestavení 0.3.0: **Nastavení → Uložené originály…** zobrazí existující relace uchování originálů bez jejich změny, také při vypnutém uchování originálů. Vyberte relaci, dvojklikem otevřete podrobnosti položky, zkopírujte původní či uloženou cestu nebo otevřete její adresář. Ctrl+C / Ctrl+Shift+C kopírují původní/uloženou cestu ze seznamu položek; Aktualizovat znovu načte záznamy. Zaznamenaný úspěch není novým ověřením obsahu. Přehled neobsahuje automatickou obnovu ani úklid. Podrobnosti v [úplném návodu](directory-sync-plugin.md#uložené-originály-030).
 
 Klikáním do záhlaví sloupce přepínáte vzestupné/sestupné řazení souborů uvnitř adresářů. Pravé tlačítko na záhlaví nebo sekce **Sloupce / Columns** v nastavení pluginu skryje či zobrazí volitelné sloupce. Názvy vlevo i vpravo, cesta adresáře a operace zůstávají. Volby sloupců a řazení se pamatují; skrytí sloupce nevynechává soubory ze synchronizace.
 
@@ -55,11 +55,11 @@ Horní „Označit ke kopírování…“ / „Označit k přeskočení“ pouze
 ## Obnova a hlavní omezení
 
 - Při ON se před přepisem/mazáním nejprve uloží a ověří zařazené originály. V cestě uvedené v souhrnu najdete `manifest.jsonl` a prováděcí protokol. U synchronizačních příkazů při OFF **nevzniká nová záloha ani trvalý protokol a nepoužívá se Koš**. Starší zálohy se automaticky neuklízejí a zabírají místo.
-- Ruční obnova: v manifestu použijte `saved` u úspěšně uložené položky. Strukturu podle adresářových záznamů nejprve vytvořte v novém kontrolním adresáři; soubory přeneste běžným F5 z jejich uložených cest. Nekopírujte celý pomocný strom běhu do původního kořene. Ověřená obnova zahrnuje strukturu, souborová data, ADS a souborový čas. F7 vytvoří adresáře s novými časy; přesná obnova adresářových metadat a původních oprávnění není automatická.
+- Ruční obnova: v manifestu použijte `saved` u úspěšně uložené položky. Strukturu podle adresářových záznamů nejprve vytvořte v novém kontrolním adresáři; soubory přeneste běžným F5 z jejich uložených cest. Nekopírujte celý pomocný strom relace do původního kořene. Ověřená obnova zahrnuje strukturu, souborová data, ADS a souborový čas. F7 vytvoří adresáře s novými časy; přesná obnova adresářových metadat a původních oprávnění není automatická.
 - Skryté a systémové položky jsou zahrnuté podle masky a rozsahu, i když je hlavní panely nezobrazují. Atributy H/S ukazuje tooltip řádku. By content porovnává pouze hlavní data, nikoli ADS; tolerance časů se při každém Compare přebírá z Konfigurace → Obecné (obvykle 2 sekundy; při vypnutí přesná shoda časů). Hodinové posuny DST se nepřebírají.
 - Samostatné kopírování prázdných adresářů zatím není podporované. Reparse/junction/symlink, EFS a nepodporované cloud/offline položky se blokují; adresáře s vlastními ADS se před mazáním odmítnou. Read-only cíle se nepřepisují ani nemažou obcházením atributů.
 - První chyba zastaví zbývající práci. Nejde o transakci ani úplný NTFS zálohovací nástroj; během běhu neměňte testovací stromy jiným programem. Mohou zůstat vytvoření prázdní rodiče, neúplný protokol nebo oznámený zbytek stagingu.
-- Přenos zatím používá vlastní okno pluginu, bez společné fronty jádra, přenosu na pozadí a rychlostního limitu. Ověřený runtime je x64. Běh na jiném systémovém DPI a přechody mezi monitory zbývají ověřit; procházení tisíců řádků přes UI Automation dříve způsobovalo prodlevy.
+- Přenos používá vlastní okno pluginu s Pozastavit/Pokračovat a limitem rychlosti pro aktuální dávku; nezapojuje se do společné fronty jádra. Panely hostitele zůstávají v nemodálním režimu dostupné. Ověřený runtime je x64. Běh na jiném systémovém DPI a přechody mezi monitory zbývají ověřit; procházení tisíců řádků přes UI Automation dříve způsobovalo prodlevy.
 
 Podrobnosti jsou v [aktuálním návodu](directory-sync-plugin.md) (`README.cs.md` v ZIP).
 
@@ -73,7 +73,7 @@ Chybu hlaste v [Issues](https://github.com/majklvi/salamander-directory-sync/iss
 - Očekávaný a skutečný výsledek; počty a přesnou chybu ze souhrnu, případně snímek okna. U prodlev počet řádků, délku čekání a zda běžel nástroj UI Automation.
 - Při ON příslušné `manifest.jsonl` a `delete.jsonl` či `overwrite.jsonl`, pokud existují. Při OFF jejich nepřítomnost není chyba. Před odesláním odstraňte citlivé cesty/názvy z kopie hlášení; původní protokoly si ponechte pro obnovu. Neposílejte skutečná soukromá data; nejlepší je malá syntetická sada reprodukující problém.
 
-Při neočekávané změně dat další zápisy zastavte, uchovejte souhrn i obnovovací běh a nejprve zkontrolujte kopie v odděleném adresáři.
+Při neočekávané změně dat další zápisy zastavte, uchovejte souhrn i relaci uchování originálů a nejprve zkontrolujte kopie v odděleném adresáři.
 
 Od 0.1.3 lze v Nastavení → Sloupce nezávisle zapnout relativní velikost a relativní čas. Obě volby jsou standardně vypnuté. U rozdílných hodnot dvojic souborů zobrazují rozdíl vůči protější straně; shodné hodnoty a chybějící protějšek ponechávají absolutní údaje. Řazení se nadále řídí skutečnou velikostí a časem. Podrobnosti uvádí README.cs.md.
 

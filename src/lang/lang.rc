@@ -464,7 +464,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICK
 CAPTION "Stored originals"
 FONT 8, "MS Shell Dlg"
 BEGIN
-    LTEXT "Runs:", -1, 7, 7, 486, 10
+    LTEXT "Sessions:", -1, 7, 7, 486, 10
     CONTROL "", IDC_STORED_RUNS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 19, 486, 66
     LTEXT "Items (double-click for details):", -1, 7, 91, 486, 10
     CONTROL "", IDC_STORED_ITEMS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 103, 486, 138
@@ -479,7 +479,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_STORED_DATE "Created"
-    IDS_STORED_RUN "Run"
+    IDS_STORED_RUN "Session"
     IDS_STORED_STATE "State"
     IDS_STORED_ORIGINAL "Original path"
     IDS_STORED_SAVED "Saved path"
@@ -488,7 +488,7 @@ BEGIN
     IDS_STORED_OPERATION "Operation result"
     IDS_STORED_NOTE "Read only. Copies are not reverified."
     IDS_STORED_LOADING "Reading recovery records..."
-    IDS_STORED_EMPTY "No recovery runs found."
+    IDS_STORED_EMPTY "No recovery sessions found."
     IDS_STORED_INCOMPLETE "Incomplete"
     IDS_STORED_COMPLETE "Manifest complete"
     IDS_STORED_DAMAGED "Unreadable / damaged"
@@ -496,7 +496,7 @@ BEGIN
     IDS_STORED_RECORDED "Saved (recorded)"
     IDS_STORED_MISSING "Missing / unavailable"
     IDS_STORED_DIFFERENT "Size / type differs"
-    IDS_STORED_UNSAFE "Outside run / reparse"
+    IDS_STORED_UNSAFE "Outside session / reparse"
     IDS_STORED_REPLACED "Replaced (recorded)"
     IDS_STORED_DELETED "Deleted (recorded)"
     IDS_STORED_NOT_STARTED "Not started (recorded)"
@@ -504,11 +504,11 @@ BEGIN
     IDS_STORED_CANCELLED "Cancelled (recorded)"
     IDS_STORED_LIMIT "Display limit reached."
     IDS_STORED_OPEN_ERROR "This directory is unavailable or contains a reparse point. Copy the path to inspect it manually."
-    IDS_STORED_COPY_RUN "Copy run path to clipboard"
-    IDS_STORED_OPEN_RUN "Open run directory in Explorer"
+    IDS_STORED_COPY_RUN "Copy session path to clipboard"
+    IDS_STORED_OPEN_RUN "Open session directory in Explorer"
     IDS_STORED_COPY_MANIFEST "Copy manifest path to clipboard"
     IDS_STORED_UNSUPPORTED "Unsupported record version"
-    IDS_STORED_COUNTS "{runs} runs, {items} items"
+    IDS_STORED_COUNTS "{runs} sessions, {items} items"
     IDS_STORED_LEFT "Left directory"
     IDS_STORED_RIGHT "Right directory"
     IDS_STORED_MANIFEST "Manifest"
