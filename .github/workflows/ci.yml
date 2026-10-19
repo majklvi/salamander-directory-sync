@@ -23,7 +23,7 @@ jobs:
           persist-credentials: false
       - name: Build plugin and both language modules
         shell: pwsh
-        run: ./tools/build.ps1 -Configuration '${{ matrix.configuration }}' -Platform '${{ matrix.platform }}'
+        run: ./tools/build.ps1 -Configuration '${{ matrix.configuration }}' -Platform '${{ matrix.platform }}' -BuildTimeoutSeconds 300
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -63,7 +63,7 @@ jobs:
           persist-credentials: false
       - name: Build Release x64
         shell: pwsh
-        run: ./tools/build.ps1 -Configuration Release -Platform x64
+        run: ./tools/build.ps1 -Configuration Release -Platform x64 -BuildTimeoutSeconds 300
       - name: Package and verify extracted hashes
         shell: pwsh
         run: ./tools/package.ps1 -OutputDirectory out/package-ci

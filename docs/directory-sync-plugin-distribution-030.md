@@ -31,7 +31,7 @@ The original candidate used the previous Czech SLG. Live verification found two 
 
 The corrected test archive is under `out/releases/0.3.0-20261019-install-verified`, SHA-256 `c5d8eccb57ad4a8f3d5a33b37b6acdfa97ab7d151b85aa63feeccb3338aeff2a`. It records the modified test worktree and is evidence, not the final deliverable. Both stopped test installations were brought to its complete extracted payload; all **15 installed files** were independently matched against the extraction (14 manifest entries plus the manifest itself).
 
-The final deliverable is generated after committing this report, from the clean source tree, into `out/releases/0.3.0-20261019-final`. Its `package-sha256.txt` records the ZIP checksum; `NOTICE.txt` records the exact source commit. The final archive is extracted again and its three modules must match the GUI-tested hashes above. Documentation/provenance links are pinned to the final commit, so its ZIP hash differs from the test archive without changing the tested modules. The final checksum is kept beside the archive to avoid a self-referential documentation commit.
+The final deliverable is generated after committing this report and the CI timeout adjustment, from the clean source tree, into `out/releases/0.3.0-20261019-final-ci`. Its `package-sha256.txt` records the ZIP checksum; `NOTICE.txt` records the exact source commit. The final archive is extracted again and its three modules must match the GUI-tested hashes above. Documentation/provenance links are pinned to the final commit, so its ZIP hash differs from the test archive without changing the tested modules. The final checksum is kept beside the archive to avoid a self-referential documentation commit.
 
 ## Clean installation
 
@@ -71,5 +71,7 @@ Local evidence: `upgrade/before-upgrade-021.reg`, `after-upgrade-czech.reg`, `af
 ## Regression checks and limits
 
 All four plugin builds pass: Debug Win32, Debug x64, Debug ARM64 and Release x64. ARM64 is compile-only. All five x64 suites pass in both Debug and Release: engine **2216**, copy/recovery/operation/export **4460**, lifecycle **2491**, English UI **5151**, Czech UI **5279** checks. The Czech resource edit does not change SDK/API or operation behavior.
+
+The first cloud run for `926aa38` passed both test jobs and all Debug builds, but its Release build exceeded the script's 105-second limit while compiling vendored Darkmodelib; it reported no compiler error. Packaging was consequently skipped. The CI plugin-build and package-build calls now explicitly allow 300 seconds per project, within the existing 20-minute job bound. Local defaults and compiler/optimization settings are unchanged. Current-head CI must finish successfully before this distribution task is considered complete.
 
 This is installation/upgrade/localization validation, not a fresh exhaustive synchronization run or a guarantee against data loss. It does not extend coverage to SMB, other host versions, a signed installer, registry-backed storage, another Windows account or a new system-DPI configuration. Existing operation/lifecycle reports remain the evidence for those already tested NTFS scenarios. The guide now explains updating in place, keeping configuration/recovery data and loading the plugin before trusting cached manager metadata.
