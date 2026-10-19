@@ -947,7 +947,8 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeSettingsTest()
 }
 // Drive the real Stop/Close handlers without accessibility enumeration timing.
 // Test-only mode bits: 1 = Verify, 2 = after one completed file, 4 = save originals,
-// 8 = overwrite, 16 = disable recovery, 32 = deletion, 64 = deletion backup.
+// 8 = overwrite, 16 = disable recovery, 32 = deletion, 64 = deletion backup,
+// 512 = modeless destruction handlers, keyboard hook and progress window.
 extern "C" __declspec(dllexport) BOOL WINAPI ProbeCopyStart(const wchar_t* left,const wchar_t* right,BOOL mode)
 {
     try {
@@ -962,9 +963,21 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeCopyStart(const wchar_t* left,
         }
         struct Template { DLGTEMPLATE dialog; WORD menu=0,cls=0,title=0; } dialog{};
         dialog.dialog.style=WS_POPUP; dialog.dialog.cx=10; dialog.dialog.cy=10;
-        probe->window=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&dialog.dialog,nullptr,EmptyDialog,0);
+        probe->modeless=(mode&512)!=0;
+        auto procedure=+[](HWND window,UINT message,WPARAM w,LPARAM l)->INT_PTR {
+            if(message==WM_DESTROY || message==WM_NCDESTROY)return Dialog(window,message,w,l);
+            return EmptyDialog(window,message,w,l);
+        };
+        probe->window=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&dialog.dialog,nullptr,
+            probe->modeless?procedure:EmptyDialog,0);
         if(!probe->window) { probe.reset(); return FALSE; }
         SetWindowLongPtrW(probe->window,DWLP_USER,reinterpret_cast<LONG_PTR>(probe.get()));
+        if(probe->modeless) {
+            previewKeyboardHook=SetWindowsHookExW(WH_GETMESSAGE,PreviewKeyboard,nullptr,GetCurrentThreadId());
+            probe->transferWindow=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&dialog.dialog,
+                probe->window,EmptyDialog,0);
+            if(!previewKeyboardHook || !probe->transferWindow)throw std::runtime_error("modeless copy fixture");
+        }
         copyBoundary=false; finished=false; active=probe.get(); probe->saving=(mode&4)!=0;
         probe->overwriting=(mode&8)!=0; probe->deleting=(mode&32)!=0;
         probe->copying=!probe->saving && !probe->overwriting && !probe->deleting; probe->running=true;
@@ -1037,6 +1050,8 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeCopyRelease(BOOL force)
     const size_t backups=probe->overwriting?static_cast<size_t>(probe->transferCount):0;
     const size_t total=static_cast<size_t>(probe->copyProgress.completed.load());
     const size_t completed=total>backups?total-backups:0;
+    const bool modeless=probe->modeless;
+    const HWND previewWindow=probe->window,progressWindow=probe->transferWindow;
     unsigned status=plugin.Release(nullptr,force)?1u:0u;
     if(!force) return status;
     if(probe->cancel && !probe->worker.joinable() && finished && !probe->failed) status|=2;
@@ -1049,6 +1064,8 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeCopyRelease(BOOL force)
         preserved=r.items[i].status==dirsync::CopyStatus::Copied && r.items[i].published;
     if(preserved && !r.items[completed].published && r.items[completed].remainingStage.empty()) status|=8;
     if(probe->copyProgress.completed==completed+backups) status|=16;
+    if(modeless && !active && !probe->window && !probe->transferWindow && !previewKeyboardHook &&
+       !IsWindow(previewWindow) && !IsWindow(progressWindow)) status|=32;
     if(IsWindow(probe->window)) DestroyWindow(probe->window);
     probe->window=nullptr; active=nullptr; probe.reset();
     return status;

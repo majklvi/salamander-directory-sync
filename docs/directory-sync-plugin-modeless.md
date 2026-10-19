@@ -2,6 +2,8 @@
 
 Date: 2026-10-19. Local NTFS only, existing pinned SDK, no SMB tests.
 
+Follow-up evidence for [host shutdown and forced unload](directory-sync-plugin-modeless-unload.md) distinguishes the new real-transfer native regressions from live host checks still pending after a Computer Use input failure. Historical validation counts and unpublished-worktree statements below describe their original development stage.
+
 ## Behavior and implementation
 
 The preview now uses `CreateDialogParamW` and returns immediately from the menu callback. Its heap-owned state outlives that callback. It is an independent top-level window with its own taskbar entry, rather than an owned modal window that disables or stays in front of Samandarin. One preview is supported; invoking the command again activates the existing window. Its captured paths and selected entries remain independent of subsequent panel navigation.

@@ -185,7 +185,7 @@ void CopyUnload(const std::wstring& dll,int mode)
     Check(module.copyRelease(FALSE)==0,"normal release refuses active copying");
     Check(module.copyStatus()==1,"refused copy release leaves worker active");
     ULONGLONG start=GetTickCount64();
-    Check(module.copyRelease(TRUE)==31,"force release joins copy, preserves completed items and cancels rest");
+    Check(module.copyRelease(TRUE)==((mode&512)?63u:31u),"force release joins copy, preserves completed items and cleans modeless windows/hook");
     Check(GetTickCount64()-start<3000,"copy force release within three seconds");
     Check(module.copyRelease(TRUE)==1,"repeated force release after copy is safe");
     Check(FreeLibrary(module.handle)!=FALSE,"immediate unload after copying release"); module.handle=nullptr;
@@ -239,7 +239,7 @@ void CopyUnload(const std::wstring& dll,int mode)
         HANDLE h=CreateFileW(path.c_str(),GENERIC_READ,0,nullptr,OPEN_EXISTING,0,nullptr);
         Check(h!=INVALID_HANDLE_VALUE,"no handles survive force copy unload"); if(h!=INVALID_HANDLE_VALUE) CloseHandle(h);
     }
-    std::cout<<((mode&8)?((mode&16)?"overwrite without recovery ":"overwrite with recovery "):"")
+    std::cout<<((mode&512)?"modeless ":"")<<((mode&8)?((mode&16)?"overwrite without recovery ":"overwrite with recovery "):"")
         <<"force Release during "<<((mode&1)?"Verify":"copy")<<", prior completed="<<((mode&2)?1:0)<<": passed\n";
 }
 }
@@ -298,6 +298,7 @@ int main()
         for(bool verify:{false,true}) for(bool close:{false,true}) CopyControls(dll,verify,close,true);
         for(bool keep:{false,true}) for(bool verify:{false,true}) for(bool close:{false,true}) CopyControls(dll,verify,close,false,true,keep);
         for(int mode=0;mode<4;++mode) CopyUnload(dll,mode);
+        for(int mode=0;mode<4;++mode) CopyUnload(dll,mode|512);
         for(bool keep:{false,true}) for(int mode=0;mode<4;++mode) CopyUnload(dll,mode|8|(keep?0:16));
         for(bool keep:{false,true}) for(bool prior:{false,true}) for(unsigned control:{0u,128u,256u})
             DeleteControls(dll,(keep?0u:16u)|(prior?2u:0u)|control);
