@@ -131,3 +131,7 @@ Final local results for this revision: all five x64 suites pass in both Debug an
 ## Modeless transfer follow-up — 2026-10-19
 
 The [modeless transfer verification](directory-sync-plugin-modeless.md#live-modeless-transfer-verification) adds live Copy-phase Pause/Resume, actual 4/8 MB/s limiting, host-panel use during copying, Stop from a pause and preview Close during Copy. It also records the corrected limited-copy time estimate, final binary/package hashes and the precise remaining limits of coverage. Earlier dated reports above retain the state tested at the time.
+
+## Speed-limit dialog alignment — 2026-10-19
+
+The [speed-dialog report](directory-sync-plugin-speed-dialog.md) compares the actual core source and live dialog with the plugin, records the unavailable public SDK entry point, and documents the new native two-radio layout, four units and localized Help. It supersedes the earlier one-checkbox/two-unit description above without changing the transfer worker.

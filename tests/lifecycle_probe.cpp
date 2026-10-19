@@ -36,12 +36,15 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
     TransferBar(nullptr,0,&native,11,10);ok &= native.value==1000;
     TransferBar(nullptr,0,&native,0,0);ok &= native.value==DWORD(-1);
     uint64_t speed=7;
-    ok &= ParseTransferSpeed(L"1",0,speed) && speed==1024;
-    ok &= ParseTransferSpeed(L"1048576",1,speed) && speed==(uint64_t(1)<<40);
-    for(const auto* invalid:{L"",L"0",L"-1",L"1.5",L"1e3",L" 2",L"1073741825",L"999999999999999999999999"}) {
+    ok &= ParseTransferSpeed(L"1",0,speed) && speed==1;
+    ok &= ParseTransferSpeed(L"1",1,speed) && speed==1024;
+    ok &= ParseTransferSpeed(L"1048576",2,speed) && speed==(uint64_t(1)<<40);
+    ok &= ParseTransferSpeed(L"1024",3,speed) && speed==(uint64_t(1)<<40);
+    ok &= ParseTransferSpeed(L" 2 ",2,speed) && speed==2*1024*1024;
+    for(const auto* invalid:{L"",L" ",L"0",L"-1",L"1.5",L"1e3",L"1 2",L"1099511627777",L"999999999999999999999999"}) {
         speed=7;ok &= !ParseTransferSpeed(invalid,0,speed) && speed==7;
     }
-    speed=7;ok &= !ParseTransferSpeed(L"1",2,speed) && speed==7;
+    speed=7;ok &= !ParseTransferSpeed(L"1",4,speed) && speed==7;
     dirsync::TransferDisplay weighted;weighted.total=1000;weighted.copied=500;
     ok &= TransferWork(weighted,dirsync::CopyPhase::Copying)==682;
     weighted.verifyTotal=2000;weighted.verified=1000;
@@ -57,6 +60,37 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
         owner.dialog.style=WS_POPUP;owner.dialog.cx=355;owner.dialog.cy=154;
         HWND parent=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&owner.dialog,nullptr,EmptyDialog,0);
         if(!parent){FreeLibrary(resources);return FALSE;}
+        // Exercise the real modal speed dialog, not just its parser/template.
+        for(int scenario=0;scenario<3;++scenario) {
+            struct SpeedProbe {HWND dialog=nullptr;int scenario=0;bool ok=true;} speedProbe;
+            speedProbe.scenario=scenario;SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&speedProbe));
+            SetTimer(parent,58,20,[](HWND owner,UINT,UINT_PTR,DWORD) {
+                auto* state=reinterpret_cast<SpeedProbe*>(GetWindowLongPtrW(owner,GWLP_USERDATA));
+                HWND dialog=state->dialog;if(!dialog)return;KillTimer(owner,58);
+                state->ok &= SendDlgItemMessageW(dialog,IDC_TRANSFER_SPEED_UNITS,CB_GETCOUNT,0,0)==4;
+                if(state->scenario==0) {
+                    state->ok &= IsDlgButtonChecked(dialog,IDC_TRANSFER_SPEED_UNLIMITED)==BST_CHECKED &&
+                        !IsWindowEnabled(GetDlgItem(dialog,IDC_TRANSFER_SPEED_VALUE)) &&
+                        ControlText(dialog,IDC_TRANSFER_SPEED_VALUE)==L"4" &&
+                        SendDlgItemMessageW(dialog,IDC_TRANSFER_SPEED_UNITS,CB_GETCURSEL,0,0)==3;
+                    SendDlgItemMessageW(dialog,IDC_TRANSFER_SPEED_ENABLE,BM_CLICK,0,0);
+                    state->ok &= IsWindowEnabled(GetDlgItem(dialog,IDC_TRANSFER_SPEED_VALUE)) &&
+                        IsDlgButtonChecked(dialog,IDC_TRANSFER_SPEED_UNLIMITED)==BST_UNCHECKED;
+                    SetDlgItemTextW(dialog,IDC_TRANSFER_SPEED_VALUE,L"17");
+                    SendDlgItemMessageW(dialog,IDC_TRANSFER_SPEED_UNITS,CB_SETCURSEL,0,0);
+                }else if(state->scenario==1) {
+                    state->ok &= IsDlgButtonChecked(dialog,IDC_TRANSFER_SPEED_ENABLE)==BST_CHECKED &&
+                        ControlText(dialog,IDC_TRANSFER_SPEED_VALUE)==L"17";
+                    SendDlgItemMessageW(dialog,IDC_TRANSFER_SPEED_UNLIMITED,BM_CLICK,0,0);
+                    state->ok &= !IsWindowEnabled(GetDlgItem(dialog,IDC_TRANSFER_SPEED_UNITS));
+                }else SetDlgItemTextW(dialog,IDC_TRANSFER_SPEED_VALUE,L"99");
+                SendMessageW(dialog,WM_COMMAND,state->scenario==2?IDCANCEL:IDOK,0);
+            });
+            uint64_t chosen=scenario?17:0;
+            const bool accepted=ChooseTransferSpeed(parent,chosen,&speedProbe.dialog);
+            ok &= speedProbe.ok && accepted==(scenario!=2) && chosen==(scenario==1?0:17) && !speedProbe.dialog;
+            KillTimer(parent,58);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
+        }
         {
             Preview p;p.window=parent;p.running=true;p.copying=true;p.transferStarted=GetTickCount64();p.operationReport.items.resize(4);
             const auto source=L"C:\\"+std::wstring(280,L'漢')+L"\\žluťoučký.txt";

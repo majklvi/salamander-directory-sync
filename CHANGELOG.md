@@ -13,6 +13,8 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### Added — 0.3.0 development
 
+- Match the host's native speed-limit dialog: compact two-radio layout, B/s through GB/s units, OK/Cancel/Help, and exact byte-rate loading. Retain the plugin's per-batch 64-bit limit and avoid overlapping Czech labels. See the [source comparison and verification](docs/directory-sync-plugin-speed-dialog.md).
+
 - Open the synchronization preview as an independent modeless window. Keep the host panels available while the plugin is open, comparing or transferring files; reopening the command activates the existing preview. Local confirmations/settings are owned by the plugin window. Keep captured paths fixed, retain safe Close/Stop and join workers before forced unload. Route dialog keyboard navigation on the host UI thread without requiring an SDK extension.
 
 - A compact native transfer-progress window for synchronization, copies, overwrites, saved originals and deletions. Shows source/target, current phase, file transfer/verification progress, completed steps including recovery saves, transferred/read bytes and elapsed time. Stop, Escape or closing this window requests safe cancellation and waits for the worker.

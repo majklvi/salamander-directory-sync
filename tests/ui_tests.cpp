@@ -97,6 +97,18 @@ void Test(int dialog)
             (style&WS_MINIMIZEBOX),"native minimize and split pause footer grid");
         Check(control(IDCANCEL).x==212 && control(IDCANCEL).y==87 && control(IDCANCEL).width==50,"native compact footer cancellation button");
     }
+    if(dialog==IDD_TRANSFER_SPEED) {
+        auto control=[&](DWORD id)->const Control& {for(const auto& c:controls)if(c.id==id)return c;throw std::runtime_error("missing speed control");};
+        Check(width==234 && height==88,"host speed-limit dialog dimensions");
+        Check((control(IDC_TRANSFER_SPEED_UNLIMITED).style&BS_TYPEMASK)==BS_AUTORADIOBUTTON &&
+            (control(IDC_TRANSFER_SPEED_ENABLE).style&BS_TYPEMASK)==BS_AUTORADIOBUTTON &&
+            (control(IDC_TRANSFER_SPEED_UNLIMITED).style&WS_GROUP),"native no-limit/set-limit radio group");
+        Check(control(IDC_TRANSFER_SPEED_UNLIMITED).y==19 && control(IDC_TRANSFER_SPEED_ENABLE).y==32 &&
+            control(IDC_TRANSFER_SPEED_VALUE).y==32 && control(IDC_TRANSFER_SPEED_VALUE).width==34 &&
+            control(IDC_TRANSFER_SPEED_UNITS).width==35,"host speed-limit input grid");
+        Check(control(IDOK).x==33 && control(IDCANCEL).x==92 && control(IDHELP).x==151 &&
+            control(IDHELP).y==67,"host OK/Cancel/Help footer");
+    }
     if(dialog==IDD_PREVIEW) {
         auto control=[&](DWORD id)->const Control& { for(const auto& c:controls) if(c.id==id) return c; throw std::runtime_error("missing preview control"); };
         const auto& profile=control(IDC_PROFILE_MENU);
