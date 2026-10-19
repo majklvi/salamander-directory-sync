@@ -10,8 +10,9 @@ dirsync::ReportContext ReportContext(const Preview& p) {
 }
 void BeginReport(Preview& p,const std::wstring& kind,bool keep,const std::wstring& root,
     const std::vector<size_t>& selected={},int side=0) {
-    p.copyProgress.ResetDisplay();p.transferStarted=GetTickCount64();
+    p.copyProgress.ResetControls();p.copyProgress.ResetDisplay();p.transferStarted=GetTickCount64();
     p.operationReport=dirsync::PrepareReport(p.result,ReportContext(p),kind,keep,root,selected,side);
+    TransferBudget(p);
 }
 void FinishReport(Preview& p) {
     if(p.synchronizing)dirsync::CompleteReport(p.operationReport,p.syncReport);

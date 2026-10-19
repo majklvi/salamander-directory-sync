@@ -110,15 +110,15 @@ inline HRESULT ImmediateCheckpoint(const ImmediateItem& item)
 class ImmediateSink final:public IFileOperationProgressSink {
     std::atomic<ULONG> references{1};
 public:
-    const ImmediateItem& item;ImmediateOutcome& outcome;std::atomic<bool>& cancel;bool recycle;
-    ImmediateSink(const ImmediateItem& i,ImmediateOutcome& o,std::atomic<bool>& c,bool r):item(i),outcome(o),cancel(c),recycle(r) {}
+    const ImmediateItem& item;ImmediateOutcome& outcome;std::atomic<bool>& cancel;bool recycle;CopyProgress* progress;
+    ImmediateSink(const ImmediateItem& i,ImmediateOutcome& o,std::atomic<bool>& c,bool r,CopyProgress* p=nullptr):item(i),outcome(o),cancel(c),recycle(r),progress(p) {}
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID id,void** out) override {
         if(!out) return E_POINTER;*out=nullptr;
         if(id==IID_IUnknown || id==__uuidof(IFileOperationProgressSink)) {*out=static_cast<IFileOperationProgressSink*>(this);AddRef();return S_OK;}return E_NOINTERFACE;
     }
     ULONG STDMETHODCALLTYPE AddRef() override {return ++references;}
     ULONG STDMETHODCALLTYPE Release() override {return --references;}
-    HRESULT Check() {return cancel?HRESULT_FROM_WIN32(ERROR_CANCELLED):S_OK;}
+    HRESULT Check() {return (progress?!progress->Checkpoint(cancel):cancel.load())?HRESULT_FROM_WIN32(ERROR_CANCELLED):S_OK;}
     HRESULT STDMETHODCALLTYPE StartOperations() override {return Check();}
     HRESULT STDMETHODCALLTYPE FinishOperations(HRESULT result) override {if(FAILED(result)) outcome.error=result;return S_OK;}
     HRESULT STDMETHODCALLTYPE PreDeleteItem(DWORD flags,IShellItem*) override {
@@ -159,6 +159,7 @@ inline ImmediateReport ImmediateDelete(Result snapshot,const std::vector<size_t>
 {
     ImmediateReport report;const auto items=ImmediateSelection(snapshot,selected,side);
     if(items.empty()) {report.error=E_INVALIDARG;return report;}
+    if(!progress.Checkpoint(cancel)) {report.cancelled=true;report.error=HRESULT_FROM_WIN32(ERROR_CANCELLED);return report;}
     if(!Revalidate(snapshot,cancel,checking)) {report.stale=true;report.cancelled=cancel;report.error=HRESULT_FROM_WIN32(cancel?ERROR_CANCELLED:ERROR_FILE_INVALID);return report;}
     HRESULT initialized=CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
     if(FAILED(initialized)) {report.error=initialized;return report;}
@@ -168,13 +169,13 @@ inline ImmediateReport ImmediateDelete(Result snapshot,const std::vector<size_t>
 #ifdef DIRSYNC_COPY_TEST_HOOKS
         if(ImmediateTestHook()) ImmediateTestHook()(report.items.size());
 #endif
-        if(cancel) {report.cancelled=true;report.error=HRESULT_FROM_WIN32(ERROR_CANCELLED);break;}
+        if(!progress.Checkpoint(cancel)) {report.cancelled=true;report.error=HRESULT_FROM_WIN32(ERROR_CANCELLED);break;}
         report.items.push_back({item.path,L"",S_OK,false});auto& outcome=report.items.back();
         progress.BeginDisplay(item.path,L"",recycle?TransferKind::Recycle:TransferKind::Delete,item.original.directory);
         progress.item=report.items.size()-1;
         HRESULT hr=ImmediateCheckpoint(item);
         if(SUCCEEDED(hr)) {
-            ImmediateSink sink(item,outcome,cancel,recycle);
+            ImmediateSink sink(item,outcome,cancel,recycle,&progress);
             ShellObject<IFileOperation> operation;ShellObject<IShellItem> source;
             hr=CoCreateInstance(CLSID_FileOperation,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&operation.value));
             DWORD flags=FOF_NOCONFIRMATION|FOF_NOERRORUI|FOF_SILENT|FOF_NO_CONNECTED_ELEMENTS|FOFX_EARLYFAILURE;
@@ -189,7 +190,7 @@ inline ImmediateReport ImmediateDelete(Result snapshot,const std::vector<size_t>
             if(SUCCEEDED(hr) && aborted) hr=HRESULT_FROM_WIN32(ERROR_CANCELLED);
         }
         if(FAILED(hr) && SUCCEEDED(outcome.error)) outcome.error=hr;
-        if(outcome.deleted) ++progress.completed;
+        if(outcome.deleted) progress.CompleteDisplay();
         if(FAILED(outcome.error) || !outcome.deleted) {
             report.error=FAILED(outcome.error)?outcome.error:E_FAIL;
             report.cancelled=cancel || report.error==HRESULT_FROM_WIN32(ERROR_CANCELLED);break;

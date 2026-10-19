@@ -16,7 +16,7 @@ ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není 
 
 **Novinky v 0.2.1 ALFA.** Přidává kopírování prázdných adresářů, import/export profilů a volby Uložit / Neukládat / Zrušit při zavírání změněného profilu. Souhrnný příkaz provede viditelné kopie, přepisy a mazání po jednom potvrzení.
 
-**Ve vývoji pro 0.2.2:** [přehled uložených originálů](docs/directory-sync-plugin.md#uložené-originály-022) pouze pro čtení, [export do CSV/textu](docs/directory-sync-plugin.md#export-porovnání-a-výsledků-operací-022) s řádky porovnání a zaznamenanými výsledky operací a samostatné [okno průběhu přenosu](docs/directory-sync-plugin.md#průběh-přenosu-022) s tlačítkem Zastavit. Odkaz ke stažení výše nadále vede na vydanou verzi 0.2.1.
+**Ve vývoji pro 0.3.0:** samostatné nemodální okno, při kterém lze pracovat v panelech hostitele, [přehled uložených originálů](docs/directory-sync-plugin.md#uložené-originály-030) pouze pro čtení, [export do CSV/textu](docs/directory-sync-plugin.md#export-porovnání-a-výsledků-operací-030) s řádky porovnání a zaznamenanými výsledky operací a samostatné [okno průběhu přenosu](docs/directory-sync-plugin.md#průběh-přenosu-030) s pozastavením, pokračováním, omezením rychlosti a přerušením. Odkaz ke stažení výše nadále vede na vydanou verzi 0.2.1.
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 

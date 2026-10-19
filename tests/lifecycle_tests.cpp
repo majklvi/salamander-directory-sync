@@ -286,6 +286,8 @@ int main()
             Check(stops && stops(),"only the appropriate adjacent Stop can cancel scanning, validation or file operations");
             auto transfer=reinterpret_cast<StopTest>(GetProcAddress(module.handle,"ProbeTransferDialog"));
             Check(transfer && transfer(),"EN/CS native transfer window: real bars, long Unicode paths, verification, Close/keyboard Stop, worker join and cleanup");
+            auto modeless=reinterpret_cast<StopTest>(GetProcAddress(module.handle,"ProbeModelessPreview"));
+            Check(modeless && modeless(),"modeless preview: host stays enabled, keyboard hook routes Tab, Close cancels, forced release joins and cleans windows");
             using PreviewTest=BOOL (WINAPI*)(const wchar_t*,const wchar_t*);
             auto preview=reinterpret_cast<PreviewTest>(GetProcAddress(module.handle,"ProbePreviewControls"));
             Check(preview && preview(scan.left.c_str(),scan.right.c_str()),"independent toggle combinations, retained results/options, muted Skip and edge-to-edge list");

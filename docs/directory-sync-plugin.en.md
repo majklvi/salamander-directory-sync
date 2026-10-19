@@ -6,21 +6,33 @@
 
 [Česky](directory-sync-plugin.md) · [Pilot instructions and bug reporting](directory-sync-plugin-pilot-guide.en.md)
 
-Current behavior as of 19 October 2026, plugin version 0.2.2 ALPHA (development build) for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
+Current behavior as of 19 October 2026, plugin version 0.3.0 ALPHA (development build) for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
 
 For pilot use, start with the [short instructions](directory-sync-plugin-pilot-guide.en.md), included in the package as `PILOT.md`. Since 0.1.4, the status bar has separate native sections for the operation state and individual counts/progress values. Widths adapt to their text and the window; tooltips expose the complete values.
 
-## Transfer progress (0.2.2)
+## Modeless window (0.3.0)
 
-Confirmed file operations open a separate compact native progress window. It shows source/target paths (ellipsized on screen, complete in tooltips), the current phase, file transfer or verification progress, completed steps, transferred bytes, verification reads and elapsed time. The total bar counts steps, including saves of originals; it is not a byte-weighted time estimate. Directory operations use an indeterminate file bar. Verification reads include both source and copy.
+The main synchronization window is independent and modeless. You can switch back to Samandarin and work with its panels while this window remains open, including during comparison and transfers. Opening the plugin again activates the existing window. Paths and panel selections are captured when opening it; navigating the host panels does not redirect an existing comparison or operation. Settings and confirmations belong to the plugin window, not to the host main window. Changing files through the host can invalidate a comparison: compare again before proceeding.
 
-**Stop**, Escape and the window's close button request cancellation. The window stays open until the worker finishes stopping; already completed changes remain. The status bar remains available. Comparison alone continues to use the main window's progress. The plugin follows the host's appearance, but does not use the host's transfer queue/background window or add pause/speed limits through the current SDK.
+[Implementation and verification](directory-sync-plugin-modeless.md).
+
+Close during an operation requests cancellation and waits for the worker. Completed changes remain; the existing modified-profile Save / Don't save / Cancel prompt still applies. The plugin keeps one preview at a time. This does not add the host's transfer queue or scheduling.
+
+## Transfer progress (0.3.0)
+
+Confirmed file operations open a compact progress window laid out on the host copying dialog's grid. It uses the host's actual SDK progress bars and split-button control, with centered percentages and host-controlled colors. Source/target paths are ellipsized on screen and complete in tooltips. The status line shows copied data, transfer speed and estimated time remaining when available, and identifies verification. Sizes use the host's transfer-dialog formatter with at least three significant digits and the local decimal separator, independently of the panel size-display option. Its tooltip retains the phase, completed steps, copied bytes, verification reads and elapsed time. Verification reads include both source and copy; they are not counted as copied data.
+
+The total bar weights work by data size, including copies of originals. A file's estimated cost is its main-stream size multiplied by three for copying and verification reads from both source and copy, with a minimum cost of 4 KiB; directory and deletion steps also have a minimum cost. Named streams are not scanned in advance, so this remains an estimate and may stay at 99% until all steps finish. The current file bar switches from copying to verification; directory operations use an indeterminate file bar.
+
+The footer offers **Minimize**, **Pause/Resume** and **Cancel**. The arrow beside Pause/Resume opens **Pause/Resume** and **Set speed limit…**. Pause takes effect at a safe worker checkpoint; Resume continues the same batch. The optional limit uses a positive whole number in KB/s or MB/s, up to 1 TB/s, and applies to copied main data, named streams and recovery copies. It does not throttle verification reads. The limit belongs only to this batch: the next operation starts without a limit. Cancelling the speed-limit dialog preserves the current value.
+
+**Cancel**, Escape and the window's close button request cancellation, including while paused. The window stays open until the worker finishes stopping; already completed changes remain. Minimize affects only the progress window, which has its own taskbar entry for restoring it. The main preview remains locked during the operation. The host panels remain available; this does not add host transfer-queue participation. Comparison alone continues to use the main window's progress.
 
 In Stored originals, item-menu commands explicitly say **Copy … path to clipboard** or **Open … directory in Explorer**. Opening can fail if an original's parent directory no longer exists or Explorer cannot handle the path.
 
-## Stored originals (0.2.2)
+## Stored originals (0.3.0)
 
-Available in the **0.2.2 development build**, not the published 0.2.1 package. Open **Settings → Stored originals…** to read runs under the configured recovery directory. Keep originals may be off. A draft recovery-directory value in Settings is used without saving the settings first. Reading this overview never starts synchronization.
+Available in the **0.3.0 development build**, not the published 0.2.1 package. Open **Settings → Stored originals…** to read runs under the configured recovery directory. Keep originals may be off. A draft recovery-directory value in Settings is used without saving the settings first. Reading this overview never starts synchronization.
 
 Select a run above to see its items below: original path, saved path, recorded main-stream size (in the host's units), recovery-copy status and recorded operation result. Runs are ordered by their current directory creation time, newest first. Double-click a run or item for full paths and error codes. **Copy original / Copy saved**, or **Ctrl+C / Ctrl+Shift+C** in the items list, copy the full Unicode paths. In the runs list the same shortcuts copy the run or manifest path. Context menus also offer path copying and opening directories. Directory buttons open Windows' file browser; files are never launched. A deleted original's parent directory may itself be missing.
 
@@ -30,7 +42,7 @@ Select a run above to see its items below: original path, saved path, recorded m
 
 Only the current `pair-* / run-*` schema-1 layout is supported. Paths are absolute; moving a recovery tree does not rewrite its records. Reparse traversal and saved paths outside their run cannot be opened. A missing or inaccessible recovery root is reported, never created. Display limits are 1,000 runs, 20,000 total items and 8 MiB per record file; reaching a limit produces a warning. This first stage has **no automatic restore or backup cleanup**. Use the manual recovery procedure below and keep independent backups.
 
-## Export comparison and operation results (0.2.2)
+## Export comparison and operation results (0.3.0)
 
 Choose **Synchronize… → Export comparison and results…** or the same command in the results context menu. The native Save dialog offers **CSV** and **Text**; its selected file type determines the format. Export becomes available after a comparison, including an empty, cancelled or failed comparison, and remains available after execution invalidates the plan. It is disabled while work is running. Export never validates or executes a synchronization plan.
 
@@ -88,7 +100,7 @@ Right-click a heading for the column menu, or use **Settings → Columns**. The 
 
 Since **0.1.1**, results are grouped by relative directory. `\` denotes the root and `\alpha\nested\` a subdirectory. Each name column shows the final item name only when the item exists on that side. Matched items show their names on both sides; single-sided items leave the opposite name empty. Headings are not action rows and clicking one does not select its contents. A directory proposed for deletion remains a separate row in its parent group. Filtering removes a group when it has no visible items. Copy paths still uses complete real paths. [Grouping record](directory-sync-plugin-grouping.md).
 
-Size columns inherit **Configuration → Panels → Show sizes**: grouped bytes, whole KB, or mixed units. They use the core formatting routines, including rounding and regional separators. Summaries labeled as bytes and transfer counters continue to show exact bytes. **Show names** in the same configuration controls letter case for every component of the relative display path, including separate file/directory styles. Display does not change real names, the plan, manifests, or clipboard paths. Preferences are read when opening the dialog and when the host notifies the plugin of a configuration change.
+Size columns inherit **Configuration → Panels → Show sizes**: grouped bytes, whole KB, or mixed units. They use the core formatting routines, including rounding and regional separators. Summaries labeled as bytes and exported counters continue to show exact bytes; the progress window uses the host's compact transfer units. **Show names** in the same configuration controls letter case for every component of the relative display path, including separate file/directory styles. Display does not change real names, the plan, manifests, or clipboard paths. Preferences are read when opening the dialog and when the host notifies the plugin of a configuration change.
 
 GUI checks compared all **three size modes and six name modes** available in the host with its main panels, including Unicode names. A seventh legacy name-format value in the SDK is not offered by the current panel configuration and is covered by a native test. Checks used en-US regional settings, with comma digit grouping and a decimal point; the system locale was not changed. [GUI display checks](directory-sync-plugin-ui.md#2026-10-16--gui-porovnání-show-sizes-a-show-names).
 
@@ -158,7 +170,7 @@ Default proposals belong only to the current comparison; a new Compare discards 
 
 ## Documentation map
 
-The longer-term plan includes [integration with the host's transfer window and queue](directory-sync-plugin-design.md#dlouhodobý-plán--společné-přenosové-prostředky-hostitele), including background transfers and a speed limit. This waits for a suitable host API. The current plugin retains its own transfer adapter.
+The longer-term plan includes [integration with the host's transfer window and queue](directory-sync-plugin-design.md#dlouhodobý-plán--společné-přenosové-prostředky-hostitele), including shared scheduling and background transfers. This waits for a suitable host API. The current plugin retains its own transfer adapter, with its own cooperative pause and per-batch speed limit.
 
 | Need | Document |
 | --- | --- |

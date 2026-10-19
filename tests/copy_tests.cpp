@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <map>
 #include <stdexcept>
+#include <thread>
 using namespace dirsync;
 namespace {
 int checks=0, sequence=0;
@@ -1075,10 +1076,144 @@ void Reports() {
     Check(!WriteReport(longParent+L"\\report.csv",before,false,{f.left,f.right}) && Read(longParent+L"\\report.csv")==saved,"long Unicode report path preserves exact bytes");
     f.NoStaging(f.root);
 }
+template<class Predicate> bool WaitForControl(Predicate ready,const std::atomic<bool>& done)
+{
+    const auto end=GetTickCount64()+5000;
+    do {if(ready()) return true;if(done) return ready();Sleep(5);} while(GetTickCount64()<end);
+    return ready();
+}
+// A failed assertion must still cancel and join the worker before fixture cleanup.
+struct ControlWorker {
+    Fixture& fixture;std::thread thread;
+    explicit ControlWorker(Fixture& f):fixture(f) {}
+    ~ControlWorker() {fixture.cancel=true;fixture.progress.pauseRequested=false;if(thread.joinable()) thread.join();}
+    void Join() {if(thread.joinable()) thread.join();}
+};
+void TransferControls()
+{
+    {
+        Fixture f;Put(f.left+L"\\a","SOURCE");const auto snapshot=f.Scan();f.progress.ResetControls();
+        std::atomic<bool> done{false};std::wstring stage;CopyReport report;
+        ControlWorker worker(f);worker.thread=std::thread([&] {
+            SetCopyHook([&](CopyPhase phase,const std::wstring& path) {
+                if(phase==CopyPhase::Publishing && stage.empty()) {stage=path;f.progress.pauseRequested=true;}
+            });
+            report=f.Run(snapshot);SetCopyHook({});done=true;
+        });
+        Check(WaitForControl([&]{return f.progress.paused.load();},done),"file publication acknowledges Pause before replacement test");
+        const auto moved=stage+L"-moved";
+        Check(MoveFileW(ApiPath(stage).c_str(),ApiPath(moved).c_str())!=FALSE,"move owned paused staging name while original handle remains open");
+        Put(stage,"FOREIGN");f.progress.pauseRequested=false;
+        const bool finished=WaitForControl([&]{return done.load();},done);worker.Join();
+        Check(finished && report.items.size()==1 && report.items[0].status==CopyStatus::Failed && report.items[0].error==ERROR_FILE_INVALID &&
+            !report.items[0].published && !f.progress.completed,"replaced staging name is rejected after Resume before file publication");
+        Check(GetFileAttributesW(ApiPath(f.right+L"\\a").c_str())==INVALID_FILE_ATTRIBUTES && report.items[0].remainingStage==stage &&
+            Read(stage)=="FOREIGN" && Read(moved)=="SOURCE" && Read(f.left+L"\\a")=="SOURCE",
+            "replacement staging is reported without publishing or deleting either identity");
+    }
+    {
+        Fixture f;f.Dir(f.left+L"\\empty-漢字");Options options;options.emptyDirectories=true;
+        const auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);f.progress.ResetControls();
+        std::atomic<bool> done{false};std::wstring stage;CopyReport report;
+        ControlWorker worker(f);worker.thread=std::thread([&] {
+            SetCopyHook([&](CopyPhase phase,const std::wstring& path) {
+                if(phase==CopyPhase::Publishing && stage.empty()) {stage=path;f.progress.pauseRequested=true;}
+            });
+            report=f.Run(snapshot);SetCopyHook({});done=true;
+        });
+        Check(WaitForControl([&]{return f.progress.paused.load();},done),"empty-directory publication acknowledges Pause before mutation test");
+        Put(stage+L"\\external-child.txt","EXTERNAL");f.progress.pauseRequested=false;
+        const bool finished=WaitForControl([&]{return done.load();},done);worker.Join();
+        Check(finished && report.items.size()==1 && report.items[0].status==CopyStatus::Failed && !report.items[0].published && !f.progress.completed,
+            "changed empty-directory staging is rejected after Resume before publication");
+        Check(GetFileAttributesW(ApiPath(f.right+L"\\empty-漢字").c_str())==INVALID_FILE_ATTRIBUTES &&
+            report.items[0].remainingStage==stage && Read(stage+L"\\external-child.txt")=="EXTERNAL",
+            "nonempty changed staging is reported and preserved without publishing or recursive cleanup");
+    }
+    for(auto phase:{CopyPhase::Copying,CopyPhase::Verifying,CopyPhase::Publishing}) for(bool stop:{false,true}) {
+        Fixture f;const std::string data(1024*1024,'p');Put(f.left+L"\\a",data);Put(f.left+L"\\a:漢字","ADS");Put(f.left+L"\\z-next","NEXT");
+        auto snapshot=f.Scan();f.progress.ResetControls();std::atomic<bool> done{false};bool requested=false;CopyReport report;
+        ControlWorker worker(f);
+        worker.thread=std::thread([&] {
+            SetCopyHook([&](CopyPhase at,const std::wstring&) {
+                if(requested || at!=phase || (at==CopyPhase::Copying && !f.progress.copied) ||
+                    (at==CopyPhase::Verifying && !f.progress.verified)) return;
+                requested=true;f.progress.pauseRequested=true;
+            });
+            report=f.Run(snapshot);SetCopyHook({});done=true;
+        });
+        const bool waiting=WaitForControl([&]{return f.progress.paused.load();},done);
+        const auto copied=f.progress.copied.load(),verified=f.progress.verified.load(),completed=f.progress.completed.load();
+        const bool absent=GetFileAttributesW(ApiPath(f.right+L"\\a").c_str())==INVALID_FILE_ATTRIBUTES;
+        Sleep(60);
+        const bool stable=f.progress.copied==copied && f.progress.verified==verified && f.progress.completed==completed && !done;
+        if(stop) f.cancel=true;else f.progress.pauseRequested=false;
+        const bool finished=WaitForControl([&]{return done.load();},done);worker.Join();
+        Check(waiting && requested && stable && absent,"copy, Verify and pre-publication pause stop actual work before publication");
+        Check(finished && !f.progress.paused && f.progress.pausedMilliseconds>=50,"resume or cancellation releases cooperative pause and counts paused time");
+        Check(report.items.size()==2,"paused batch retains complete operation plan");
+        if(stop) {
+            Check(report.cancelled && report.items[0].status==CopyStatus::Cancelled && report.items[1].status==CopyStatus::NotStarted,
+                "cancel releases paused copy without needing Resume or starting next file");
+            Check(GetFileAttributesW(ApiPath(f.right+L"\\a").c_str())==INVALID_FILE_ATTRIBUTES,"cancelled paused copy never published");
+        } else {
+            Check(!report.cancelled && report.items[0].status==CopyStatus::Copied && report.items[1].status==CopyStatus::Copied,
+                "resume finishes paused copy and subsequent file");
+            Check(Read(f.right+L"\\a")==data && Read(f.right+L"\\a:漢字")=="ADS" && Read(f.right+L"\\z-next")=="NEXT",
+                "resume preserves main stream, named stream and next item");
+        }
+        f.NoStaging(f.right);
+    }
+    {
+        Fixture f;Put(f.left+L"\\a",std::string(4096,'a'));Put(f.left+L"\\a:note",std::string(1024,'s'));Put(f.left+L"\\b",std::string(2560,'b'));
+        f.progress.ResetControls();f.progress.bytesPerSecond=32768;const auto start=GetTickCount64();auto report=f.Run(f.Scan());
+        Check(GetTickCount64()-start>=175,"rate limit accounts cumulatively for main data, named streams and multiple files");
+        Check(report.items.size()==2 && report.items[0].status==CopyStatus::Copied && report.items[1].status==CopyStatus::Copied &&
+            f.progress.copied==7680 && f.progress.verified==15360,"throttled transfers retain exact counters and verification");
+        const auto display=f.progress.Display();
+        Check(f.progress.completedWork==23040 && f.progress.completedCopyBytes==7680 && display.finished && display.workBase==15360 && display.copyBase==5120,
+            "completed work weights main and named streams consistently and exposes one coherent display base");
+        f.progress.CompleteDisplay();Check(f.progress.completed==2 && f.progress.completedWork==23040,"completion cannot double-count a finished display");
+        Check(Read(f.right+L"\\a:note")==std::string(1024,'s') && Read(f.right+L"\\b")==std::string(2560,'b'),"rate limiting leaves verified data unchanged");
+    }
+    for(bool stop:{false,true}) {
+        Fixture f;f.progress.ResetControls();f.progress.bytesPerSecond=1;std::atomic<bool> entered{false},done{false};bool allowed=false;
+        ControlWorker worker(f);worker.thread=std::thread([&]{entered=true;allowed=f.progress.Throttle(f.cancel,65536);done=true;});
+        const bool started=WaitForControl([&]{return entered.load();},done);Sleep(60);const bool limited=!done;
+        const auto changed=GetTickCount64();if(stop) f.cancel=true;else f.progress.bytesPerSecond=0;
+        const bool finished=WaitForControl([&]{return done.load();},done);worker.Join();
+        Check(started && limited && finished && GetTickCount64()-changed<5000 && allowed!=stop,"active rate wait responds to unlimited setting or cancellation");
+        f.cancel=false;f.progress.pauseRequested=true;f.progress.paused=true;f.progress.pausedMilliseconds=999;f.progress.ResetControls();
+        Check(!f.progress.pauseRequested && !f.progress.paused && !f.progress.bytesPerSecond && !f.progress.pausedMilliseconds && !f.progress.completedWork && !f.progress.completedCopyBytes && f.progress.Throttle(f.cancel,1),
+            "new batch clears control settings and previous throttle debt");
+    }
+    {
+        Fixture f;const auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b"}) {Put(f.left+L"\\"+name,"NEW");Put(f.right+L"\\"+name,"ORIGINAL");}
+        const auto snapshot=RecoveryPlan(f);f.progress.ResetControls();std::atomic<bool> done{false};std::wstring published;RecoveryReport report;
+        ControlWorker worker(f);worker.thread=std::thread([&] {
+            SetCopyHook([&](CopyPhase phase,const std::wstring& path) {
+                if(phase==CopyPhase::Published && published.empty()) {published=path;f.progress.pauseRequested=true;}
+            });
+            report=Save(f,snapshot,root);SetCopyHook({});done=true;
+        });
+        const bool waiting=WaitForControl([&]{return f.progress.paused.load();},done);
+        Check(waiting && f.progress.completed==1,"pause requested after recovery publication waits until the next item");
+        const auto marker=published.find(L"\\right\\1\\data\\");
+        Check(marker!=std::wstring::npos,"paused recovery exposes first saved path");
+        const auto manifest=Read(published.substr(0,marker)+L"\\manifest.jsonl");
+        Check(manifest.find("\"event\":\"result\",\"item\":1,\"status\":\"saved\"")!=std::string::npos,
+            "published recovery result is durably recorded before worker acknowledges pause");
+        f.cancel=true;const bool finished=WaitForControl([&]{return done.load();},done);worker.Join();
+        Check(finished && report.cancelled && report.items.size()==2 && report.items[0].logged && report.items[0].copy.status==CopyStatus::Copied &&
+            report.items[1].copy.status==CopyStatus::Cancelled,"cancel paused recovery retains logged completed original and stops next save");
+        Check(Read(published)=="ORIGINAL" && Read(f.right+L"\\a")=="ORIGINAL" && Read(f.right+L"\\b")=="ORIGINAL","paused recovery and cancellation preserve all originals");
+    }
+}
 int main() {
     try { Success(); Scope(); ModifyOnlyDestination(); Boundaries(); Paths(); AfterPublication(); DiskSpace();
         RecoverySuccess(); RecoveryFailures(); RecoveryPaths(); OverwriteSuccess(); OverwriteFailures(); OverwritePaths();
-        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();
+        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();
         std::cout<<checks<<" copy/recovery/overwrite/delete assertions passed\n"; return 0; }
     catch(const std::exception& e) { std::cerr<<"FAILED: "<<e.what()<<"\n"; return 1; }
 }

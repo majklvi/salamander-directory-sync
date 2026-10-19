@@ -24,6 +24,32 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
     struct RestoreLanguage {HINSTANCE previous=language;~RestoreLanguage(){language=previous;}} restore;
     bool ok=true;
     ok &= InsertTextValues(L"%n {a} {a} {unknown}",{{L"{a}",L"{b}"},{L"{b}",L"expanded"}})==L"%n {b} {b} {unknown}";
+    struct NativeProgress final:CGUIProgressBarAbstract {
+        DWORD value=0;
+        void WINAPI SetProgress(DWORD progress,const char*) override {value=progress;}
+        void WINAPI SetSelfMoveTime(DWORD) override {}
+        void WINAPI SetSelfMoveSpeed(DWORD) override {}
+        void WINAPI Stop() override {}
+        void WINAPI SetProgress2(const CQuadWord&,const CQuadWord&,const char*) override {}
+    } native;
+    TransferBar(nullptr,0,&native,5,10);ok &= native.value==500;
+    TransferBar(nullptr,0,&native,11,10);ok &= native.value==1000;
+    TransferBar(nullptr,0,&native,0,0);ok &= native.value==DWORD(-1);
+    uint64_t speed=7;
+    ok &= ParseTransferSpeed(L"1",0,speed) && speed==1024;
+    ok &= ParseTransferSpeed(L"1048576",1,speed) && speed==(uint64_t(1)<<40);
+    for(const auto* invalid:{L"",L"0",L"-1",L"1.5",L"1e3",L" 2",L"1073741825",L"999999999999999999999999"}) {
+        speed=7;ok &= !ParseTransferSpeed(invalid,0,speed) && speed==7;
+    }
+    speed=7;ok &= !ParseTransferSpeed(L"1",2,speed) && speed==7;
+    dirsync::TransferDisplay weighted;weighted.total=1000;weighted.copied=500;
+    ok &= TransferWork(weighted,dirsync::CopyPhase::Copying)==682;
+    weighted.verifyTotal=2000;weighted.verified=1000;
+    ok &= TransferWork(weighted,dirsync::CopyPhase::Verifying)==2730;
+    weighted.copied=weighted.total;weighted.verified=0;
+    ok &= TransferWork(weighted,dirsync::CopyPhase::Copying)==TransferWork(weighted,dirsync::CopyPhase::Preparing) &&
+        TransferWork(weighted,dirsync::CopyPhase::Preparing)==TransferWork(weighted,dirsync::CopyPhase::Verifying);
+    weighted.finished=true;ok &= TransferWork(weighted,dirsync::CopyPhase::Verifying)==4096;
     for(const wchar_t* name:{L"dirsync_ui_tests.exe",L"dirsync_ui_czech_tests.exe"}) {
         HMODULE resources=LoadLibraryExW(name,nullptr,LOAD_LIBRARY_AS_DATAFILE|LOAD_LIBRARY_AS_IMAGE_RESOURCE);
         if(!resources)return FALSE;language=resources;
@@ -40,23 +66,31 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ShowTransfer(p);HWND progress=p.transferWindow;
             ok &= IsWindow(progress) && IsWindowVisible(progress) && GetWindow(progress,GW_OWNER)==parent;
             ok &= ControlText(progress,IDC_TRANSFER_SOURCE)==source && ControlText(progress,IDC_TRANSFER_TARGET)==target;
-            for(int id:{IDC_TRANSFER_SOURCE,IDC_TRANSFER_TARGET}) {
+            for(int id:{IDC_TRANSFER_SOURCE,IDC_TRANSFER_TARGET,IDC_TRANSFER_PHASE}) {
                 HWND path=GetDlgItem(progress,id);ok &= (GetWindowLongPtrW(path,GWL_STYLE)&SS_NOTIFY)!=0;
                 NMTTDISPINFOW tip{};tip.hdr.code=TTN_GETDISPINFOW;tip.hdr.idFrom=UINT_PTR(path);
                 SendMessageW(progress,WM_NOTIFY,0,LPARAM(&tip));
-                ok &= tip.lpszText && std::wstring(tip.lpszText)==(id==IDC_TRANSFER_SOURCE?source:target);
+                ok &= tip.lpszText && std::wstring(tip.lpszText)==(id==IDC_TRANSFER_SOURCE?source:id==IDC_TRANSFER_TARGET?target:p.transferDetails);
             }
             ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_FILE_BAR,PBM_GETPOS,0,0)==500;
             ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_TOTAL_BAR,PBM_GETPOS,0,0)==250;
-            ok &= ControlText(progress,IDC_TRANSFER_COUNTS).find(L"1 / 4")!=std::wstring::npos;
-            ok &= ControlText(progress,IDC_TRANSFER_BYTES).find(L'{')==std::wstring::npos &&
-                ControlText(progress,IDC_TRANSFER_ELAPSED).find(L"0:00:")!=std::wstring::npos;
+            ok &= p.transferDetails.find(L"1 / 4")!=std::wstring::npos;
+            ok &= p.transferDetails.find(L'{')==std::wstring::npos &&
+                p.transferDetails.find(L"0:00:")!=std::wstring::npos;
             p.copyProgress.VerifyDisplay(1000);p.copyProgress.VerifiedDisplay(250);p.copyProgress.phase=dirsync::CopyPhase::Verifying;
             UpdateTransfer(p);ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_FILE_BAR,PBM_GETPOS,0,0)==250;
             ok &= ControlText(progress,IDC_TRANSFER_PHASE).find(Text(IDS_PROGRESS_VERIFY))!=std::wstring::npos;
             p.copyProgress.BeginDisplay(source,target,dirsync::TransferKind::Save,true);UpdateTransfer(p);
             ok &= (GetWindowLongPtrW(GetDlgItem(progress,IDC_TRANSFER_FILE_BAR),GWL_STYLE)&PBS_MARQUEE)!=0;
-            ok &= ControlText(progress,IDC_TRANSFER_FILE_PERCENT)==L"—";
+            ok &= ControlText(progress,IDC_TRANSFER_FILE_BAR)==L"—";
+            SendMessageW(progress,WM_COMMAND,IDC_TRANSFER_PAUSE,0);
+            ok &= p.copyProgress.pauseRequested && ControlText(progress,IDC_TRANSFER_PAUSE)==Text(IDS_TRANSFER_RESUME);
+            SendMessageW(GetDlgItem(progress,IDC_TRANSFER_MINIMIZE),WM_KEYDOWN,VK_TAB,0);
+            ok &= GetFocus()==GetDlgItem(progress,IDC_TRANSFER_PAUSE);
+            SendMessageW(GetDlgItem(progress,IDC_TRANSFER_PAUSE),WM_KEYDOWN,VK_RETURN,0);
+            ok &= !p.copyProgress.pauseRequested;
+            SendMessageW(progress,WM_COMMAND,IDC_TRANSFER_MINIMIZE,0);ok &= IsIconic(progress)!=FALSE;
+            ShowWindow(progress,SW_RESTORE);ok &= !IsIconic(progress);
             SendMessageW(progress,WM_CLOSE,0,0);
             ok &= p.cancel && IsWindow(progress) && !IsWindowEnabled(GetDlgItem(progress,IDCANCEL));
             p.running=false;SendMessageW(progress,WM_TIMER,1,0);
@@ -64,6 +98,16 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             p.cancel=false;p.running=true;ShowTransfer(p);progress=p.transferWindow;
             SendMessageW(GetDlgItem(progress,IDCANCEL),WM_KEYDOWN,VK_ESCAPE,0);
             ok &= p.cancel && IsWindow(progress);p.CloseTransfer();
+            p.cancel=false;p.running=true;ShowTransfer(p);progress=p.transferWindow;
+            SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&p));
+            SetTimer(parent,57,20,[](HWND owner,UINT,UINT_PTR, DWORD) {
+                auto* pending=reinterpret_cast<Preview*>(GetWindowLongPtrW(owner,GWLP_USERDATA));
+                pending->running=false;pending->CloseTransfer();KillTimer(owner,57);
+            });
+            speed=7;
+            ok &= !ChooseTransferSpeed(progress,speed,&p.transferSpeedWindow) && speed==7 &&
+                !p.transferSpeedWindow && !p.transferWindow && !IsWindow(progress);
+            KillTimer(parent,57);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
             ok &= TransferPosition(UINT64_MAX-1,UINT64_MAX)==999 && TransferPosition(5,10)==500 && TransferPosition(11,10)==1000;
         }
         std::atomic<bool> ended{false};HWND visible=nullptr;
@@ -288,6 +332,52 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeProposalRules(const wchar_
     return checks;
 }
 // Real native toggle states, option handlers and list/status geometry; no executor.
+extern "C" __declspec(dllexport) BOOL WINAPI ProbeModelessPreview() try {
+    bool ok=true;std::atomic<bool> ended{false};
+    struct Template {DLGTEMPLATE dialog;WORD menu=0,cls=0,title=0;} layout{};
+    layout.dialog.style=WS_POPUP|WS_CAPTION;layout.dialog.cx=180;layout.dialog.cy=70;
+    auto ownerProcedure=+[](HWND window,UINT message,WPARAM,LPARAM)->INT_PTR {
+        if(message==WM_APP+27){SetWindowLongPtrW(window,DWLP_USER,1);return TRUE;}return FALSE;
+    };
+    HWND host=CreateDialogIndirectParamW(instance,&layout.dialog,nullptr,ownerProcedure,0);
+    if(!host)return FALSE;
+    auto procedure=+[](HWND window,UINT message,WPARAM w,LPARAM l)->INT_PTR {
+        if(message==WM_INITDIALOG){auto* p=reinterpret_cast<Preview*>(l);p->window=window;
+            SetWindowLongPtrW(window,DWLP_USER,l);return TRUE;}
+        return Dialog(window,message,w,l);
+    };
+    modelessPreview=std::make_unique<Preview>();auto& p=*modelessPreview;p.modeless=true;active=&p;
+    HWND window=CreateDialogIndirectParamW(instance,&layout.dialog,nullptr,procedure,LPARAM(&p));
+    if(!window){active=nullptr;modelessPreview.reset();DestroyWindow(host);return FALSE;}
+    SetWindowPos(window,nullptr,0,0,4000,4000,SWP_NOZORDER|SWP_NOACTIVATE);
+    PositionPreview(p,host);RECT fitted{};MONITORINFO monitor{sizeof(monitor)};
+    GetWindowRect(window,&fitted);GetMonitorInfoW(MonitorFromWindow(host,MONITOR_DEFAULTTONEAREST),&monitor);
+    ok &= fitted.left>=monitor.rcWork.left && fitted.top>=monitor.rcWork.top &&
+        fitted.right<=monitor.rcWork.right && fitted.bottom<=monitor.rcWork.bottom;
+    HWND first=CreateWindowExW(0,L"BUTTON",L"First",WS_CHILD|WS_VISIBLE|WS_TABSTOP,5,5,50,20,window,HMENU(17),instance,nullptr);
+    HWND second=CreateWindowExW(0,L"BUTTON",L"Second",WS_CHILD|WS_VISIBLE|WS_TABSTOP,60,5,50,20,window,HMENU(18),instance,nullptr);
+    previewKeyboardHook=SetWindowsHookExW(WH_GETMESSAGE,PreviewKeyboard,nullptr,GetCurrentThreadId());
+    ok &= previewKeyboardHook && IsWindowEnabled(host) && GetWindow(window,GW_OWNER)==nullptr;
+    ShowWindow(window,SW_SHOW);SetFocus(first);
+    PostMessageW(first,WM_KEYDOWN,VK_TAB,0);PostMessageW(host,WM_APP+27,0,0);
+    MSG message{};for(int iteration=0;iteration<20 && !GetWindowLongPtrW(host,DWLP_USER);++iteration)
+        if(PeekMessageW(&message,nullptr,0,0,PM_REMOVE)){TranslateMessage(&message);DispatchMessageW(&message);}
+    ok &= GetFocus()==second && GetWindowLongPtrW(host,DWLP_USER)==1 && IsWindowEnabled(host);
+    p.running=true;p.worker=std::thread([&]{while(!p.cancel)Sleep(1);ended=true;});
+    SendMessageW(window,WM_CLOSE,0,0);
+    ok &= p.cancel && p.closing && IsWindow(window) && IsWindowEnabled(host);
+    p.Join();p.running=false;EndPreview(p);
+    ok &= ended && !p.window && !active && !previewKeyboardHook && !IsWindow(window) && IsWindowEnabled(host);
+    modelessPreview.reset();
+    // Forced release must synchronously destroy a modeless window and join its
+    // worker before the caller is allowed to FreeLibrary this module.
+    modelessPreview=std::make_unique<Preview>();auto& forced=*modelessPreview;forced.modeless=true;active=&forced;
+    window=CreateDialogIndirectParamW(instance,&layout.dialog,nullptr,procedure,LPARAM(&forced));
+    ended=false;forced.running=true;forced.worker=std::thread([&]{while(!forced.cancel)Sleep(1);ended=true;});
+    ok &= !plugin.Release(nullptr,FALSE) && !forced.cancel;
+    ok &= plugin.Release(nullptr,TRUE) && ended && !active && !modelessPreview && !IsWindow(window) && IsWindowEnabled(host);
+    DestroyWindow(host);return ok;
+}catch(...){return FALSE;}
 extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t* left,const wchar_t* right) try
 {
     struct Template {DLGTEMPLATE dialog;WORD menu=0,cls=0,title=0;} dialog{};

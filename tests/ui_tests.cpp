@@ -83,6 +83,20 @@ void Test(int dialog)
             Check((c.style&ES_READONLY)!=0 && (c.style&ES_MULTILINE)!=0 && (c.style&WS_VSCROLL)!=0,"selectable scrolling read-only details");
         controls.push_back(c);
     }
+    if(dialog==IDD_TRANSFER_PROGRESS) {
+        auto control=[&](DWORD id)->const Control& {for(const auto& c:controls)if(c.id==id)return c;throw std::runtime_error("missing transfer control");};
+        Check(width==355 && height==110,"host single-stream progress dialog dimensions");
+        for(auto id:{IDC_TRANSFER_FILE_BAR,IDC_TRANSFER_TOTAL_BAR}) {
+            const auto& bar=control(id);Check(bar.type==0x82 && bar.x==45 && bar.width==297 && bar.height==12 && !(bar.style&WS_BORDER),
+                "borderless static attaches the real host progress control");
+        }
+        Check(control(IDC_TRANSFER_FILE_BAR).y==40 && control(IDC_TRANSFER_TOTAL_BAR).y==55,"host file and total progress grid");
+        Check(control(IDC_TRANSFER_SOURCE).x==45 && control(IDC_TRANSFER_SOURCE).y==11 &&
+            control(IDC_TRANSFER_TARGET).y==23 && control(IDC_TRANSFER_PHASE).y==69,"host path and status grid");
+        Check(control(IDC_TRANSFER_MINIMIZE).x==92 && control(IDC_TRANSFER_PAUSE).x==152 &&
+            (style&WS_MINIMIZEBOX),"native minimize and split pause footer grid");
+        Check(control(IDCANCEL).x==212 && control(IDCANCEL).y==87 && control(IDCANCEL).width==50,"native compact footer cancellation button");
+    }
     if(dialog==IDD_PREVIEW) {
         auto control=[&](DWORD id)->const Control& { for(const auto& c:controls) if(c.id==id) return c; throw std::runtime_error("missing preview control"); };
         const auto& profile=control(IDC_PROFILE_MENU);
@@ -284,6 +298,7 @@ int main()
         for(int id=IDS_REPORT_EXPORT;id<=IDS_REPORT_HELP;++id)Check(!text(id).empty(),"report export interface localized");
         for(int id=IDS_PROGRESS_PREPARE;id<=IDS_STORED_OPEN_SAVED_MENU;++id)Check(!text(id).empty(),"transfer progress and explicit recovery menu actions localized");
         Test(IDD_TRANSFER_PROGRESS);
+        Test(IDD_TRANSFER_SPEED);
         Test(IDD_STORED_ORIGINALS);
         Test(IDD_PREVIEW); Test(IDD_INFORMATION);Test(IDD_APPEARANCE);Test(IDD_PROFILE_NAME);Test(IDD_PROFILES);Test(IDD_PROFILE_CLOSE); std::cout << checks << " resource/layout checks passed\n"; return 0;
     }

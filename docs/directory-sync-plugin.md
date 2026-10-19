@@ -6,7 +6,7 @@
 
 [English](directory-sync-plugin.en.md)
 
-Stav 19. října 2026, vývojová alfa verze 0.2.2 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
+Stav 19. října 2026, vývojová alfa verze 0.3.0 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
 
 Pro pilotní používání začněte [krátkými pokyny včetně hlášení chyb](directory-sync-plugin-pilot-guide.md), přiloženými v balíčku jako `PILOT.cs.md`.
 
@@ -14,17 +14,29 @@ Stavový řádek od 0.1.4 používá samostatné nativní oddíly: stav operace 
 
 Nejnižší testované verze hostitele: 0.15.1 uživatelsky a nevydaná 0.16 automatizovaně pomocí AI z vlastního vývojářského sestavení.
 
-## Průběh přenosu (0.2.2)
+## Nemodální okno (0.3.0)
 
-Potvrzené souborové operace otevřou samostatné kompaktní nativní okno průběhu. Zobrazuje zdroj a cíl (zkrácené na obrazovce, úplné v tooltipu), aktuální fázi, průběh přenosu nebo ověřování souboru, dokončené kroky, přenesené bajty, čtení při ověřování a uplynulý čas. Celkový ukazatel počítá kroky včetně uchování originálů; nejde o odhad času podle objemu dat. U adresářů je průběh aktuální položky neurčitý. Čtení při ověřování zahrnuje zdroj i kopii.
+Hlavní okno synchronizace je samostatné a nemodální. Dokud je otevřené, lze přepnout do Samandarinu a pracovat v jeho panelech, a to i během porovnání a přenosů. Opětovné spuštění pluginu aktivuje stávající okno. Cesty a výběr panelů se zachytí při otevření; pozdější navigace hostitele nepřesměruje rozpracované porovnání ani operaci. Nastavení a potvrzení mají za vlastníka okno pluginu, nikoli hlavní okno hostitele. Změny souborů v hostiteli mohou zneplatnit porovnání: před další operací porovnejte znovu.
 
-**Zastavit**, Escape i křížek okna požádají o přerušení. Okno zůstane otevřené do ukončení pracovníka; dokončené změny zůstanou zachované. Stavový řádek zůstává dostupný. Samotné porovnávání používá průběh v hlavním okně. Dialog přebírá vzhled hostitele; současné SDK nezpřístupňuje jeho úplné přenosové okno s frontou, během na pozadí, pozastavením a omezením rychlosti.
+[Implementace a ověření](directory-sync-plugin-modeless.md).
+
+Zavření během operace požádá o přerušení a počká na pracovní vlákno. Dokončené změny zůstanou zachované; nadále platí dotaz Uložit / Neukládat / Zrušit pro změněný profil. Otevřené může být jedno hlavní okno pluginu. Společná fronta a plánování přenosů hostitele tím nepřibývají.
+
+## Průběh přenosu (0.3.0)
+
+Potvrzené souborové operace otevřou kompaktní okno podle rozložení kopírovacího dialogu hostitele. Používá přímo jeho SDK ukazatele průběhu a dělené tlačítko, s procenty uprostřed a barvami hostitele. Zdroj a cíl jsou na obrazovce zkrácené, v tooltipech úplné. Stavový řádek ukazuje zkopírovaná data, rychlost a odhad zbývajícího času, jsou-li dostupné, a označuje ověřování. Velikosti formátuje stejná funkce jako v přenosovém dialogu hostitele, alespoň na tři platné číslice a s místním desetinným oddělovačem, nezávisle na nastavení zobrazení velikostí v panelech. Tooltip zachovává fázi, dokončené kroky, zkopírované bajty, čtení při ověřování a uplynulý čas. Čtení při ověřování zahrnuje zdroj i kopii; nepočítá se mezi zkopírovaná data.
+
+Celkový ukazatel váží práci podle objemu dat včetně kopií originálů. Odhad pro soubor odpovídá trojnásobku velikosti hlavního datového proudu pro kopírování a čtení obou stran při ověřování, nejméně však 4 KiB; minimální váhu mají také adresářové a mazací kroky. Pojmenované proudy se předem neprocházejí, proto jde o odhad, který může zůstat na 99 % až do dokončení všech kroků. Ukazatel aktuálního souboru přechází z kopírování na ověřování; u adresářů je neurčitý.
+
+Dole jsou tlačítka **Minimalizovat**, **Pozastavit/Pokračovat** a **Storno**. Šipka vedle Pozastavit/Pokračovat otevře nabídku **Pozastavit/Pokračovat** a **Nastavit omezení rychlosti…**. Pozastavení se projeví v bezpečném kontrolním bodě pracovníka; Pokračovat naváže na stejnou dávku. Volitelný limit je kladné celé číslo v KB/s nebo MB/s, nejvýše 1 TB/s, a vztahuje se na kopírování hlavních dat, pojmenovaných proudů i kopií pro obnovu. Čtení při ověřování neomezuje. Limit platí pouze pro tuto dávku: další operace začne bez omezení. Zrušení dialogu rychlosti zachová aktuální hodnotu.
+
+**Storno**, Escape i křížek okna požádají o přerušení, i při pozastavení. Okno zůstane otevřené do ukončení pracovníka; dokončené změny zůstanou zachované. Minimalizuje se pouze okno průběhu, které má vlastní položku na hlavním panelu pro opětovné zobrazení. Hlavní náhled zůstává po dobu operace zamčený. Panely hostitele zůstávají dostupné; nejde o zapojení do jeho přenosové fronty. Samotné porovnávání používá průběh v hlavním okně.
 
 Nabídka položek v Uložených originálech výslovně rozlišuje **Kopírovat … cestu do schránky** a **Otevřít … adresář v Průzkumníku**. Otevření může selhat, pokud rodičovský adresář originálu již neexistuje nebo Průzkumník cestu nepodporuje.
 
-## Uložené originály (0.2.2)
+## Uložené originály (0.3.0)
 
-Dostupné ve **vývojovém sestavení 0.2.2**, nikoli ve vydaném balíčku 0.2.1. Přes **Nastavení → Uložené originály…** otevřete přehled běhů z nastaveného adresáře obnovy, i když je Uchovat originály vypnuto. Použije se aktuální hodnota pole v nastavení; není nutné ji předem uložit. Přehled nikdy nespouští synchronizaci.
+Dostupné ve **vývojovém sestavení 0.3.0**, nikoli ve vydaném balíčku 0.2.1. Přes **Nastavení → Uložené originály…** otevřete přehled běhů z nastaveného adresáře obnovy, i když je Uchovat originály vypnuto. Použije se aktuální hodnota pole v nastavení; není nutné ji předem uložit. Přehled nikdy nespouští synchronizaci.
 
 Výběrem běhu nahoře zobrazíte dole původní a uložené cesty, zaznamenané velikosti hlavního datového proudu (v jednotkách hostitele), stav kopií a zaznamenaný výsledek operací. Běhy se řadí od nejnovějších podle současného času vytvoření jejich adresářů. Dvojklik na běh nebo položku otevře úplné podrobnosti včetně cest a chybových kódů. **Původní cesta / Uložená cesta** nebo **Ctrl+C / Ctrl+Shift+C** v seznamu položek zkopírují celé Unicode cesty. V seznamu běhů tyto zkratky kopírují cestu běhu nebo manifestu. Kontextové nabídky obsahují kopírování cest a otevření adresářů. Adresáře se otevírají v průzkumníku Windows; soubory se nespouštějí. Rodičovský adresář odstraněného originálu již nemusí existovat.
 
@@ -34,7 +46,7 @@ Výběrem běhu nahoře zobrazíte dole původní a uložené cesty, zaznamenan�
 
 Podporováno je současné uspořádání `pair-* / run-*`, schéma 1. Cesty v protokolech jsou absolutní; přesun stromu obnovy je nepřepisuje. Nelze otevřít uloženou cestu mimo její běh ani cestu přes reparse bod. Nedostupný adresář obnovy se nahlásí, nevytváří. Limity zobrazení jsou 1 000 běhů, 20 000 položek celkem a 8 MiB na soubor záznamů; jejich dosažení se oznámí. První etapa **neobsahuje automatickou obnovu ani úklid záloh**. Nadále platí postup ruční obnovy níže a potřeba nezávislých záloh.
 
-## Export porovnání a výsledků operací (0.2.2)
+## Export porovnání a výsledků operací (0.3.0)
 
 Použijte **Synchronizovat… → Exportovat porovnání a výsledky…** nebo stejný příkaz v kontextové nabídce výsledků. Nativní dialog Uložit nabízí **CSV** a **textový protokol**; formát určuje vybraný typ souboru. Export je dostupný po porovnání včetně prázdného, přerušeného či chybového výsledku a také po provedení, které plán zneplatní. Během práce je vypnutý. Export plán znovu neověřuje ani neprovádí synchronizaci.
 
@@ -90,7 +102,7 @@ Pravé tlačítko na záhlaví otevře nabídku sloupců; stejné volby jsou v *
 
 Od verze **0.1.1** je seznam seskupený podle relativních adresářů. Záhlaví `\` označuje kořen, například `\alpha\nested\` podadresář; sloupce **Left name / Název vlevo** a **Right name / Název vpravo** obsahují koncový název pouze tehdy, pokud položka na dané straně existuje. U párových položek se název zobrazí na obou stranách; u jednostranných zůstane protější název prázdný. Záhlaví nejsou návrhy operací a jejich kliknutí nevybírá obsah. Adresář navržený k odstranění zůstává samostatným řádkem v nadřazené skupině. Filtry odstraní skupinu, pokud nemá žádné viditelné položky. Kopírování cest nadále používá celé skutečné cesty. Podrobnosti a ověření jsou v [záznamu seskupování](directory-sync-plugin-grouping.md).
 
-Sloupce velikostí přebírají **Configuration → Panels → Show sizes**: bajty s oddělovači tisíců, celé KB nebo smíšené jednotky. Používají stejné formátovací rutiny jádra, včetně jeho zaokrouhlování a regionálních oddělovačů. Souhrny výslovně označené jako bajty a přenosové čítače nadále uvádějí přesné bajty. **Show names** ze stejného nastavení určuje velikost písmen každé části relativní cesty v seznamu, včetně odlišného stylu pro soubory a adresáře. Zobrazení nemění skutečné názvy, plán, manifest ani cesty kopírované do schránky. Nastavení se načítá při otevření okna a při oznámení změny konfigurace hostitelem.
+Sloupce velikostí přebírají **Configuration → Panels → Show sizes**: bajty s oddělovači tisíců, celé KB nebo smíšené jednotky. Používají stejné formátovací rutiny jádra, včetně jeho zaokrouhlování a regionálních oddělovačů. Souhrny výslovně označené jako bajty a exportované čítače nadále uvádějí přesné bajty; okno průběhu používá stručné přenosové jednotky hostitele. **Show names** ze stejného nastavení určuje velikost písmen každé části relativní cesty v seznamu, včetně odlišného stylu pro soubory a adresáře. Zobrazení nemění skutečné názvy, plán, manifest ani cesty kopírované do schránky. Nastavení se načítá při otevření okna a při oznámení změny konfigurace hostitelem.
 
 V GUI současného hostitele bylo proti hlavním panelům ověřeno všech **3 režimů velikostí a 6 dostupných režimů názvů**, včetně Unicode. Sedmá hodnota názvového formátu v SDK je starší styl, který dnešní konfigurace panelů nenabízí; ten pokrývá nativní test. Ověření proběhlo s regionálním nastavením en-US (čárka mezi tisíci, desetinná tečka), bez změny systémového locale. Podrobnosti jsou v [záznamu GUI porovnání](directory-sync-plugin-ui.md#2026-10-16--gui-porovnání-show-sizes-a-show-names).
 
@@ -162,7 +174,7 @@ Pravé kliknutí na zvýrazněný řádek zachová celý výběr; kliknutí na j
 Výchozí návrh se pamatuje pouze pro aktuální porovnání; nový Compare zahodí ruční změny. Samotné souborové operace spouštějí oddělené příkazy nabídky Synchronize… / Visible plan pro všechny viditelné způsobilé návrhy, vždy po vlastním potvrzení. Prohlížení, porovnání obsahu, editace, přejmenování, tisk, kopírování vlastností a shellové menu nejsou součástí této nabídky. [Průzkum a implementační evidence](directory-sync-plugin-context-menu.md) rozlišují referenční chování a hotový rozsah pluginu.
 ## Mapa dokumentace
 
-Do vzdálenějšího plánu patří [integrace s přenosovým oknem a frontou jádra](directory-sync-plugin-design.md#dlouhodobý-plán--společné-přenosové-prostředky-hostitele), včetně pozadí a rychlostního limitu. Bude se řešit až po zpřístupnění potřebného API hostitele; současná verze nad SDK 0.16 ponechává vlastní přenosový adaptér.
+Do vzdálenějšího plánu patří [integrace s přenosovým oknem a frontou jádra](directory-sync-plugin-design.md#dlouhodobý-plán--společné-přenosové-prostředky-hostitele), včetně společného plánování a přenosů na pozadí. Bude se řešit až po zpřístupnění potřebného API hostitele; současná verze ponechává vlastní přenosový adaptér s kooperativním pozastavením a rychlostním limitem pro jednotlivou dávku.
 
 | Potřeba | Dokument |
 | --- | --- |

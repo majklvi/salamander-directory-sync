@@ -11,9 +11,14 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ## [Unreleased]
 
-### Added — 0.2.2 development
+### Added — 0.3.0 development
+
+- Open the synchronization preview as an independent modeless window. Keep the host panels available while the plugin is open, comparing or transferring files; reopening the command activates the existing preview. Local confirmations/settings are owned by the plugin window. Keep captured paths fixed, retain safe Close/Stop and join workers before forced unload. Route dialog keyboard navigation on the host UI thread without requiring an SDK extension.
 
 - A compact native transfer-progress window for synchronization, copies, overwrites, saved originals and deletions. Shows source/target, current phase, file transfer/verification progress, completed steps including recovery saves, transferred/read bytes and elapsed time. Stop, Escape or closing this window requests safe cancellation and waits for the worker.
+- Match the host copying dialog's compact 355 × 110 layout and use its actual SDK progress controls with centered percentages and host colors. Consolidate transfer details into one status line with a complete tooltip; use the native Cancel/Storno caption.
+- Use the host's native split button for **Pause/Resume**, beside **Minimize** and **Cancel**. Its menu provides Pause/Resume and a per-batch speed limit for copied main data, named streams and recovery copies; verification reads remain unthrottled. Cooperative pause and cancellation retain the existing safe completion/journal boundaries. Minimize gives the progress window its own taskbar entry; the preview remains locked and the plugin does not join the host's queue or enable background panel use.
+- Show copied data, speed and estimated remaining time with the host's transfer-size formatting and local decimal separator. Weight total progress by copying and verification work, with a 4 KiB minimum per step. Named streams are not scanned in advance, so totals are approximate and remain below 100% until the batch finishes; detailed counts, verification reads and elapsed time remain in the tooltip.
 - Stored-originals item menus explicitly distinguish copying paths to the clipboard from opening directories in Windows Explorer.
 - A read-only **Stored originals…** browser in Settings, available even when Keep originals is off. Select a recovery run to inspect original/saved paths, recorded sizes, copy availability and recorded overwrite/deletion results. Double-click for full details; copy paths or open their directories. Refresh reads the current recovery directory again.
 - Keep incomplete, damaged and unsupported records visible with warnings. Missing or differently sized copies are distinct from recorded operation results. Reading records does not verify file contents, restore files, repair logs or delete backups.
@@ -21,6 +26,8 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 - Export all comparison rows and the last confirmed operation/combined batch as UTF-8 CSV or text. Include hidden/Skip rows, actual scan options, current and execution-time filters, sources/targets, saved originals, errors, and distinct recorded-completion/filesystem-change fields. Keep unreported steps explicitly unknown and export available after a plan becomes stale. Stage report writes outside the comparison/recovery trees; confirm replacing existing reports through the native Save dialog.
 
 ### Verification
+
+- Verify the 0.3.0 modeless lifetime, dialog keyboard routing, host responsiveness, monitor bounds and safe Close/forced unload. A live Czech/dark host remained usable while the preview was open and while switching away from content comparison. See the [modeless-window report](docs/directory-sync-plugin-modeless.md) for exact coverage and limitations.
 
 - Verify the native transfer window with English/Czech resources, long Unicode paths/tooltips, copy/verification bars, Stop/Escape/close and worker teardown. All five x64 suites and the plugin matrix pass; see the [progress-window report](docs/directory-sync-plugin-transfer-progress.md) for automated coverage and remaining live-host checks.
 - Live Czech GUI checks in host-controlled light/dark modes confirm the progress window and active-transfer cancellation through Stop and its close button. All four cases preserve the completed file, leave subsequent work unstarted and clean staging. Record the separate large-list automation limitation and preliminary disk-space error in the [progress-window report](docs/directory-sync-plugin-transfer-progress.md).

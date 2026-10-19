@@ -477,7 +477,12 @@ struct Preview
     dirsync::SyncReport syncReport;
     dirsync::ReportBatch operationReport;
     bool reportReady=false;
-    HWND transferWindow=nullptr;
+    HWND transferWindow=nullptr,transferSpeedWindow=nullptr;
+    CGUIProgressBarAbstract* transferFileBar=nullptr;
+    CGUIProgressBarAbstract* transferTotalBar=nullptr;
+    std::wstring transferDetails,transferCaption;
+    uint64_t transferWorkTotal=0,transferBytesTotal=0,transferSampleTick=0,transferSampleCopied=0,transferSampleWork=0;
+    uint64_t transferRate=0,transferWorkRate=0;
     ULONGLONG transferStarted=0;
     std::wstring transferTip;
     std::atomic<dirsync::SyncStage> syncStage{dirsync::SyncStage::Checking};
@@ -487,7 +492,11 @@ struct Preview
     std::vector<std::pair<HWND, RECT>> controls;
     bool applyingProfile=false;
     bool running = false, closing = false, failed = false, validating = false, updatingList = false;
-    void CloseTransfer() {if(transferWindow){HWND window=transferWindow;transferWindow=nullptr;DestroyWindow(window);}}
+    bool modeless=false;
+    void CloseTransfer() {
+        if(transferSpeedWindow){EndDialog(transferSpeedWindow,IDCANCEL);transferSpeedWindow=nullptr;}
+        if(transferWindow){HWND window=transferWindow;transferWindow=nullptr;DestroyWindow(window);}
+    }
     ~Preview() { Stop(); Join(); CloseTransfer(); for(auto icon:buttonIcons) if(icon) DestroyIcon(icon); }
     void Stop()
     {
@@ -497,6 +506,38 @@ struct Preview
     void Join() { if (worker.joinable()) worker.join(); }
 };
 Preview* active = nullptr;
+// All UI and SDK calls remain on the host UI thread. The closed preview is
+// retained until the next launch or unload, so nested dialog callbacks can unwind.
+std::unique_ptr<Preview> modelessPreview;
+HHOOK previewKeyboardHook=nullptr;
+unsigned previewCallbacks=0;
+struct PreviewCallback {PreviewCallback(){++previewCallbacks;}~PreviewCallback(){--previewCallbacks;}};
+LRESULT CALLBACK PreviewKeyboard(int code,WPARAM removed,LPARAM value) {
+    PreviewCallback callback;
+    if(code>=0 && removed==PM_REMOVE && active && active->modeless) {
+        auto* message=reinterpret_cast<MSG*>(value);
+        if(message->message>=WM_KEYFIRST && message->message<=WM_KEYLAST) {
+            HWND root=GetAncestor(message->hwnd,GA_ROOT);
+            if(root && (root==active->window || root==active->transferWindow) && IsDialogMessageW(root,message))
+                message->message=WM_NULL;
+        }
+    }
+    return CallNextHookEx(nullptr,code,removed,value);
+}
+void EndPreview(Preview& p) {
+    if(p.modeless)DestroyWindow(p.window);else EndDialog(p.window,0);
+}
+void PositionPreview(Preview& p,HWND host) {
+    MONITORINFO monitor{sizeof(monitor)};RECT bounds{};
+    if(!GetMonitorInfoW(MonitorFromWindow(host,MONITOR_DEFAULTTONEAREST),&monitor) || !GetWindowRect(p.window,&bounds))return;
+    const auto& area=monitor.rcWork;
+    const int width=std::min(bounds.right-bounds.left,area.right-area.left);
+    const int height=std::min(bounds.bottom-bounds.top,area.bottom-area.top);
+    p.minimumWindow.cx=std::min(p.minimumWindow.cx,LONG(width));
+    p.minimumWindow.cy=std::min(p.minimumWindow.cy,LONG(height));
+    SetWindowPos(p.window,nullptr,area.left+(area.right-area.left-width)/2,
+        area.top+(area.bottom-area.top-height)/2,width,height,SWP_NOACTIVATE|SWP_NOZORDER);
+}
 std::wstring Number(uint64_t n) { return std::to_wstring(n); }
 std::wstring InsertTextValues(const std::wstring& pattern,
     std::initializer_list<std::pair<const wchar_t*,std::wstring>> values)
@@ -1187,6 +1228,7 @@ int StopControl(const Preview& p)
             p.intent==Preview::Intent::Overwrite || p.intent==Preview::Intent::Delete || p.intent==Preview::Intent::ImmediateDelete || p.intent==Preview::Intent::Sync));
     return files?IDC_STOP_SYNC:IDC_STOP;
 }
+#include "transfer_speed.inc"
 #include "transfer_progress.inc"
 void ProfileControls(Preview& p);
 void Busy(Preview& p, bool busy)
@@ -1273,10 +1315,10 @@ void ClosePreview(Preview& p)
             const auto result=SaveClosingProfile(p,[&]{return PersistSettings(p.window);});
             if(result==ProfileSaveResult::Invalid) Message(p.window,IDS_PROFILE_INVALID_PATH);
             if(result!=ProfileSaveResult::Saved) {ProfileControls(p);return;}
-            EndDialog(p.window,0);return;
+            EndPreview(p);return;
         }
     }
-    PersistSettings(p.window);EndDialog(p.window,0);
+    PersistSettings(p.window);EndPreview(p);
 }
 void ProfileControls(Preview& p)
 {
@@ -2676,6 +2718,17 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
 }
 INT_PTR CALLBACK Dialog(HWND window, UINT message, WPARAM w, LPARAM l)
 {
+    PreviewCallback callback;
+    auto* preview=reinterpret_cast<Preview*>(GetWindowLongPtrW(window,DWLP_USER));
+    if(message==WM_DESTROY && preview && preview->modeless) {
+        preview->Stop();preview->Join();preview->CloseTransfer();
+    }
+    if(message==WM_NCDESTROY && preview && preview->modeless) {
+        preview->window=nullptr;if(active==preview)active=nullptr;
+        SetWindowLongPtrW(window,DWLP_USER,0);
+        if(previewKeyboardHook){UnhookWindowsHookEx(previewKeyboardHook);previewKeyboardHook=nullptr;}
+        return FALSE;
+    }
     try { return DialogBody(window, message, w, l); }
     catch (...)
     {
@@ -2683,7 +2736,7 @@ INT_PTR CALLBACK Dialog(HWND window, UINT message, WPARAM w, LPARAM l)
         if (p) { p->Stop(); p->Join(); }
         wchar_t text[512]{}; LoadStringW(language, IDS_FAILED, text, 512);
         DarkModeMessageBoxW(window, text, nullptr, MB_OK | MB_ICONERROR);
-        EndDialog(window, 0);
+        if(p)EndPreview(*p);else DestroyWindow(window);
         return TRUE;
     }
 }
@@ -2716,17 +2769,30 @@ public:
     DWORD WINAPI GetMenuItemState(int, DWORD) override { return MENU_ITEM_STATE_ENABLED; }
     BOOL WINAPI ExecuteMenuItem(CSalamanderForOperationsAbstract*, HWND parent, int, DWORD) override
     {
-        if (active) { SetForegroundWindow(active->window); return FALSE; }
+        if (active) { if(IsIconic(active->window))ShowWindow(active->window,SW_RESTORE);SetForegroundWindow(active->window); return FALSE; }
         try
         {
-            Preview preview;
-            if (!Snapshot(preview)) { ConfigureDark(nullptr); Message(parent, IDS_INPUT_ERROR); return FALSE; }
+            if(previewCallbacks)return FALSE;
+            modelessPreview=std::make_unique<Preview>();auto& preview=*modelessPreview;
+            if (!Snapshot(preview)) { modelessPreview.reset();ConfigureDark(nullptr); Message(parent, IDS_INPUT_ERROR); return FALSE; }
             general->SetUserWorkedOnPanelPath(PANEL_LEFT); general->SetUserWorkedOnPanelPath(PANEL_RIGHT);
+            preview.modeless=true;
             active = &preview;
-            DialogBoxParamW(language, MAKEINTRESOURCEW(IDD_PREVIEW), parent, Dialog, LPARAM(&preview));
-            active = nullptr;
+            previewKeyboardHook=SetWindowsHookExW(WH_GETMESSAGE,PreviewKeyboard,nullptr,GetCurrentThreadId());
+            if(!previewKeyboardHook)throw std::runtime_error("modeless keyboard hook");
+            HWND window=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_PREVIEW),nullptr,Dialog,LPARAM(&preview));
+            if(!window || !preview.window)throw std::runtime_error("modeless preview");
+            PositionPreview(preview,parent);
+            auto icon=LoadIconW(instance,MAKEINTRESOURCEW(IDI_DIRSYNC));
+            if(icon){SendMessageW(window,WM_SETICON,ICON_SMALL,LPARAM(icon));SendMessageW(window,WM_SETICON,ICON_BIG,LPARAM(icon));}
+            ShowWindow(window,SW_SHOW);SetForegroundWindow(window);
         }
-        catch (...) { active = nullptr; Message(parent, IDS_FAILED); }
+        catch (...) {
+            if(modelessPreview && modelessPreview->window)DestroyWindow(modelessPreview->window);
+            active=nullptr;
+            if(previewKeyboardHook){UnhookWindowsHookEx(previewKeyboardHook);previewKeyboardHook=nullptr;}
+            modelessPreview.reset();Message(parent,IDS_FAILED);
+        }
         return FALSE; // Preserve panel selections; completed copies refresh via notifications.
     }
     BOOL WINAPI HelpForMenuItem(HWND parent, int) override { Message(parent, IDS_HELP); return TRUE; }
@@ -2744,13 +2810,20 @@ public:
     }
     BOOL WINAPI Release(HWND, BOOL force) override
     {
+        // A forced unload can reenter while a plugin-owned modal child pumps
+        // the host queue. The SDK ignores FALSE when force is TRUE. Keep code
+        // mapped in that exceptional case so its existing frames can unwind.
+        if(force && previewCallbacks){HMODULE pinned=nullptr;
+            if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_PIN,
+                reinterpret_cast<LPCWSTR>(&previewCallbacks),&pinned))return FALSE;}
         if (active)
         {
             if (!force) return FALSE;
             active->Stop(); active->Join();
             active->CloseTransfer();
-            if (active->window) EndDialog(active->window, 0);
+            if (active->window) EndPreview(*active);
         }
+        if(!previewCallbacks)modelessPreview.reset();
         DarkModeShutdown();
         if (backgroundBrush) { DeleteObject(backgroundBrush); backgroundBrush = nullptr; }
         return TRUE;
@@ -2789,7 +2862,9 @@ public:
     void WINAPI Event(int event, DWORD) override
     {
         if(event==PLUGINEVENT_CONFIGURATIONCHANGED && active && active->window) {
-            ReadPanelFormat(*active);UpdateGroupHeaders(*active);InvalidateRect(GetDlgItem(active->window,IDC_LIST),nullptr,FALSE);
+            ReadPanelFormat(*active);
+            if(!active->running)UpdateGroupHeaders(*active);
+            InvalidateRect(GetDlgItem(active->window,IDC_LIST),nullptr,FALSE);
         }
     }
     void WINAPI ClearHistory(HWND) override {}
@@ -2813,7 +2888,7 @@ CPluginInterfaceAbstract* WINAPI SalamanderPluginEntry(CSalamanderPluginEntryAbs
     if (!language) return nullptr;
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES}; InitCommonControlsEx(&controls);
     ConfigureDark(nullptr);
-    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.2.2", VERSINFO_COPYRIGHT,
+    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.3.0", VERSINFO_COPYRIGHT,
                               general->LoadStr(language, IDS_DESCRIPTION), "DirectorySync");
     entry->SetPluginHomePageURL("https://github.com/majklvi/salamander-directory-sync");
     return &plugin;
