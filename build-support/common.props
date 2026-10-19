@@ -24,6 +24,11 @@
   </Link>
   <ResourceCompile><PreprocessorDefinitions>WINVER=0x0601;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)'=='Debug'">_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions><PreprocessorDefinitions Condition="'$(Configuration)'=='Release'">NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions><AdditionalIncludeDirectories>$(RepoRoot)src;$(RepoRoot)vendor\samandarin-sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories><Culture>0x0409</Culture></ResourceCompile>
  </ItemDefinitionGroup>
+ <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+  <!-- /DEBUG changes these defaults to NOREF/NOICF. Keep external PDBs,
+       but remove unused COMDATs and fold identical code in shipping builds. -->
+  <Link><OptimizeReferences>true</OptimizeReferences><EnableCOMDATFolding>true</EnableCOMDATFolding></Link>
+ </ItemDefinitionGroup>
  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
   <ResourceCompile><PreprocessorDefinitions>_WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions></ResourceCompile>
  </ItemDefinitionGroup>

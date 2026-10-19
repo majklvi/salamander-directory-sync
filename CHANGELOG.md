@@ -34,6 +34,11 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 - Test the 0.2.2 recovery catalog against genuine manifests/journals, incomplete and unavailable records, cancellation, junctions and long Unicode paths. All five x64 suites pass in Debug/Release and the plugin build matrix passes. The [stored-originals report](docs/directory-sync-plugin-stored-originals.md) separates the successful live GUI/path-copy checks from remaining checks after Computer Use state-capture timeouts.
 - Verify combined new-copy/overwrite/deletion batches in the live GUI with recovery ON and OFF, plus Stop (ON) and Close (OFF) during a large-file transfer. Confirm later phases remain unstarted, completed copies remain, staging is cleaned, and recovery contents match the selected mode. Record the separate large-list automation limitation and exact coverage in the [GUI verification report](docs/directory-sync-plugin-combined-gui.md). No production code or SDK change was required.
 
+### Build size
+
+- Enable Release linker removal of unused code/data and folding of identical COMDATs while preserving external PDBs, speed optimization and runtime safety checks. The x64 plugin shrinks from 1,029,632 to 713,216 bytes (30.7%) with unchanged exports.
+- Remove 21 obsolete messages from each language module without renumbering live resource IDs. The three binary modules together shrink from 1,144,320 to 812,032 bytes. Packaging logs now show individual module sizes. See the [size review](docs/directory-sync-plugin-binary-size.md) for measurements and retained safeguards.
+
 ## [0.2.1] — 2026-10-19
 
 ### Added

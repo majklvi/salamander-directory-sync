@@ -19,6 +19,7 @@ foreach($relative in $inputs){
  $version=[Diagnostics.FileVersionInfo]::GetVersionInfo($path)
  if($version.FileMajorPart -ne 0 -or $version.FileMinorPart -ne 3 -or $version.FileBuildPart -ne 0){throw "Expected 0.3.0: $relative"}
  if($version.FileVersion -notmatch '\(x64\)'){throw "Expected x64 version label: $relative"}
+ Write-Output "Package module: $relative; $((Get-Item -LiteralPath $path).Length) bytes"
 }
 $payload=Join-Path $output 'payload\dirsync'
 [void][IO.Directory]::CreateDirectory((Join-Path $payload 'lang'))
