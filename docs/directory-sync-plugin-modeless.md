@@ -2,7 +2,7 @@
 
 Date: 2026-10-19. Local NTFS only, existing pinned SDK, no SMB tests.
 
-Follow-up evidence for [host shutdown and forced unload](directory-sync-plugin-modeless-unload.md) distinguishes the new real-transfer native regressions from live host checks still pending after a Computer Use input failure. Historical validation counts and unpublished-worktree statements below describe their original development stage.
+Follow-up evidence for [host shutdown and forced unload](directory-sync-plugin-modeless-unload.md) completes the live close/force-unload checks during paused Verify, including actual module unmapping and reload, and adds deterministic modeless Copy/Verify regressions. Historical validation counts and unpublished-worktree statements below describe their original development stage.
 
 ## Behavior and implementation
 
