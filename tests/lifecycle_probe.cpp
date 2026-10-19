@@ -23,6 +23,7 @@ bool RecoveryLogged()
 extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
     struct RestoreLanguage {HINSTANCE previous=language;~RestoreLanguage(){language=previous;}} restore;
     bool ok=true;
+    ok &= InsertTextValues(L"%n {a} {a} {unknown}",{{L"{a}",L"{b}"},{L"{b}",L"expanded"}})==L"%n {b} {b} {unknown}";
     for(const wchar_t* name:{L"dirsync_ui_tests.exe",L"dirsync_ui_czech_tests.exe"}) {
         HMODULE resources=LoadLibraryExW(name,nullptr,LOAD_LIBRARY_AS_DATAFILE|LOAD_LIBRARY_AS_IMAGE_RESOURCE);
         if(!resources)return FALSE;language=resources;
@@ -47,6 +48,9 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             }
             ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_FILE_BAR,PBM_GETPOS,0,0)==500;
             ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_TOTAL_BAR,PBM_GETPOS,0,0)==250;
+            ok &= ControlText(progress,IDC_TRANSFER_COUNTS).find(L"1 / 4")!=std::wstring::npos;
+            ok &= ControlText(progress,IDC_TRANSFER_BYTES).find(L'{')==std::wstring::npos &&
+                ControlText(progress,IDC_TRANSFER_ELAPSED).find(L"0:00:")!=std::wstring::npos;
             p.copyProgress.VerifyDisplay(1000);p.copyProgress.VerifiedDisplay(250);p.copyProgress.phase=dirsync::CopyPhase::Verifying;
             UpdateTransfer(p);ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_FILE_BAR,PBM_GETPOS,0,0)==250;
             ok &= ControlText(progress,IDC_TRANSFER_PHASE).find(Text(IDS_PROGRESS_VERIFY))!=std::wstring::npos;

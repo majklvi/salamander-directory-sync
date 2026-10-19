@@ -44,8 +44,8 @@ void StoredButtons(StoredBrowser& b) {
     for(int id:{IDC_STORED_COPY_ORIGINAL,IDC_STORED_COPY_SAVED,IDC_STORED_OPEN_ORIGINAL,IDC_STORED_OPEN_SAVED})
         EnableWindow(GetDlgItem(b.window,id),item && (id!=IDC_STORED_OPEN_SAVED || item->copy!=dirsync::StoredCopy::Unsafe));
     std::wstring note=Text(b.loading?IDS_STORED_LOADING:IDS_STORED_NOTE);
-    if(!b.loading){wchar_t counts[128]{};swprintf_s(counts,Text(IDS_STORED_COUNTS).c_str(),
-            static_cast<unsigned long long>(b.catalog.runs.size()),static_cast<unsigned long long>(run?run->items.size():0));note+=L"  "+std::wstring(counts);
+    if(!b.loading){note+=L"  "+InsertTextValues(Text(IDS_STORED_COUNTS),
+            {{L"{runs}",Number(b.catalog.runs.size())},{L"{items}",Number(run?run->items.size():0)}});
         DWORD error=run && run->error?run->error:b.catalog.error;
         if(error)note+=L"  "+Text(IDS_STORED_ERROR)+L": "+Number(error);
         if(b.catalog.limited)note+=L"  "+Text(IDS_STORED_LIMIT);

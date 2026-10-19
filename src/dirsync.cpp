@@ -498,6 +498,20 @@ struct Preview
 };
 Preview* active = nullptr;
 std::wstring Number(uint64_t n) { return std::to_wstring(n); }
+std::wstring InsertTextValues(const std::wstring& pattern,
+    std::initializer_list<std::pair<const wchar_t*,std::wstring>> values)
+{
+    // Resource text is a template, never a printf format. Inserted values are
+    // copied once and cannot introduce another placeholder or format directive.
+    std::wstring result;
+    for(size_t i=0;i<pattern.size();) {
+        bool inserted=false;
+        for(const auto& value:values) {size_t length=wcslen(value.first);
+            if(length && pattern.compare(i,length,value.first)==0) {result+=value.second;i+=length;inserted=true;break;}}
+        if(!inserted)result+=pattern[i++];
+    }
+    return result;
+}
 template<class Query> void ReadTimeComparison(dirsync::Options& options,Query query)
 {
     // Re-read on the UI thread for each new comparison, never mutate a running snapshot.

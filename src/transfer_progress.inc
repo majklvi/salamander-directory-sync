@@ -42,15 +42,14 @@ void UpdateTransfer(Preview& p) {
     if(!count)count=(p.synchronizing || p.overwriting || p.deleting || p.immediateDeleting)?p.transferCount:uint64_t(p.copyRows.size());
     auto completed=p.copyProgress.completed.load();
     TransferBar(p.transferWindow,IDC_TRANSFER_TOTAL_BAR,IDC_TRANSFER_TOTAL_PERCENT,completed,count);
-    wchar_t counts[160]{};swprintf_s(counts,Text(IDS_PROGRESS_COUNTS).c_str(),
-        static_cast<unsigned long long>(completed),static_cast<unsigned long long>(count));
-    TransferText(p.transferWindow,IDC_TRANSFER_COUNTS,counts);
+    TransferText(p.transferWindow,IDC_TRANSFER_COUNTS,InsertTextValues(Text(IDS_PROGRESS_COUNTS),
+        {{L"{completed}",Number(completed)},{L"{total}",Number(count)}}));
     auto copied=PanelSize(p.copyProgress.copied.load(),p.sizeFormat),verified=PanelSize(p.copyProgress.verified.load(),p.sizeFormat);
-    wchar_t bytes[256]{};swprintf_s(bytes,Text(IDS_PROGRESS_BYTES).c_str(),copied.c_str(),verified.c_str());
-    TransferText(p.transferWindow,IDC_TRANSFER_BYTES,bytes);
+    TransferText(p.transferWindow,IDC_TRANSFER_BYTES,InsertTextValues(Text(IDS_PROGRESS_BYTES),
+        {{L"{copied}",copied},{L"{verified}",verified}}));
     auto seconds=(GetTickCount64()-p.transferStarted)/1000;wchar_t elapsed[128]{};
-    swprintf_s(elapsed,Text(IDS_PROGRESS_ELAPSED).c_str(),static_cast<unsigned long long>(seconds/3600),unsigned(seconds/60%60),unsigned(seconds%60));
-    TransferText(p.transferWindow,IDC_TRANSFER_ELAPSED,elapsed);
+    swprintf_s(elapsed,L"%llu:%02u:%02u",static_cast<unsigned long long>(seconds/3600),unsigned(seconds/60%60),unsigned(seconds%60));
+    TransferText(p.transferWindow,IDC_TRANSFER_ELAPSED,InsertTextValues(Text(IDS_PROGRESS_ELAPSED),{{L"{time}",elapsed}}));
     EnableWindow(GetDlgItem(p.transferWindow,IDCANCEL),!p.cancel);
 }
 LRESULT CALLBACK TransferStopButton(HWND button,UINT message,WPARAM w,LPARAM l,UINT_PTR id,DWORD_PTR) {
