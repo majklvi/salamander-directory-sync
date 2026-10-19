@@ -6,9 +6,9 @@
 
 [Česky](directory-sync-plugin-pilot-guide.md) · [Full user guide](directory-sync-plugin.en.md)
 
-Plugin 0.3.0 ALPHA development build for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
+Plugin 0.3.0 ALPHA for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
 
-New in the 0.3.0 development build: **Settings → Stored originals…** shows existing recovery sessions without changing them, even with Keep originals off. Select a session, double-click an item for details, copy original/saved paths or open their directories. Ctrl+C / Ctrl+Shift+C copy the original/saved path in the items list; Refresh rereads records. Recorded success is not a new content verification. This browser offers no automatic restore or cleanup. See the [full guide](directory-sync-plugin.en.md#stored-originals-030).
+New in 0.3.0 ALPHA: **Settings → Stored originals…** shows existing recovery sessions without changing them, even with Keep originals off. Select a session, double-click an item for details, copy original/saved paths or open their directories. Ctrl+C / Ctrl+Shift+C copy the original/saved path in the items list; Refresh rereads records. Recorded success is not a new content verification. This browser offers no automatic restore or cleanup. See the [full guide](directory-sync-plugin.en.md#stored-originals-030).
 
 Click a heading to switch ascending/descending sorting within each directory. Right-click a heading or use **Settings → Columns** to hide/show optional columns. Both names, directory paths, and Action remain. Column choices/sorting persist; hiding a column does not exclude files from synchronization.
 

@@ -11,10 +11,12 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-19
+
 - Complete local x64 0.3.0 package installation checks in an isolated Samandarin 0.16 developer build: clean configuration, English/Czech loading, registration after restart, a new Unicode profile, and an in-place update from the published 0.2.1 package. All 13 saved plugin values, including both old profiles and their selection, remain identical after Czech and English restarts. See the [distribution report](docs/directory-sync-plugin-distribution-030.md).
 - Translate the remaining Cancel buttons in the Czech profile manager and profile-name dialog to Storno.
 
-### Added — 0.3.0 development
+### Added
 
 - Use **Sessions / Relace** for groups of stored-originals records. Update the session menu, counts and current English/Czech guides; preserve existing `run-*` paths and manifest schema. See the [terminology analysis](docs/directory-sync-plugin-terminology.md) for the distinction from profiles, window lifetime and complete synchronizations.
 - Match the host's native speed-limit dialog: compact two-radio layout, B/s through GB/s units, OK/Cancel/Help, and exact byte-rate loading. Retain the plugin's per-batch 64-bit limit and avoid overlapping Czech labels. See the [source comparison and verification](docs/directory-sync-plugin-speed-dialog.md).
@@ -23,7 +25,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 - A compact native transfer-progress window for synchronization, copies, overwrites, saved originals and deletions. Shows source/target, current phase, file transfer/verification progress, completed steps including recovery saves, transferred/read bytes and elapsed time. Stop, Escape or closing this window requests safe cancellation and waits for the worker.
 - Match the host copying dialog's compact 355 × 110 layout and use its actual SDK progress controls with centered percentages and host colors. Consolidate transfer details into one status line with a complete tooltip; use the native Cancel/Storno caption.
-- Use the host's native split button for **Pause/Resume**, beside **Minimize** and **Cancel**. Its menu provides Pause/Resume and a per-batch speed limit for copied main data, named streams and recovery copies; verification reads remain unthrottled. Cooperative pause and cancellation retain the existing safe completion/journal boundaries. Minimize gives the progress window its own taskbar entry; the preview remains locked and the plugin does not join the host's queue or enable background panel use.
+- Use the host's native split button for **Pause/Resume**, beside **Minimize** and **Cancel**. Its menu provides Pause/Resume and a per-batch speed limit for copied main data, named streams and recovery copies; verification reads remain unthrottled. Cooperative pause and cancellation retain the existing safe completion/journal boundaries. Minimize gives the progress window its own taskbar entry; the preview remains locked and the plugin does not join the host's queue.
 - Show copied data, speed and estimated remaining time with the host's transfer-size formatting and local decimal separator. Weight total progress by copying and verification work, with a 4 KiB minimum per step. Named streams are not scanned in advance, so totals are approximate and remain below 100% until the batch finishes; detailed counts, verification reads and elapsed time remain in the tooltip.
 - Stored-originals item menus explicitly distinguish copying paths to the clipboard from opening directories in Windows Explorer.
 - A read-only **Stored originals…** browser in Settings, available even when Keep originals is off. Select a recovery run to inspect original/saved paths, recorded sizes, copy availability and recorded overwrite/deletion results. Double-click for full details; copy paths or open their directories. Refresh reads the current recovery directory again.
@@ -178,7 +180,8 @@ The versions below were development milestones, not separate published GitHub re
 
 - Document the comparison/synchronization design, SDK constraints, recovery approach and verification plan before implementation in the original fork. Plugin development later moved to this standalone repository; the [migration records and commit map](docs/migration/repository-migration.md) preserve that provenance.
 
-[Unreleased]: https://github.com/majklvi/salamander-directory-sync/compare/v0.2.1...main
+[Unreleased]: https://github.com/majklvi/salamander-directory-sync/compare/v0.3.0...main
+[0.3.0]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.3.0
 [0.2.1]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.1
 [0.2.0]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.0
 [0.1.6]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.1.6

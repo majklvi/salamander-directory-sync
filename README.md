@@ -4,19 +4,17 @@
 > **ALPHA SOFTWARE — RISK OF DATA LOSS. NOT FOR PRODUCTION USE.**
 > Use entirely at your own risk. The authors and contributors provide **NO WARRANTY** and accept **NO RESPONSIBILITY OR LIABILITY FOR ANY LOSS OR CORRUPTION OF DATA**. Test only on disposable copies and keep a separate, verified backup. Keep originals does not provide automatic rollback or eliminate the risk of data loss.
 
-**[Download the ready-to-use 0.2.1 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/dirsync-0.2.1-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/package-sha256.txt)
+**[Download the ready-to-use 0.3.0 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/dirsync-0.3.0-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/package-sha256.txt)
 
 The ZIP contains the compiled plugin and both language modules. **No compilation, Visual Studio, or SDK is needed to install it.**
 
 A native directory comparison and synchronization plugin for **Samandarin**, with English and Czech interfaces. Compare two directory trees side by side, review the proposed actions, then copy, overwrite, or remove right-only items in asymmetric mode. Optional recovery copies preserve originals before synchronization overwrites and deletions.
 
-**Version 0.2.1 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
+**Version 0.3.0 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
 
 **Since version 0.2.0, the plugin supports named profiles.** Save directory pairs, masks, comparison options and result filters, then switch tasks from the star button beside the directory inputs. The last selected profile opens next time; loading a profile never starts comparison or synchronization. Recovery and appearance remain shared across profiles. [Using profiles](docs/directory-sync-plugin.en.md#profiles-020).
 
-**New in 0.2.1 ALPHA.** Adds copying of empty directories, profile import/export and Save / Don't save / Cancel when closing a modified profile. A combined visible-plan command runs new copies, overwrites and deletions after one confirmation.
-
-**In development for 0.3.0:** an independent modeless window that keeps the host panels usable, a read-only [stored-originals browser](docs/directory-sync-plugin.en.md#stored-originals-030), [CSV/text export](docs/directory-sync-plugin.en.md#export-comparison-and-operation-results-030) of comparison rows and recorded operation results, and a separate [transfer-progress window](docs/directory-sync-plugin.en.md#transfer-progress-030) with Pause/Resume, speed limiting and Cancel. The download above remains the published 0.2.1 release.
+**New in 0.3.0 ALPHA:** an independent modeless window that keeps the host panels usable, a read-only [stored-originals browser](docs/directory-sync-plugin.en.md#stored-originals-030), [CSV/text export](docs/directory-sync-plugin.en.md#export-comparison-and-operation-results-030) of comparison rows and recorded operation results, and a native [transfer-progress window](docs/directory-sync-plugin.en.md#transfer-progress-030) with Pause/Resume, speed limiting and Cancel. Clean installation and updating from 0.2.1 were verified with English/Czech interfaces and preserved settings/profiles.
 
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
@@ -52,11 +50,13 @@ The lowest tested Samandarin versions are **0.15.1** in user testing and **0.16*
 
 ## Install the alpha build
 
-1. Download the [ready-to-use x64 ZIP from release 0.2.1](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/dirsync-0.2.1-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
+1. Download the [ready-to-use x64 ZIP from release 0.3.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/dirsync-0.3.0-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
 2. Close any host instance using an older copy. Put the entire `dirsync` directory inside the host's `plugins` directory, beside `salamand.exe`. Keep `dirsync.spl`, `lang/english.slg`, and `lang/czech.slg` in their original layout.
 3. In **Plugins → Plugins Manager → Add…**, select `plugins/dirsync/dirsync.spl` unless already registered. Launch **Plugins → Directory Synchronization → Directory synchronization…**. The host selects the interface language.
 
 Start with copies of local NTFS data. Before overwrites or deletions with Keep originals enabled, select a recovery directory outside both compared trees that is not an ancestor of either. Allow room for recovery copies and staging. Old recovery runs are not cleaned up automatically.
+
+**Updating from 0.2.1:** back up the host configuration (and optionally export profiles), close every instance using the plugin, then replace the existing `plugins/dirsync` contents with the complete new package. Keep the host configuration and recovery directories. Do not remove/re-add an existing registration. Settings, profiles and the last selected profile are preserved. [Installation and upgrade checks](docs/directory-sync-plugin-distribution-030.md).
 
 ## Typical workflow
 

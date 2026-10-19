@@ -6,7 +6,7 @@
 
 [English](directory-sync-plugin.en.md)
 
-Stav 19. října 2026, vývojová alfa verze 0.3.0 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
+Stav 19. října 2026, alfa verze 0.3.0 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
 
 Pro pilotní používání začněte [krátkými pokyny včetně hlášení chyb](directory-sync-plugin-pilot-guide.md), přiloženými v balíčku jako `PILOT.cs.md`.
 
@@ -36,7 +36,7 @@ Nabídka položek v Uložených originálech výslovně rozlišuje **Kopírovat 
 
 ## Uložené originály (0.3.0)
 
-Dostupné ve **vývojovém sestavení 0.3.0**, nikoli ve vydaném balíčku 0.2.1. Přes **Nastavení → Uložené originály…** otevřete přehled relací z nastaveného adresáře obnovy, i když je Uchovat originály vypnuto. Použije se aktuální hodnota pole v nastavení; není nutné ji předem uložit. Přehled nikdy nespouští synchronizaci. Relace zde znamená jeden zaznamenaný pokus o uchování originálů, i nedokončený; nejde o dobu otevření pluginu ani o uložený profil. Souhrnná synchronizace může vytvořit zvláštní relaci přepisů a zvláštní relaci mazání.
+Dostupné od **0.3.0 ALFA**. Přes **Nastavení → Uložené originály…** otevřete přehled relací z nastaveného adresáře obnovy, i když je Uchovat originály vypnuto. Použije se aktuální hodnota pole v nastavení; není nutné ji předem uložit. Přehled nikdy nespouští synchronizaci. Relace zde znamená jeden zaznamenaný pokus o uchování originálů, i nedokončený; nejde o dobu otevření pluginu ani o uložený profil. Souhrnná synchronizace může vytvořit zvláštní relaci přepisů a zvláštní relaci mazání.
 
 Výběrem relace nahoře zobrazíte dole původní a uložené cesty, zaznamenané velikosti hlavního datového proudu (v jednotkách hostitele), stav kopií a zaznamenaný výsledek operací. Relace se řadí od nejnovějších podle současného času vytvoření jejich adresářů. Dvojklik na relaci nebo položku otevře úplné podrobnosti včetně cest a chybových kódů. **Původní cesta / Uložená cesta** nebo **Ctrl+C / Ctrl+Shift+C** v seznamu položek zkopírují celé Unicode cesty. V seznamu relací tyto zkratky kopírují cestu relace nebo manifestu. Kontextové nabídky obsahují kopírování cest a otevření adresářů. Adresáře se otevírají v průzkumníku Windows; soubory se nespouštějí. Rodičovský adresář odstraněného originálu již nemusí existovat.
 

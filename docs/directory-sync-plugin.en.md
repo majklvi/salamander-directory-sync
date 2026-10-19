@@ -6,7 +6,7 @@
 
 [Česky](directory-sync-plugin.md) · [Pilot instructions and bug reporting](directory-sync-plugin-pilot-guide.en.md)
 
-Current behavior as of 19 October 2026, plugin version 0.3.0 ALPHA (development build) for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
+Current behavior as of 19 October 2026, plugin version 0.3.0 ALPHA for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
 
 For pilot use, start with the [short instructions](directory-sync-plugin-pilot-guide.en.md), included in the package as `PILOT.md`. Since 0.1.4, the status bar has separate native sections for the operation state and individual counts/progress values. Widths adapt to their text and the window; tooltips expose the complete values.
 
@@ -32,7 +32,7 @@ In Stored originals, item-menu commands explicitly say **Copy … path to clipbo
 
 ## Stored originals (0.3.0)
 
-Available in the **0.3.0 development build**, not the published 0.2.1 package. Open **Settings → Stored originals…** to read sessions under the configured recovery directory. Keep originals may be off. A draft recovery-directory value in Settings is used without saving the settings first. Reading this overview never starts synchronization. A session here is one recorded attempt to preserve originals, including an incomplete attempt; it is not the lifetime of the plugin window or a saved profile. A combined synchronization can create separate overwrite and deletion sessions.
+Available since **0.3.0 ALPHA**. Open **Settings → Stored originals…** to read sessions under the configured recovery directory. Keep originals may be off. A draft recovery-directory value in Settings is used without saving the settings first. Reading this overview never starts synchronization. A session here is one recorded attempt to preserve originals, including an incomplete attempt; it is not the lifetime of the plugin window or a saved profile. A combined synchronization can create separate overwrite and deletion sessions.
 
 Select a session above to see its items below: original path, saved path, recorded main-stream size (in the host's units), recovery-copy status and recorded operation result. Sessions are ordered by their current directory creation time, newest first. Double-click a session or item for full paths and error codes. **Copy original / Copy saved**, or **Ctrl+C / Ctrl+Shift+C** in the items list, copy the full Unicode paths. In the sessions list the same shortcuts copy the session or manifest path. Context menus also offer path copying and opening directories. Directory buttons open Windows' file browser; files are never launched. A deleted original's parent directory may itself be missing.
 

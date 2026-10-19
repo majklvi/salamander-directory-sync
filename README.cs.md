@@ -4,19 +4,17 @@
 > **ALFA VERZE — NEBEZPEČÍ ZTRÁTY DAT. NENÍ URČENO PRO PRODUKČNÍ POUŽITÍ.**
 > Použití výhradně na vlastní nebezpečí. Autoři a přispěvatelé neposkytují **ŽÁDNOU ZÁRUKU A NENESOU ODPOVĚDNOST ZA JAKOUKOLI ZTRÁTU NEBO POŠKOZENÍ DAT**. Testujte pouze na postradatelných kopiích a mějte nezávislou ověřenou zálohu. Uchování originálů nezajišťuje automatické vrácení změn ani neodstraňuje riziko ztráty dat.
 
-**[Stáhnout hotový plugin 0.2.1 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/dirsync-0.2.1-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/package-sha256.txt)
+**[Stáhnout hotový plugin 0.3.0 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/dirsync-0.3.0-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/package-sha256.txt)
 
 ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není potřeba nic kompilovat, instalovat Visual Studio ani SDK.**
 
 [English](README.md)
 
-**Verze 0.2.1 ALFA · místní NTFS pilot · x64.**
+**Verze 0.3.0 ALFA · místní NTFS pilot · x64.**
 
 **Od verze 0.2.0 plugin podporuje pojmenované profily.** Uložte dvojici adresářů, masky, volby porovnání a filtry výsledků a přepínejte úlohy tlačítkem s hvězdou vedle adresářů. Při příštím otevření se načte naposledy vybraný profil; načtení nikdy samo nespustí porovnání ani synchronizaci. Obnova a vzhled zůstávají společné pro všechny profily. [Používání profilů](docs/directory-sync-plugin.md#profily-020).
 
-**Novinky v 0.2.1 ALFA.** Přidává kopírování prázdných adresářů, import/export profilů a volby Uložit / Neukládat / Zrušit při zavírání změněného profilu. Souhrnný příkaz provede viditelné kopie, přepisy a mazání po jednom potvrzení.
-
-**Ve vývoji pro 0.3.0:** samostatné nemodální okno, při kterém lze pracovat v panelech hostitele, [přehled uložených originálů](docs/directory-sync-plugin.md#uložené-originály-030) pouze pro čtení, [export do CSV/textu](docs/directory-sync-plugin.md#export-porovnání-a-výsledků-operací-030) s řádky porovnání a zaznamenanými výsledky operací a samostatné [okno průběhu přenosu](docs/directory-sync-plugin.md#průběh-přenosu-030) s pozastavením, pokračováním, omezením rychlosti a přerušením. Odkaz ke stažení výše nadále vede na vydanou verzi 0.2.1.
+**Novinky v 0.3.0 ALFA:** samostatné nemodální okno, při kterém lze pracovat v panelech hostitele, [přehled uložených originálů](docs/directory-sync-plugin.md#uložené-originály-030) pouze pro čtení, [export do CSV/textu](docs/directory-sync-plugin.md#export-porovnání-a-výsledků-operací-030) s řádky porovnání a zaznamenanými výsledky operací a nativní [okno průběhu přenosu](docs/directory-sync-plugin.md#průběh-přenosu-030) s pozastavením, pokračováním, omezením rychlosti a přerušením. Čistá instalace i aktualizace z 0.2.1 byly ověřeny v češtině a angličtině se zachováním nastavení a profilů.
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
@@ -44,6 +42,8 @@ pwsh -NoProfile -File tools/package.ps1 -OutputDirectory out/package-01
 Nejnižší testované verze Samandarinu jsou **0.15.1** při uživatelském testování a **0.16** při automatizovaném testování pomocí AI z vlastního vývojářského sestavení. Verze 0.16 v době testování ještě nebyla vydaná.
 
 ## Instalace a použití
+
+**Aktualizace z 0.2.1:** zálohujte konfiguraci hostitele (případně exportujte profily), zavřete všechny instance používající plugin a nahraďte obsah stávajícího `plugins/dirsync` celým novým balíčkem. Konfiguraci hostitele a adresáře obnovy zachovejte. Stávající registraci neodebírejte a znovu nepřidávejte. Nastavení, profily i poslední výběr zůstávají zachované. [Ověření instalace a aktualizace](docs/directory-sync-plugin-distribution-030.md).
 
 Rozbalit `dirsync/` do adresáře `plugins/` hostitele a registrovat `dirsync.spl` přes Plugins Manager > Add. Zvolit český či anglický modul. Nejprve testovat na kopii místních dat. [Aktuální návod](docs/directory-sync-plugin.md), [pilotní pokyny](docs/directory-sync-plugin-pilot-guide.md) a [ruční obnova](docs/directory-sync-plugin-recovery.md) popisují postup, známá omezení a hlášení chyb. SMB nebylo ověřeno; neslibuje se crash replay ani automatický rollback. Hotové operace po Stop zůstávají provedené.
 
@@ -80,7 +80,7 @@ Otevřete **Settings… / Nastavení…** v náhledu nebo **Plugins Manager → 
 
 ## Stažení a instalace alfa verze
 
-Stáhněte [hotový x64 ZIP z release 0.2.1](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.2.1/dirsync-0.2.1-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
+Stáhněte [hotový x64 ZIP z release 0.3.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/dirsync-0.3.0-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
 
 ## Běžný postup a rozsah operací
 

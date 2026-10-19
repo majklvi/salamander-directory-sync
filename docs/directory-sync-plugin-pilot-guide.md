@@ -6,9 +6,9 @@
 
 [English](directory-sync-plugin-pilot-guide.en.md)
 
-Vývojová alfa verze 0.3.0 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
+Alfa verze 0.3.0 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
 
-Novinka vývojového sestavení 0.3.0: **Nastavení → Uložené originály…** zobrazí existující relace uchování originálů bez jejich změny, také při vypnutém uchování originálů. Vyberte relaci, dvojklikem otevřete podrobnosti položky, zkopírujte původní či uloženou cestu nebo otevřete její adresář. Ctrl+C / Ctrl+Shift+C kopírují původní/uloženou cestu ze seznamu položek; Aktualizovat znovu načte záznamy. Zaznamenaný úspěch není novým ověřením obsahu. Přehled neobsahuje automatickou obnovu ani úklid. Podrobnosti v [úplném návodu](directory-sync-plugin.md#uložené-originály-030).
+Novinka 0.3.0 ALFA: **Nastavení → Uložené originály…** zobrazí existující relace uchování originálů bez jejich změny, také při vypnutém uchování originálů. Vyberte relaci, dvojklikem otevřete podrobnosti položky, zkopírujte původní či uloženou cestu nebo otevřete její adresář. Ctrl+C / Ctrl+Shift+C kopírují původní/uloženou cestu ze seznamu položek; Aktualizovat znovu načte záznamy. Zaznamenaný úspěch není novým ověřením obsahu. Přehled neobsahuje automatickou obnovu ani úklid. Podrobnosti v [úplném návodu](directory-sync-plugin.md#uložené-originály-030).
 
 Klikáním do záhlaví sloupce přepínáte vzestupné/sestupné řazení souborů uvnitř adresářů. Pravé tlačítko na záhlaví nebo sekce **Sloupce / Columns** v nastavení pluginu skryje či zobrazí volitelné sloupce. Názvy vlevo i vpravo, cesta adresáře a operace zůstávají. Volby sloupců a řazení se pamatují; skrytí sloupce nevynechává soubory ze synchronizace.
 
