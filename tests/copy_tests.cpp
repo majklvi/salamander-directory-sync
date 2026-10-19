@@ -950,6 +950,13 @@ void StoredOriginalsCatalog() {
     Check(!catalog.error && catalog.runs.size()==1 && !catalog.runs[0].error,"catalog reads genuine recovery manifest and journal");
     Check(catalog.runs[0].complete && catalog.runs[0].items.size()==1 && catalog.runs[0].items[0].copy==StoredCopy::Recorded &&
         catalog.runs[0].items[0].operation==StoredOperation::Replaced,"recorded copy and replacement are distinct states");
+    std::vector<wchar_t> shortRoot(32768);DWORD shortCount=GetShortPathNameW(root.c_str(),shortRoot.data(),DWORD(shortRoot.size()));
+    if(shortCount && shortCount<shortRoot.size() && root!=shortRoot.data()) {
+        auto aliased=ReadRecoveryCatalog(shortRoot.data(),f.cancel);
+        Check(!aliased.error && aliased.runs.size()==1 && !aliased.runs[0].error && aliased.runs[0].complete &&
+            aliased.runs[0].items.size()==1 && aliased.runs[0].items[0].operation==StoredOperation::Replaced,
+            "catalog accepts 8.3 recovery-root spelling used by Windows TEMP");
+    }else std::cout<<"catalog 8.3 alias unavailable on fixture volume\n";
     Check(Read(manifest)==before && Read(report.journal)==journal && Read(saved)=="ORIGINAL","catalog leaves records and saved contents unchanged");
     std::wstring location;
     Check(RecoverySavedLocation(report.recovery.runDirectory,saved,false,location),"open location accepts saved Unicode file parent");

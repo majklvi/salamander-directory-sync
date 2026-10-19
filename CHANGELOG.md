@@ -17,6 +17,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 - Stored-originals item menus explicitly distinguish copying paths to the clipboard from opening directories in Windows Explorer.
 - A read-only **Stored originals…** browser in Settings, available even when Keep originals is off. Select a recovery run to inspect original/saved paths, recorded sizes, copy availability and recorded overwrite/deletion results. Double-click for full details; copy paths or open their directories. Refresh reads the current recovery directory again.
 - Keep incomplete, damaged and unsupported records visible with warnings. Missing or differently sized copies are distinct from recorded operation results. Reading records does not verify file contents, restore files, repair logs or delete backups.
+- Accept ordinary 8.3 aliases of the recovery directory by resolving the root consistently with the manifest writer; retain reparse checks. A regression reproduces the short TEMP-path case discovered by cloud CI.
 - Export all comparison rows and the last confirmed operation/combined batch as UTF-8 CSV or text. Include hidden/Skip rows, actual scan options, current and execution-time filters, sources/targets, saved originals, errors, and distinct recorded-completion/filesystem-change fields. Keep unreported steps explicitly unknown and export available after a plan becomes stale. Stage report writes outside the comparison/recovery trees; confirm replacing existing reports through the native Save dialog.
 
 ### Verification

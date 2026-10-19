@@ -77,6 +77,17 @@ uint64_t Number(const Object& o,const wchar_t* key) {auto i=o.find(key);Need(i!=
         Need(value<=(std::numeric_limits<uint64_t>::max()-digit)/10);value=value*10+digit;}return value;}
 bool Flag(const Object& o,const wchar_t* key) {auto i=o.find(key);Need(i!=o.end() && !i->second.string && (i->second.text==L"true" || i->second.text==L"false"));return i->second.text==L"true";}
 struct Handle {HANDLE h;~Handle(){if(h!=INVALID_HANDLE_VALUE) CloseHandle(h);}};
+std::wstring CanonicalDirectory(const std::wstring& path) {
+    Handle directory{CreateFileW(ApiPath(path).c_str(),FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+        nullptr,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr)};
+    Need(directory.h!=INVALID_HANDLE_VALUE,GetLastError());
+    BY_HANDLE_FILE_INFORMATION info{};Need(GetFileInformationByHandle(directory.h,&info)!=FALSE,GetLastError());
+    Need((info.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY) && !(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT),ERROR_DIRECTORY);
+    DWORD size=GetFinalPathNameByHandleW(directory.h,nullptr,0,VOLUME_NAME_DOS);Need(size!=0,GetLastError());
+    std::vector<wchar_t> buffer(size_t(size)+1);
+    DWORD used=GetFinalPathNameByHandleW(directory.h,buffer.data(),DWORD(buffer.size()),VOLUME_NAME_DOS);
+    Need(used && used<buffer.size(),GetLastError());return Full(std::wstring(buffer.data(),used));
+}
 std::vector<Object> Lines(const std::wstring& path,std::atomic<bool>& cancel,bool optional=false,DWORD* warning=nullptr) {
     Handle file{CreateFileW(ApiPath(path).c_str(),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
         OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_SEQUENTIAL_SCAN,nullptr)};
@@ -169,7 +180,10 @@ template<class Callback> void Directories(const std::wstring& root,const wchar_t
 RecoveryCatalog ReadRecoveryCatalog(const std::wstring& input,std::atomic<bool>& cancel) {
     RecoveryCatalog result;size_t total=0;
     try {
-        auto root=Full(input);Need(Plain(root),ERROR_ACCESS_DENIED);Need(GetFileAttributesW(ApiPath(root).c_str())&FILE_ATTRIBUTE_DIRECTORY,ERROR_DIRECTORY);
+        auto root=Full(input);Need(Plain(root),ERROR_ACCESS_DENIED);
+        // The writer records a handle-normalized root. Match that spelling even
+        // when Windows TEMP or the user's setting contains an ordinary 8.3 alias.
+        root=CanonicalDirectory(root);
         Directories(root,L"pair-*",cancel,[&](const WIN32_FIND_DATAW& pair){
             auto path=root+L"\\"+pair.cFileName;
             Directories(path,L"run-*",cancel,[&](const WIN32_FIND_DATAW& data){
