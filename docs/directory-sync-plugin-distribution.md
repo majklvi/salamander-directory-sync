@@ -1,5 +1,7 @@
 # Directory Synchronization: balíček a čistá konfigurace 0.16
 
+Aktuální ověření připraveného balíčku 0.3.0, čisté instalace a aktualizace z 0.2.1 v češtině i angličtině: [samostatný záznam z 2026-10-19](directory-sync-plugin-distribution-030.md). Níže zůstávají historické výsledky starších verzí.
+
 ## 2026-10-17 — 0.1.4: nativní oddíly stavového řádku
 
 Aktuální archiv: `C:\Samandarin\builds\dirsync-distribution\status-panes-0.1.4-20261017\plugin_5.0_dirsync_0.1.4_x64.zip`, SHA-256 `690e32f6630fc8b718f638ca56f34f8670e7747ad1c56bbf14545d58c65f852d`. SPL i oba SLG hlásí **0.1.4 (x64)**. Archiv byl znovu rozbalen a ověřeno všech 12 hashů manifestu; přiložený návod a pilotní pokyny mají aktuální verzi. [Samostatné oddíly a ověření](directory-sync-plugin-status-bar.md) nahrazují souhrnný pravý text ve status baru. Bez SMB testů a změn SDK.

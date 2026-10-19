@@ -11,6 +11,9 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ## [Unreleased]
 
+- Complete local x64 0.3.0 package installation checks in an isolated Samandarin 0.16 developer build: clean configuration, English/Czech loading, registration after restart, a new Unicode profile, and an in-place update from the published 0.2.1 package. All 13 saved plugin values, including both old profiles and their selection, remain identical after Czech and English restarts. See the [distribution report](docs/directory-sync-plugin-distribution-030.md).
+- Translate the remaining Cancel buttons in the Czech profile manager and profile-name dialog to Storno.
+
 ### Added — 0.3.0 development
 
 - Use **Sessions / Relace** for groups of stored-originals records. Update the session menu, counts and current English/Czech guides; preserve existing `run-*` paths and manifest schema. See the [terminology analysis](docs/directory-sync-plugin-terminology.md) for the distinction from profiles, window lifetime and complete synchronizations.

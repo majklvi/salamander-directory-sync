@@ -78,6 +78,8 @@ plugins/dirsync/lang/czech.slg
 
 Close instances using an older plugin, copy the entire `dirsync` directory into `plugins` beside the program, and retain this structure. Open **Plugins → Plugins Manager → Add…**, choose `dirsync.spl`, and check the Directory Synchronization entry. Do not add it again if already registered by your distribution. Launch **Plugins → Directory Synchronization → Directory synchronization…**. Both roots must be physical Windows paths; archives and virtual plugin filesystems are not supported inputs.
 
+**Updating from 0.2.1:** close every host instance using this plugin, back up the host configuration and optionally export profiles, then replace the contents of the existing `plugins/dirsync` directory with the complete new package. Keep the host configuration and recovery directories; do not remove and re-add the registered plugin. Settings, saved profiles and the last selected profile are kept. Both language modules must be updated together with `dirsync.spl`; the host selects its language when loading the plugin. After restarting, open the plugin once before checking its new version in Plugins Manager: an unloaded entry can still show cached metadata. [0.3.0 installation and upgrade verification](directory-sync-plugin-distribution-030.md).
+
 Developers can build with `pwsh -File tools/build.ps1 -Configuration Release -Platform x64`; both language modules are dependencies of `build-support/dirsync.vcxproj`. Standalone build, test, and packaging instructions are in the [repository README](https://github.com/majklvi/salamander-directory-sync/blob/main/README.md). Historical distribution records remain dated evidence of earlier checks.
 
 ## Immediate removal of selected items

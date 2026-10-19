@@ -82,6 +82,8 @@ plugins/dirsync/lang/czech.slg
 
 Zavřete instance používající starou verzi pluginu, zkopírujte celý adresář `dirsync` do `plugins` vedle programu a ponechte uvedenou strukturu. V Samandarinu otevřete **Plugins → Plugins Manager → Add…**, vyberte `dirsync.spl` a ověřte položku Directory Synchronization. Pokud ji distribuce už zaregistrovala, znovu ji nepřidávejte. Plugin spusťte z nabídky **Plugins → Directory Synchronization → Directory synchronization…**. Obě porovnávané adresáře musí být fyzické Windows cesty; archivy a virtuální pluginové systémy nejsou vstupem.
 
+**Aktualizace z 0.2.1:** zavřete všechny instance hostitele používající plugin, zálohujte konfiguraci hostitele a případně exportujte profily. Potom nahraďte obsah stávajícího `plugins/dirsync` celým novým balíčkem. Konfiguraci hostitele ani adresáře obnovy nemažte; registrovaný plugin neodebírejte a znovu nepřidávejte. Nastavení, uložené profily i poslední výběr zůstávají zachované. Oba jazykové moduly aktualizujte společně s `dirsync.spl`; jazyk vybírá hostitel při načtení pluginu. Po restartu plugin jednou otevřete a potom ověřte novou verzi ve Správci pluginů: nenačtená položka může ještě zobrazovat údaje z mezipaměti. [Ověření instalace a aktualizace 0.3.0](directory-sync-plugin-distribution-030.md).
+
 Při sestavení ze zdrojů použijte `pwsh -File tools/build.ps1 -Configuration Release -Platform x64`; oba jazykové moduly jsou závislosti projektu `build-support/dirsync.vcxproj`. Samostatný build, testy a balení popisuje [README](https://github.com/majklvi/salamander-directory-sync/blob/main/README.md). Historické distribuční záznamy níže zůstávají datovanou evidencí původních ověření.
 
 ## Okamžité odstranění vybraných položek
