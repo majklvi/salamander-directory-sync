@@ -29,6 +29,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### Verification
 
+- Live Stored originals follow-up in the Czech/light host: item-menu copying of full Unicode paths, directory-open handlers and missing-location feedback, Refresh after missing/restored copies and an added incomplete run, maximize/restore, and Close during visible catalog loading followed by successful reopening. Baseline recovery files remain unchanged. The [follow-up report](docs/directory-sync-plugin-stored-originals.md#live-gui-follow-up--2026-10-19-030-development) explicitly retains the narrow menu/F5 input checks limited by automation focus.
 - Live modeless synchronization on isolated local NTFS: host-panel navigation during copying, Pause/Resume, changing the active speed limit from 4 to 8 MB/s, successful verification of all three targets, Stop from a paused copy, and preview Close during copying. Completed targets remain; unpublished staging and subsequent work are absent after cancellation. See the [modeless-window report](docs/directory-sync-plugin-modeless.md#live-modeless-transfer-verification).
 - Suppress the misleading time estimate while speed-limited copying remains: unrestricted verification cannot be extrapolated from the limited copy rate. Keep byte counts, speed and progress visible; cover the estimate policy in both language dialog probes.
 

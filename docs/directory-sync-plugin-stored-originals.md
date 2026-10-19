@@ -33,3 +33,36 @@ Initial stored-originals-only development package (before export): `out/package-
 This is a snapshot. Refresh after external changes; a missing journal result remains unconfirmed. A complete manifest does not certify that the entire synchronization completed. Basic type/main-stream-size inspection does not detect same-size corruption, ADS changes or metadata changes. Moving a recovery tree leaves absolute records stale. Windows' file browser may reject paths it cannot represent; the full path remains copyable.
 
 No automatic restore or recovery cleanup is implemented. Comparison/results export was subsequently implemented for the same 0.2.2 development version; see the separate [export report](directory-sync-plugin-report-export.md). Restore/cleanup still require a separate design.
+
+## Live GUI follow-up — 2026-10-19, 0.3.0 development
+
+This follow-up extends, rather than replaces, the dated 0.2.2 observations above. It uses the private Czech Samandarin 0.16 x64 host at `C:\Samandarin\builds\dirsync-progress-gui-20261019\host-compact`. The installed user instances were left open and untouched. The tested Release x64 plugin is from commit `a65f0682df81cc5e94e4ca9b343d681d8d65a43b`, 713,728 bytes, SHA-256 `3c1af1c1aa4732c63fb0740bb6e155f2dc106dde0bbbb752a583e94b1582ec82`. No production-code change was needed for the outcomes below.
+
+### Isolated fixture and checks
+
+The local NTFS fixture is `C:\Samandarin\builds\dirsync-stored-gui-20261019`. Genuine overwrite/deletion manifests, journals and saved data were copied from the earlier combined-operation test and their absolute paths rebased to this new fixture. The two original roots exist but contain no files. Thus directory-opening checks cannot accidentally launch an original document. The recovery root is `recovery-漢字`; its overwrite run contains one 18-byte file and its deletion run contains an 11-byte file and two directories. Preferences reads this unsaved draft recovery path; Keep originals was OFF for the normal browsing checks.
+
+| Check | Observed result |
+| --- | --- |
+| Host-controlled light appearance | Both lists, headers, selected rows, native menus and buttons are readable. Two runs load with the expected complete-manifest, saved-copy and replaced/deleted states. The deletion run shows all three entries, with blank file-size cells for directories. |
+| Item context menu | Four explicit commands distinguish copying original/saved paths to the clipboard from opening original/saved directories in Explorer, with a separator between the groups. Both path-copy commands were selected from the menu using keyboard navigation; pasting into a new blank Notepad document preserves the full Unicode paths. |
+| Directory-open commands | The corresponding bottom buttons open exactly the existing original parent `on\right-漢字` and the saved file's `right\1\data` directory in separate Explorer windows. These buttons and the item menu dispatch the same `StoredCommand` handlers. The test Explorer windows were then closed. This verifies the handlers, not a separate live activation of both menu entries. |
+| Missing original location | Opening the deletion file's absent original parent displays the localized unavailable/reparse-location message. Dismissing it returns to a usable browser; no directory is created. |
+| Refresh after an external change | Rename only the synthetic saved `overwrite.txt` to `overwrite.txt.held` outside the GUI. **Refresh** changes copy availability to **Missing / unavailable**, while the recorded overwrite result remains unchanged. Rename it back and Refresh restores **Saved according to record**. The selected run is retained. |
+| Newly added run | Add a header-only `run-refresh` manifest externally. Refresh changes the run count from two to three, labels the new run **Incomplete**, and retains the previous overwrite run even though its row index changes. |
+| Resizing | Maximize the browser from 752 × 507 to the 2286 × 1099 work area and restore it. Lists expand, summary/buttons stay at the bottom, Close stays on the right, and the selected run and three deletion items remain intact. This is maximize/restore coverage, not continuous-drag or multi-DPI coverage. |
+| Close during loading | A separate `loading-synthetic` catalog has 128 run directories with hardlinked, approximately 7 MiB newline-padded manifests. The GUI visibly shows **Loading recovery records…**, empty lists and disabled Refresh/path buttons. Click **Close** while this state is visible: the next capture shows responsive Preferences, with no browser or error dialog. The action plus capture took 545 ms; this is not a precise worker-latency measurement. Repoint the unsaved draft at the normal catalog and reopen it: both genuine runs and their entries load normally. |
+
+The padded catalog deliberately prolongs parsing without a source-code delay or a test hook. It is a cancellation fixture, not evidence that all its synthetic records are valid recovery runs. No synchronization, restoration or backup removal was started.
+
+### Automation boundary and remaining narrow checks
+
+Computer Use exposes the owned browser under its disabled Preferences owner rather than as a separately targetable window. Some subsequent keyboard/menu actions activate that owner and dismiss the popup or leave the list without keyboard focus. The two successful menu-copy results above were verified by their pasted contents; a previous unrelated clipboard value was not accepted as evidence. Upper-list menu labels and separation were inspected, but execution of its three commands, separate activation of the two item-menu directory-open entries, and F5 with actual list focus remain **unconfirmed in the live host**. Refresh through its button and both directory-open handlers did pass. No plugin change was made solely to accommodate automation targeting. These remaining input checks must not be described as passed on the strength of shared handlers or source inspection.
+
+### Read-only evidence and cleanup
+
+`before.json` and `after.json` in the isolated fixture confirm unchanged lengths and SHA-256 hashes for all six baseline manifest/journal/data files after the temporary rename was reversed. The intentionally added `run-refresh` is separate from that baseline. The original roots still contain zero files. `clipboard-paths.txt`, saved from the test Notepad, contains the two full paths used to validate menu copying. These local fixtures and evidence are outside Git.
+
+Preferences changes were cancelled, the browser/preview/private host were closed normally, and the private host's original file-backed configuration was restored byte-for-byte after confirming its process had exited. The temporary light theme therefore does not replace its earlier test configuration. No installed user host or existing editor document was changed. No SMB test or SDK change was performed.
+
+Both existing x64 test configurations were rerun with `tools/test.ps1`: all five suites passed in Debug and Release (engine 2,216; copy/recovery 4,460; lifecycle 2,369; English resource/layout 5,147; Czech resource/layout 5,277). This follow-up changes documentation only; it does not rebuild or replace the tested binary. Cloud build-matrix, test, package and CodeQL results must be checked for the published documentation commit separately.
