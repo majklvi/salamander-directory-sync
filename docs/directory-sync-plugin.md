@@ -6,13 +6,47 @@
 
 [English](directory-sync-plugin.en.md)
 
-Stav 18. října 2026, alfa verze 0.2.1 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
+Stav 19. října 2026, vývojová alfa verze 0.2.2 pro **Samandarin**, bez rozšíření SDK. Tento dokument je výchozí přehled aktuálního chování. Ostatní dokumenty zachovávají návrh a datovanou evidenci jednotlivých etap; jejich tehdejší omezení a počty testů nepředstavují dnešní stav.
 
 Pro pilotní používání začněte [krátkými pokyny včetně hlášení chyb](directory-sync-plugin-pilot-guide.md), přiloženými v balíčku jako `PILOT.cs.md`.
 
 Stavový řádek od 0.1.4 používá samostatné nativní oddíly: stav operace a jednotlivé počty řádků nebo průběhu. Šířky se přizpůsobují textu a oknu; celý údaj je dostupný v tooltipu.
 
 Nejnižší testované verze hostitele: 0.15.1 uživatelsky a nevydaná 0.16 automatizovaně pomocí AI z vlastního vývojářského sestavení.
+
+## Průběh přenosu (0.2.2)
+
+Potvrzené souborové operace otevřou samostatné kompaktní nativní okno průběhu. Zobrazuje zdroj a cíl (zkrácené na obrazovce, úplné v tooltipu), aktuální fázi, průběh přenosu nebo ověřování souboru, dokončené kroky, přenesené bajty, čtení při ověřování a uplynulý čas. Celkový ukazatel počítá kroky včetně uchování originálů; nejde o odhad času podle objemu dat. U adresářů je průběh aktuální položky neurčitý. Čtení při ověřování zahrnuje zdroj i kopii.
+
+**Zastavit**, Escape i křížek okna požádají o přerušení. Okno zůstane otevřené do ukončení pracovníka; dokončené změny zůstanou zachované. Stavový řádek zůstává dostupný. Samotné porovnávání používá průběh v hlavním okně. Dialog přebírá vzhled hostitele; současné SDK nezpřístupňuje jeho úplné přenosové okno s frontou, během na pozadí, pozastavením a omezením rychlosti.
+
+Nabídka položek v Uložených originálech výslovně rozlišuje **Kopírovat … cestu do schránky** a **Otevřít … adresář v Průzkumníku**. Otevření může selhat, pokud rodičovský adresář originálu již neexistuje nebo Průzkumník cestu nepodporuje.
+
+## Uložené originály (0.2.2)
+
+Dostupné ve **vývojovém sestavení 0.2.2**, nikoli ve vydaném balíčku 0.2.1. Přes **Nastavení → Uložené originály…** otevřete přehled běhů z nastaveného adresáře obnovy, i když je Uchovat originály vypnuto. Použije se aktuální hodnota pole v nastavení; není nutné ji předem uložit. Přehled nikdy nespouští synchronizaci.
+
+Výběrem běhu nahoře zobrazíte dole původní a uložené cesty, zaznamenané velikosti hlavního datového proudu (v jednotkách hostitele), stav kopií a zaznamenaný výsledek operací. Běhy se řadí od nejnovějších podle současného času vytvoření jejich adresářů. Dvojklik na běh nebo položku otevře úplné podrobnosti včetně cest a chybových kódů. **Původní cesta / Uložená cesta** nebo **Ctrl+C / Ctrl+Shift+C** v seznamu položek zkopírují celé Unicode cesty. V seznamu běhů tyto zkratky kopírují cestu běhu nebo manifestu. Kontextové nabídky obsahují kopírování cest a otevření adresářů. Adresáře se otevírají v průzkumníku Windows; soubory se nespouštějí. Rodičovský adresář odstraněného originálu již nemusí existovat.
+
+**Aktualizovat** (nebo F5 v seznamu) znovu načte záznamy a zachová výběr běhu, pokud stále existuje. Načítání běží mimo vlákno GUI; zavření požádá o přerušení a počká na ukončení čtení. Nativní okno lze zvětšit a přebírá vzhled hostitele. Rozměry okna ani šířky sloupců se neukládají.
+
+„Uloženo podle záznamu“ znamená úspěšné ověřené uchování zaznamenané manifestem a aktuální shodu typu a velikosti hlavního proudu. **Nejde o nové ověření obsahu, ADS ani metadat.** Výsledek přepisu či mazání se čte samostatně z protokolu operace. Chybějící výsledek znamená **nepotvrzeno**, nikoli důkaz, že operace neproběhla. Neúplné, poškozené a nepodporované záznamy, chybějící kopie a rozdíly typu či velikosti zůstávají viditelné s upozorněním. Po vnější změně použijte Aktualizovat; přehled není živý monitor.
+
+Podporováno je současné uspořádání `pair-* / run-*`, schéma 1. Cesty v protokolech jsou absolutní; přesun stromu obnovy je nepřepisuje. Nelze otevřít uloženou cestu mimo její běh ani cestu přes reparse bod. Nedostupný adresář obnovy se nahlásí, nevytváří. Limity zobrazení jsou 1 000 běhů, 20 000 položek celkem a 8 MiB na soubor záznamů; jejich dosažení se oznámí. První etapa **neobsahuje automatickou obnovu ani úklid záloh**. Nadále platí postup ruční obnovy níže a potřeba nezávislých záloh.
+
+## Export porovnání a výsledků operací (0.2.2)
+
+Použijte **Synchronizovat… → Exportovat porovnání a výsledky…** nebo stejný příkaz v kontextové nabídce výsledků. Nativní dialog Uložit nabízí **CSV** a **textový protokol**; formát určuje vybraný typ souboru. Export je dostupný po porovnání včetně prázdného, přerušeného či chybového výsledku a také po provedení, které plán zneplatní. Během práce je vypnutý. Export plán znovu neověřuje ani neprovádí synchronizaci.
+
+Oba formáty obsahují **všechny řádky načtené porovnáním**, nikoli pouze viditelné nebo zvýrazněné. U řádků je výchozí i aktuální návrh, Skip, stav/důvod/chyby, dostupné levé a pravé cesty, typy, přesné velikosti hlavního proudu v bajtech, UTC časy změn a atributy. Položky vyloučené už při skenu maskou či volbami a vůbec nenačtené nelze vypsat. Metadata uvádějí skutečné volby a časovou toleranci skenu, masku/výběr panelu, aktuální profil, přerušení/zneplatnění, aktivní filtry zobrazení a případné změny voleb pro příští porovnání. Řazení GUI, skryté sloupce a relativní zobrazení velikostí/časů data exportu neomezují ani nepřepočítávají; řádky jsou v pořadí modelu.
+
+Pokud existuje, další část popisuje **poslední potvrzenou operaci nebo souhrnnou dávku tohoto porovnání**: filtry a viditelnost při provedení, volbu obnovy, čas začátku/konce, chyby, plánované zdroje/cíle a vrácené výsledky. Uchování originálů má vlastní záznamy s uloženými cestami. Nové kopie, přepisy a mazání mají různé druhy kroků; okamžité mazání do Koše a trvalé mazání jsou odlišeny také. `filesystem_changed=true` neznamená `completed=true`: publikovaný či odstraněný cíl s následnou chybou není úspěšně dokončená operace. `not_reported` znamená, že se pro krok nevrátil výsledek; není to důkaz, že se nic nestalo. Výjimka pracovníka označí dávku jako nedokončenou. Jde o přehled výsledků, nikoli chronologický protokol odolný proti pádu procesu.
+
+Pozdější změna filtrů mění `visible`, zatímco `execution_visible` zachová potvrzený rozsah. Export po zápisu neobnovuje metadata souborů: řádky porovnání stále popisují původní sken a jsou označené jako zastaralé. Nové porovnání nebo zneplatnění cest/masky starý záznam operace zahodí. Zavřením okna se tento záznam v paměti ztratí; manifesty obnovy jsou nezávislé. Potřebný protokol exportujte před novým porovnáním či zavřením.
+
+Soubory mají **UTF-8 s BOM**, CRLF, stabilní anglické názvy polí/kódy a přesné číselné bajty/UTC FILETIME hodnoty. CSV používá čárku, každé pole má uvozovky a vnitřní uvozovky se zdvojují. Text s počátečním znakem vzorce dostane kvůli bezpečnosti tabulkového procesoru apostrof; pro zachování přesnosti velkých čísel importujte sloupce jako text. Textový protokol má sekce a řádky `klíč: hodnota`, zpětná lomítka a řídicí znaky zapisuje jako `\\`, `\r`, `\n`, `\t`. Chybějící strana má prázdná pole, nikoli soubor o nule bajtů.
+
+Ukládejte do existujícího adresáře **mimo oba porovnávané stromy a nastavený/použitý adresář obnovy**. Rodiče s reparse bodem se odmítají. Nahrazení existujícího protokolu potvrzuje nativní dialog. Úplný dočasný soubor se zapíše, flushne a přejmenuje v cílovém adresáři; neúspěšné nahrazení zachová starý protokol. Export nevytváří adresáře ani nemění porovnávané soubory. Velký export v první implementaci běží synchronně s čekacím kurzorem, bez ukazatele průběhu a Stop během sestavování/zápisu. Protokol obsahuje cesty a podrobnosti souborů; před přiložením k hlášení chyby jej zkontrolujte.
 
 ## Profily (0.2.0)
 

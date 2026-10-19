@@ -11,8 +11,19 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ## [Unreleased]
 
+### Added — 0.2.2 development
+
+- A compact native transfer-progress window for synchronization, copies, overwrites, saved originals and deletions. Shows source/target, current phase, file transfer/verification progress, completed steps including recovery saves, transferred/read bytes and elapsed time. Stop, Escape or closing this window requests safe cancellation and waits for the worker.
+- Stored-originals item menus explicitly distinguish copying paths to the clipboard from opening directories in Windows Explorer.
+- A read-only **Stored originals…** browser in Settings, available even when Keep originals is off. Select a recovery run to inspect original/saved paths, recorded sizes, copy availability and recorded overwrite/deletion results. Double-click for full details; copy paths or open their directories. Refresh reads the current recovery directory again.
+- Keep incomplete, damaged and unsupported records visible with warnings. Missing or differently sized copies are distinct from recorded operation results. Reading records does not verify file contents, restore files, repair logs or delete backups.
+- Export all comparison rows and the last confirmed operation/combined batch as UTF-8 CSV or text. Include hidden/Skip rows, actual scan options, current and execution-time filters, sources/targets, saved originals, errors, and distinct recorded-completion/filesystem-change fields. Keep unreported steps explicitly unknown and export available after a plan becomes stale. Stage report writes outside the comparison/recovery trees; confirm replacing existing reports through the native Save dialog.
+
 ### Verification
 
+- Verify the native transfer window with English/Czech resources, long Unicode paths/tooltips, copy/verification bars, Stop/Escape/close and worker teardown. All five x64 suites and the plugin matrix pass; see the [progress-window report](docs/directory-sync-plugin-transfer-progress.md) for automated coverage and remaining live-host checks.
+- Live Czech GUI checks in host-controlled light/dark modes confirm the progress window and active-transfer cancellation through Stop and its close button. All four cases preserve the completed file, leave subsequent work unstarted and clean staging. Record the separate large-list automation limitation and preliminary disk-space error in the [progress-window report](docs/directory-sync-plugin-transfer-progress.md).
+- Test the 0.2.2 recovery catalog against genuine manifests/journals, incomplete and unavailable records, cancellation, junctions and long Unicode paths. All five x64 suites pass in Debug/Release and the plugin build matrix passes. The [stored-originals report](docs/directory-sync-plugin-stored-originals.md) separates the successful live GUI/path-copy checks from remaining checks after Computer Use state-capture timeouts.
 - Verify combined new-copy/overwrite/deletion batches in the live GUI with recovery ON and OFF, plus Stop (ON) and Close (OFF) during a large-file transfer. Confirm later phases remain unstarted, completed copies remain, staging is cleaned, and recovery contents match the selected mode. Record the separate large-list automation limitation and exact coverage in the [GUI verification report](docs/directory-sync-plugin-combined-gui.md). No production code or SDK change was required.
 
 ## [0.2.1] — 2026-10-19

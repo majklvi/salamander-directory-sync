@@ -6,13 +6,19 @@
 
 [English](directory-sync-plugin-pilot-guide.en.md)
 
-Alfa verze 0.2.1 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
+Vývojová alfa verze 0.2.2 pro **Samandarin x64**, čeština i angličtina. Balíček obsahuje zkompilované moduly; instalace nevyžaduje kompilaci. Balíček je nepodepsaný a obsahuje pouze plugin. Pilot je určen pro **kopie místních NTFS dat**; SMB, síťové disky a změny SDK jsou mimo tento pilot.
+
+Novinka vývojového sestavení 0.2.2: **Nastavení → Uložené originály…** zobrazí existující běhy obnovy bez jejich změny, také při vypnutém uchování originálů. Vyberte běh, dvojklikem otevřete podrobnosti položky, zkopírujte původní či uloženou cestu nebo otevřete její adresář. Ctrl+C / Ctrl+Shift+C kopírují původní/uloženou cestu ze seznamu položek; Aktualizovat znovu načte záznamy. Zaznamenaný úspěch není novým ověřením obsahu. Přehled neobsahuje automatickou obnovu ani úklid. Podrobnosti v [úplném návodu](directory-sync-plugin.md#uložené-originály-022).
 
 Klikáním do záhlaví sloupce přepínáte vzestupné/sestupné řazení souborů uvnitř adresářů. Pravé tlačítko na záhlaví nebo sekce **Sloupce / Columns** v nastavení pluginu skryje či zobrazí volitelné sloupce. Názvy vlevo i vpravo, cesta adresáře a operace zůstávají. Volby sloupců a řazení se pamatují; skrytí sloupce nevynechává soubory ze synchronizace.
 
 Výsledky jsou seskupené podle relativních adresářů (`\` je kořen). Pod záhlavím jsou názvy souborů; záhlaví samo není položka operace a nevybírá své potomky. Prázdné skupiny po filtrování zmizí. Adresář určený k odstranění má vlastní řádek v nadřazené skupině.
 
 Nejnižší testované verze hostitele: 0.15.1 uživatelsky a nevydaná 0.16 automatizovaně pomocí AI z vlastního vývojářského sestavení.
+
+V 0.2.2 uloží **Synchronizovat… → Exportovat porovnání a výsledky…** CSV/text se všemi načtenými řádky včetně skrytých/Skip a zaznamenanými výsledky poslední potvrzené dávky. Exportujte před novým porovnáním či zavřením. Cíl zvolte mimo porovnávané stromy a adresář obnovy; před sdílením zkontrolujte cesty. Podrobnosti v [návodu k exportu](directory-sync-plugin.md#export-porovnání-a-výsledků-operací-022).
+
+V 0.2.2 se při potvrzených souborových operacích otevře také samostatné okno **Průběh synchronizace**. Zastavit, Escape i jeho křížek požádají o přerušení a počkají na ukončení pracovníka; dokončené změny zůstanou. Celkový ukazatel počítá kroky včetně uchování originálů. Viz [průběh přenosu](directory-sync-plugin.md#průběh-přenosu-022).
 
 ## Profily (0.2.0)
 

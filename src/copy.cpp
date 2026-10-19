@@ -138,6 +138,8 @@ void Verify(const std::wstring& source, const std::wstring& stage, std::atomic<b
 {
     Streams a=StreamsOf(source), b=StreamsOf(stage);
     if (a != b) throw Failure{ERROR_CRC};
+    uint64_t verifyTotal=0;for(const auto& stream:a)verifyTotal+=stream.second;
+    progress.VerifyDisplay(verifyTotal);
     std::vector<BYTE> x(256*1024), y(x.size());
     for (const auto& stream:a) {
         Stop(cancel); auto suffix=stream.first==L"::$DATA" ? L"" : stream.first;
@@ -150,6 +152,7 @@ void Verify(const std::wstring& source, const std::wstring& stage, std::atomic<b
             Need(ReadFile(out.h,y.data(),DWORD(y.size()),&ny,nullptr));
             if (nx!=ny || memcmp(x.data(),y.data(),nx)!=0) throw Failure{ERROR_CRC};
             if (!nx) break; total+=nx; progress.verified.fetch_add(uint64_t(nx)*2,std::memory_order_relaxed);
+            progress.VerifiedDisplay(nx);
 #if defined(DIRSYNC_ENGINE_TEST) || defined(DIRSYNC_COPY_TEST_HOOKS)
             if (hook) hook(CopyPhase::Verifying,stage);
 #endif
@@ -167,11 +170,12 @@ void Phase(CopyProgress& p, CopyPhase phase, const std::wstring& path) {
 #endif
 }
 struct Callback { std::atomic<bool>& cancel; CopyProgress& progress; uint64_t base; const std::wstring& stage; };
-DWORD CALLBACK CopyCallback(LARGE_INTEGER, LARGE_INTEGER transferred, LARGE_INTEGER, LARGE_INTEGER,
+DWORD CALLBACK CopyCallback(LARGE_INTEGER total, LARGE_INTEGER transferred, LARGE_INTEGER, LARGE_INTEGER,
                            DWORD, DWORD, HANDLE, HANDLE, LPVOID context)
 {
     auto& c=*static_cast<Callback*>(context);
     c.progress.copied=c.base+uint64_t(transferred.QuadPart);
+    c.progress.CopyDisplay(uint64_t(total.QuadPart),uint64_t(transferred.QuadPart));
 #if defined(DIRSYNC_ENGINE_TEST) || defined(DIRSYNC_COPY_TEST_HOOKS)
     try { if (hook) hook(CopyPhase::Copying,c.stage); } catch (...) { c.cancel=true; }
 #endif
@@ -179,10 +183,11 @@ DWORD CALLBACK CopyCallback(LARGE_INTEGER, LARGE_INTEGER transferred, LARGE_INTE
 }
 void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, const Row& row,
              CopyOutcome& outcome, std::atomic<bool>& cancel, CopyProgress& progress,
-             const Entry* original=nullptr,const Security* targetSecurity=nullptr)
+             const Entry* original=nullptr,const Security* targetSecurity=nullptr,bool recovery=false)
 {
     const Entry& expected=row.action==Action::CopyRight ? row.left : row.right;
     const std::wstring source=Join(sourceRoot,row.path), target=Join(targetRoot,row.path);
+    progress.BeginDisplay(source,target,recovery?TransferKind::Save:original?TransferKind::Overwrite:TransferKind::Copy,false,expected.size);
     Entry owned{}; std::wstring stage;
     try {
         if (!Relative(row.path)) throw Failure{ERROR_INVALID_NAME};
@@ -402,6 +407,7 @@ void CopyEmptyDirectory(const std::wstring& sourceRoot,const std::wstring& targe
 {
     const auto& expected=row.action==Action::CopyRight?row.left:row.right;
     const auto source=Join(sourceRoot,row.path),target=Join(targetRoot,row.path);
+    progress.BeginDisplay(source,target,TransferKind::Copy,true);
     Stop(cancel);Parents(sourceRoot,source,false,cancel);
     File original(Open(source,FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE));Need(original.h!=INVALID_HANDLE_VALUE);
     auto check=[&]{if(!Unchanged(expected,Info(original.h))) throw Failure{ERROR_FILE_INVALID};EmptyDirectory(source);DirectoryStreams(source);};
@@ -448,6 +454,8 @@ void CopyEmptyDirectory(const std::wstring& sourceRoot,const std::wstring& targe
 void SaveDirectory(const std::wstring& root,const Entry& expected,RecoveryItem& item,
                    std::atomic<bool>& cancel,CopyProgress& progress)
 {
+    progress.BeginDisplay(item.original,item.saved,TransferKind::Save,true);
+    progress.phase=CopyPhase::Preparing;
     Stop(cancel); Parents(root,item.original,false,cancel);
     File original(Open(item.original,FILE_READ_ATTRIBUTES)); Need(original.h!=INVALID_HANDLE_VALUE);
     if(!Unchanged(expected,Info(original.h))) throw Failure{ERROR_FILE_INVALID};
@@ -526,7 +534,7 @@ static RecoveryReport SaveOriginalsImpl(Result snapshot,const std::vector<size_t
                 Row original; original.path=row.path; original.hasLeft=true; original.left=item.right?row.right:row.left; original.action=Action::CopyRight;
                 auto data=item.saved.substr(0,item.saved.size()-row.path.size()-1);
                 if(original.left.directory) SaveDirectory(item.right?right:left,original.left,item,cancel,progress);
-                else CopyOne(item.right?right:left,data,original,item.copy,cancel,progress);
+                else CopyOne(item.right?right:left,data,original,item.copy,cancel,progress,nullptr,nullptr,true);
             } catch (const Failure& failure) {
                 item.copy.error=failure.error; report.error=failure.error;
                 report.cancelled=cancel.load() || failure.error==ERROR_CANCELLED || failure.error==ERROR_OPERATION_ABORTED || failure.error==ERROR_REQUEST_ABORTED;
@@ -649,6 +657,7 @@ DeleteReport DeleteFiles(Result snapshot,const std::vector<size_t>& visible,bool
             auto& item=report.items[n]; const auto& row=snapshot.rows[item.row];
             progress.item=n+(keepOriginals?report.items.size():0);
             try {
+                progress.BeginDisplay(item.target,L"",TransferKind::Delete,row.right.directory);
                 Phase(progress,CopyPhase::Deleting,item.target); Stop(cancel);
                 // Ordinary final checks, no attribute clearing or recursive fallback.
                 // Missing left parents are valid, but existing ancestors must be safe.

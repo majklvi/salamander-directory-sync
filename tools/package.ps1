@@ -17,7 +17,7 @@ foreach($relative in $inputs){
   if($reader.ReadUInt32() -ne 0x4550 -or $reader.ReadUInt16() -ne 0x8664){throw "Expected x64: $relative"}
  }finally{$reader.Dispose()}
  $version=[Diagnostics.FileVersionInfo]::GetVersionInfo($path)
- if($version.FileMajorPart -ne 0 -or $version.FileMinorPart -ne 2 -or $version.FileBuildPart -ne 1){throw "Expected 0.2.1: $relative"}
+ if($version.FileMajorPart -ne 0 -or $version.FileMinorPart -ne 2 -or $version.FileBuildPart -ne 2){throw "Expected 0.2.2: $relative"}
  if($version.FileVersion -notmatch '\(x64\)'){throw "Expected x64 version label: $relative"}
 }
 $payload=Join-Path $output 'payload\dirsync'
@@ -26,6 +26,9 @@ $payload=Join-Path $output 'payload\dirsync'
 foreach($relative in $inputs){Copy-Item -LiteralPath (Join-Path $binary $relative) -Destination (Join-Path $payload $relative)}
 $revision=& git -C $repo rev-parse HEAD
 if($LASTEXITCODE -ne 0){throw 'Source revision unavailable.'}
+$sourceChanges=& git -C $repo status --porcelain
+if($LASTEXITCODE -ne 0){throw 'Source worktree state unavailable.'}
+$sourceState=if($sourceChanges){'Modified working tree (development build); source revision is the base commit.'}else{'Clean working tree.'}
 $guides=@(
  @{source='docs/directory-sync-plugin.en.md';target='README.md'},
  @{source='docs/directory-sync-plugin-pilot-guide.en.md';target='PILOT.md'},
@@ -66,7 +69,7 @@ Copy-Item -LiteralPath (Join-Path $dark 'LICENSE.md') -Destination (Join-Path $p
 Copy-Item -LiteralPath (Join-Path $dark 'LICENSE-MIT.md') -Destination (Join-Path $payload 'licenses\darkmodelib-MIT.md')
 Get-ChildItem -LiteralPath (Join-Path $dark 'docs') -Filter 'LICENSE-*.md' -File | ForEach-Object{Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $payload ('licenses\'+$_.Name))}
 $notice=@"
-Directory Synchronization 0.2.1 ALPHA, x64; for Samandarin.
+Directory Synchronization 0.2.2 ALPHA, x64; for Samandarin.
 ALPHA SOFTWARE -- RISK OF DATA LOSS. NOT FOR PRODUCTION USE.
 NO WARRANTY. Authors and contributors accept NO RESPONSIBILITY OR LIABILITY
 FOR ANY LOSS OR CORRUPTION OF DATA. Use only on disposable test copies with
@@ -74,6 +77,7 @@ an independent verified backup. Keep originals does not provide rollback.
 ALFA VERZE -- NEBEZPECI ZTRATY DAT. BEZ ZARUKY A ODPOVEDNOSTI ZA ZTRATU DAT.
 Copyright (c) 2026 Michal Várady; Open Salamander Authors. GPL-2.0-or-later.
 Source revision: $revision
+Source state: $sourceState
 Source: https://github.com/majklvi/salamander-directory-sync/tree/$revision
 Includes darkmodelib by ozone10; licenses are in licenses/.
 Extract dirsync/ into the host plugins/ directory, then register dirsync.spl
@@ -88,7 +92,7 @@ $manifest=@(Get-ChildItem -LiteralPath $payload -File -Recurse | Sort-Object Ful
  [ordered]@{path=$_.FullName.Substring($payload.Length+1).Replace('\','/');sha256=(Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant()}
 })
 [IO.File]::WriteAllText((Join-Path $payload 'files.json'),($manifest|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
-$archive=Join-Path $output 'dirsync-0.2.1-x64.zip'
+$archive=Join-Path $output 'dirsync-0.2.2-x64.zip'
 Compress-Archive -LiteralPath $payload -DestinationPath $archive
 $extracted=Join-Path $output 'verified-extraction'
 Expand-Archive -LiteralPath $archive -DestinationPath $extracted
@@ -112,5 +116,5 @@ foreach($guide in $guides){
  }
 }
 $zipHash=(Get-FileHash -LiteralPath $archive).Hash.ToLowerInvariant()
-[IO.File]::WriteAllText((Join-Path $output 'package-sha256.txt'),"$zipHash  dirsync-0.2.1-x64.zip`n",[Text.UTF8Encoding]::new($false))
+[IO.File]::WriteAllText((Join-Path $output 'package-sha256.txt'),"$zipHash  dirsync-0.2.2-x64.zip`n",[Text.UTF8Encoding]::new($false))
 Write-Output "Verified $($manifest.Count) packaged files; $archive; SHA256 $zipHash"

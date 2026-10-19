@@ -2,15 +2,34 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include "engine.h"
+#include <mutex>
 #if defined(DIRSYNC_ENGINE_TEST) || defined(DIRSYNC_COPY_TEST_HOOKS)
 #include <functional>
 #endif
 
 namespace dirsync {
 enum class CopyPhase { Checking, Copying, Preparing, Verifying, Publishing, Published, Deleting, Deleted, Finished };
+enum class TransferKind { Copy, Overwrite, Save, Delete, Recycle };
+struct TransferDisplay {
+    std::wstring source,target;
+    TransferKind kind=TransferKind::Copy;
+    bool directory=false;
+    uint64_t total=0,copied=0,verifyTotal=0,verified=0;
+};
 struct CopyProgress {
     std::atomic<CopyPhase> phase{CopyPhase::Checking};
     std::atomic<uint64_t> copied{0}, verified{0}, completed{0}, item{0};
+    void BeginDisplay(const std::wstring& source,const std::wstring& target,TransferKind kind,bool directory,uint64_t total=0) {
+        std::lock_guard<std::mutex> lock(displayMutex);display={source,target,kind,directory,total,0,0,0};phase=CopyPhase::Checking;
+    }
+    void CopyDisplay(uint64_t total,uint64_t done) {std::lock_guard<std::mutex> lock(displayMutex);display.total=total;display.copied=done;}
+    void VerifyDisplay(uint64_t total) {std::lock_guard<std::mutex> lock(displayMutex);display.verifyTotal=total;display.verified=0;}
+    void VerifiedDisplay(uint64_t bytes) {std::lock_guard<std::mutex> lock(displayMutex);display.verified+=bytes;}
+    TransferDisplay Display() const {std::lock_guard<std::mutex> lock(displayMutex);return display;}
+    void ResetDisplay() {std::lock_guard<std::mutex> lock(displayMutex);display={};}
+private:
+    mutable std::mutex displayMutex;
+    TransferDisplay display;
 };
 enum class CopyStatus { NotStarted, Copied, Cancelled, Failed };
 struct CopyOutcome {

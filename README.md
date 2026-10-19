@@ -16,6 +16,8 @@ A native directory comparison and synchronization plugin for **Samandarin**, wit
 
 **New in 0.2.1 ALPHA.** Adds copying of empty directories, profile import/export and Save / Don't save / Cancel when closing a modified profile. A combined visible-plan command runs new copies, overwrites and deletions after one confirmation.
 
+**In development for 0.2.2:** a read-only [stored-originals browser](docs/directory-sync-plugin.en.md#stored-originals-022), [CSV/text export](docs/directory-sync-plugin.en.md#export-comparison-and-operation-results-022) of comparison rows and recorded operation results, and a separate [transfer-progress window](docs/directory-sync-plugin.en.md#transfer-progress-022) with Stop. The download above remains the published 0.2.1 release.
+
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
 ## Highlights

@@ -8,6 +8,6 @@
  <Import Project="common.props" />
  <ItemDefinitionGroup><ClCompile><LanguageStandard>stdcpp17</LanguageStandard><PreprocessorDefinitions>DIRSYNC_ENGINE_TEST;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile></ItemDefinitionGroup>
  
- <ItemGroup><ClCompile Include="$(RepoRoot)tests\copy_tests.cpp"></ClCompile><ClCompile Include="$(RepoRoot)tests\copy_space_faults.cpp"></ClCompile><ClCompile Include="$(RepoRoot)src\engine.cpp"></ClCompile></ItemGroup>
+ <ItemGroup><ClCompile Include="$(RepoRoot)src\recovery_catalog.cpp" /><ClCompile Include="$(RepoRoot)src\report.cpp" /><ClCompile Include="$(RepoRoot)tests\copy_tests.cpp"></ClCompile><ClCompile Include="$(RepoRoot)tests\copy_space_faults.cpp"></ClCompile><ClCompile Include="$(RepoRoot)src\engine.cpp"></ClCompile></ItemGroup>
  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

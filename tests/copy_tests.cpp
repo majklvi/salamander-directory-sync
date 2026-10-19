@@ -5,11 +5,14 @@
 #include "../src/overwrite.h"
 #include "../src/delete.h"
 #include "../src/sync.h"
+#include "../src/recovery_catalog.h"
+#include "../src/report.h"
 #include "copy_space_faults.h"
 #include <sddl.h>
 #include <winioctl.h>
 #include <iostream>
 #include <algorithm>
+#include <map>
 #include <stdexcept>
 using namespace dirsync;
 namespace {
@@ -117,6 +120,9 @@ void Success() {
     Check(CreateHardLinkW(ApiPath(link.root+L"\\alias").c_str(),ApiPath(link.left+L"\\source").c_str(),nullptr)!=FALSE,"source hardlink fixture");
     auto independent=link.Run(link.Scan());
     Check(independent.items.size()==1 && independent.items[0].status==CopyStatus::Copied,"hardlinked source copied");
+    auto display=link.progress.Display();
+    Check(display.source==link.left+L"\\source" && display.target==link.right+L"\\source" && display.kind==TransferKind::Copy &&
+        display.total==3 && display.copied==3 && display.verifyTotal==3 && display.verified==3,"native progress receives actual copy and verification telemetry");
     Put(link.root+L"\\alias","NEW",false);
     Check(Read(link.right+L"\\source")=="OLD","new target independent of source hardlinks");
 }
@@ -274,6 +280,9 @@ void RecoverySuccess() {
     for(const auto& item:report.items) Check(item.logged && item.copy.status==CopyStatus::Copied && item.copy.published,"saved outcomes durably logged");
     Check(Read(report.items[0].saved)=="ORIGINAL" && Read(report.items[0].saved+L":note")=="OLD ADS" && Read(report.items[0].saved+L":漢字").empty(),"recovery exact main and full ADS set");
     Check(Read(report.items[1].saved)=="LEFT OLD","reverse saves left original, not proposed source");
+    auto display=f.progress.Display();
+    Check(display.kind==TransferKind::Save && display.source==report.items[1].original && display.target==report.items[1].saved &&
+        display.verified==8 && display.verifyTotal==8,"native progress identifies actual saved original and verification");
     Check(Read(f.left+L"\\a")=="NEW" && Read(f.right+L"\\a")=="ORIGINAL" && Read(f.left+L"\\b")=="LEFT OLD" && Read(f.right+L"\\b")=="NEW RIGHT","all originals unchanged");
     Check(Read(f.right+L"\\delete")=="NOT DELETED" && GetFileAttributesW(ApiPath(f.right+L"\\new").c_str())==INVALID_FILE_ATTRIBUTES,"delete and new-file proposals not executed");
     Check(Dacl(f.right+L"\\a")==originalAcl,"original permissions unchanged");
@@ -864,10 +873,16 @@ void CombinedSynchronization() {
         auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);std::vector<size_t> visible;
         for(size_t i=0;i<snapshot.rows.size();++i) {visible.push_back(i);auto& row=snapshot.rows[i];if(row.path==L"overwrite.txt") row.action=Action::CopyRight;}
         const auto plan=BuildSyncPlan(snapshot,visible);Check(plan.copies.size()==2 && plan.overwrites.size()==1 && plan.deletions.size()==2,"combined plan separates all operation kinds");
+        ReportContext exportContext;exportContext.left=f.left;exportContext.right=f.right;exportContext.options=options;exportContext.visible=visible;
+        auto exported=PrepareReport(snapshot,exportContext,L"combined",keep,f.root+L"\\recovery");
         std::atomic<SyncStage> stage{SyncStage::Checking};
         auto report=Synchronize(snapshot,visible,keep,f.root+L"\\recovery",f.cancel,f.checking,f.progress,stage);
         if(report.error) std::cerr<<"combined error "<<report.error<<" stale "<<report.stale<<"\n";
         Check(report.complete && !report.error && !report.stale && stage==SyncStage::Finished,"combined phases accept only their own completed changes");
+        CompleteReport(exported,report);
+        Check(exported.complete && exported.keepOriginals==keep && exported.items.size()==(keep?8u:5u) &&
+            std::all_of(exported.items.begin(),exported.items.end(),[](const ReportOperation& item){return item.completed && item.changed;}),
+            "combined export records actual file/directory operations and frozen recovery ON/OFF");
         Check(Read(f.right+L"\\new.txt")=="NEW" && Read(f.right+L"\\overwrite.txt")=="REPLACEMENT","combined copy and overwrite data");
         Check(GetFileAttributesW(ApiPath(f.right+L"\\new-empty").c_str())!=INVALID_FILE_ATTRIBUTES &&
             GetFileAttributesW(ApiPath(f.right+L"\\old-empty").c_str())==INVALID_FILE_ATTRIBUTES &&
@@ -880,6 +895,8 @@ void CombinedSynchronization() {
         Options options;options.asymmetric=true;auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);std::vector<size_t> visible;
         for(size_t i=0;i<snapshot.rows.size();++i) {visible.push_back(i);if(snapshot.rows[i].path==L"overwrite.txt") snapshot.rows[i].action=Action::CopyRight;}
         std::atomic<SyncStage> stage{SyncStage::Checking};
+        ReportContext exportContext;exportContext.left=f.left;exportContext.right=f.right;exportContext.options=options;exportContext.visible=visible;
+        auto exported=PrepareReport(snapshot,exportContext,L"combined",false,L"");
         SetCopyHook([&](CopyPhase phase,const std::wstring& path) {
             if(stage==SyncStage::NewItems && phase==CopyPhase::Publishing && scenario==0) throw std::runtime_error("copy fault");
             if(stage==SyncStage::NewItems && phase==CopyPhase::Published) {
@@ -892,6 +909,10 @@ void CombinedSynchronization() {
             }
         });
         auto report=Synchronize(snapshot,visible,false,L"",f.cancel,f.checking,f.progress,stage);SetCopyHook({});
+        CompleteReport(exported,report);
+        Check(!exported.complete && exported.cancelled==report.cancelled && exported.stale==report.stale &&
+            std::all_of(exported.items.begin(),exported.items.end(),[](const ReportOperation& item){return item.kind!=L"delete" || (!item.changed && !item.completed && item.status==L"not_reported");}),
+            "real Stop/failure/stale export does not fabricate later deletion results");
         if(report.complete || !report.error || !report.deletions.items.empty()) std::cerr<<"combined scenario "<<scenario<<" complete="<<report.complete<<" error="<<report.error<<" deletes="<<report.deletions.items.size()<<" cancel="<<report.cancelled<<"\n";
         Check(!report.complete && report.error && report.deletions.items.empty(),"failure, Stop or changed pending item prevents later deletion phase");
         if(scenario<=2) Check(report.overwrites.items.empty(),"copy failure/Stop and changed overwrite prevent overwrite phase");
@@ -916,10 +937,141 @@ void CombinedSynchronization() {
         Check(report.error && !report.complete && GetFileAttributesW(ApiPath(f.right+L"\\new.txt").c_str())==INVALID_FILE_ATTRIBUTES,"invalid recovery root stops whole batch before any writes");
     }
 }
+void StoredOriginalsCatalog() {
+    Fixture f;auto root=f.root+L"\\recovery-漢字";f.Dir(root);
+    Put(f.left+L"\\ž.txt","REPLACEMENT");Put(f.right+L"\\ž.txt","ORIGINAL");
+    auto plan=f.Scan();for(auto& row:plan.rows)row.action=Action::CopyRight;
+    auto report=OverwriteFiles(plan,{0},true,root,f.cancel,f.checking,f.progress);
+    if(report.error)std::cerr<<"catalog fixture error "<<report.error<<" recovery "<<report.recovery.error<<"\n";
+    Check(report.complete && report.recovery.complete,"catalog fixture overwrite");
+    auto saved=report.recovery.items[0].saved;auto manifest=report.recovery.journal;
+    auto before=Read(manifest),journal=Read(report.journal);
+    auto catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(!catalog.error && catalog.runs.size()==1 && !catalog.runs[0].error,"catalog reads genuine recovery manifest and journal");
+    Check(catalog.runs[0].complete && catalog.runs[0].items.size()==1 && catalog.runs[0].items[0].copy==StoredCopy::Recorded &&
+        catalog.runs[0].items[0].operation==StoredOperation::Replaced,"recorded copy and replacement are distinct states");
+    Check(Read(manifest)==before && Read(report.journal)==journal && Read(saved)=="ORIGINAL","catalog leaves records and saved contents unchanged");
+    std::wstring location;
+    Check(RecoverySavedLocation(report.recovery.runDirectory,saved,false,location),"open location accepts saved Unicode file parent");
+    Check(!RecoverySavedLocation(report.recovery.runDirectory,f.right+L"\\ž.txt",false,location),"saved location rejects outside run");
+    Put(saved,"DIFFERENT-SIZE",false);catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(catalog.runs[0].items[0].copy==StoredCopy::Different,"changed size not presented as available recorded copy");
+    Check(DeleteFileW(ApiPath(saved).c_str())!=FALSE,"remove owned saved-copy fixture");catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(catalog.runs[0].items[0].copy==StoredCopy::Missing,"missing saved copy retained in overview");
+    Check(DeleteFileW(ApiPath(report.journal).c_str())!=FALSE,"remove owned journal fixture");
+    catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(catalog.runs[0].items[0].operation==StoredOperation::Unknown,"missing operation journal does not imply no operation occurred");
+    auto replace=[&](const std::string& data){Check(DeleteFileW(ApiPath(manifest).c_str())!=FALSE,"replace owned manifest fixture");Put(manifest,data);};
+    auto end=before.rfind("{\"event\":\"end\"");Check(end!=std::string::npos,"manifest end fixture");
+    replace(before.substr(0,end)+"{\"event\":");catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(!catalog.runs[0].complete && catalog.runs[0].error && catalog.runs[0].items.size()==1,"truncated last line retains preceding records and warning");
+    replace(before+"invalid-json\n");catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(catalog.runs[0].error,"invalid trailing record visibly damaged");
+    auto unsupported=before;auto schema=unsupported.find("\"schema\":1");unsupported.replace(schema,10,"\"schema\":9");
+    replace(unsupported);catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(catalog.runs[0].error==ERROR_REVISION_MISMATCH && catalog.runs[0].items.empty(),"future schema rejected without guessing");
+    auto plannedStart=before.find("{\"event\":\"planned\"");auto plannedEnd=before.find('\n',plannedStart)+1;
+    replace(before.substr(0,plannedEnd)+before.substr(plannedStart,plannedEnd-plannedStart));catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(catalog.runs[0].error && catalog.runs[0].items.size()==1,"duplicate item IDs rejected");
+    replace(before+std::string("\xff\n",2));catalog=ReadRecoveryCatalog(root,f.cancel);
+    Check(catalog.runs[0].error,"invalid UTF-8 rejected");
+    replace(before);f.Junction(report.recovery.runDirectory+L"\\linked",f.right);
+    Check(!RecoverySavedLocation(report.recovery.runDirectory,report.recovery.runDirectory+L"\\linked\\ž.txt",false,location),"opening saved location rejects junction traversal");
+    f.cancel=true;catalog=ReadRecoveryCatalog(root,f.cancel);Check(catalog.cancelled,"catalog cancellation reported");f.cancel=false;
+    auto absent=f.root+L"\\absent";catalog=ReadRecoveryCatalog(absent,f.cancel);
+    Check(catalog.error && GetFileAttributesW(ApiPath(absent).c_str())==INVALID_FILE_ATTRIBUTES,"unavailable recovery root never created");
+    Fixture deletion;deletion.Dir(deletion.root+L"\\recovery");Put(deletion.right+L"\\delete.txt","DELETE");deletion.Dir(deletion.right+L"\\empty");
+    Options options;options.asymmetric=true;options.emptyDirectories=true;
+    auto snapshot=Compare(deletion.left,deletion.right,options,deletion.cancel,deletion.checking);std::vector<size_t> visible;
+    for(size_t i=0;i<snapshot.rows.size();++i)visible.push_back(i);
+    auto removed=DeleteFiles(snapshot,visible,true,deletion.root+L"\\recovery",deletion.cancel,deletion.checking,deletion.progress);
+    Check(removed.complete,"catalog genuine deletion fixture");catalog=ReadRecoveryCatalog(deletion.root+L"\\recovery",deletion.cancel);
+    Check(catalog.runs.size()==1 && !catalog.runs[0].error && catalog.runs[0].items.size()==2 &&
+        std::all_of(catalog.runs[0].items.begin(),catalog.runs[0].items.end(),[](const StoredOriginal& item){return item.copy==StoredCopy::Recorded && item.operation==StoredOperation::Deleted;}),
+        "catalog reads file and empty-directory deletion results");
+    Fixture longPaths;auto longRoot=longPaths.root;
+    for(int i=0;i<7;++i){longRoot+=L"\\adresář-漢字-"+std::wstring(30,L'x');longPaths.Dir(longRoot);}
+    Put(longPaths.left+L"\\ž.txt","NEW");Put(longPaths.right+L"\\ž.txt","OLD ORIGINAL");
+    auto longReport=Save(longPaths,OverwritePlan(longPaths),longRoot);
+    Check(longReport.complete && longReport.items[0].saved.size()>260,"long Unicode recovery fixture");
+    catalog=ReadRecoveryCatalog(longRoot,longPaths.cancel);
+    Check(!catalog.error && catalog.runs.size()==1 && !catalog.runs[0].error && catalog.runs[0].items[0].copy==StoredCopy::Recorded &&
+        catalog.runs[0].items[0].saved==longReport.items[0].saved,"catalog preserves long Unicode paths without truncation");
+    Check(RecoverySavedLocation(longReport.runDirectory,longReport.items[0].saved,false,location) && location.size()>260,"long saved location preserved for wide shell call");
+}
+// Independent CSV reader: prove quoting/column alignment instead of matching a
+// serializer's implementation or trusting substring-only output checks.
+std::vector<std::map<std::wstring,std::wstring>> CsvRecords(const std::wstring& text) {
+    std::vector<std::vector<std::wstring>> rows;std::vector<std::wstring> cells;std::wstring value;bool quoted=false;
+    for(size_t i=0;i<text.size();++i){wchar_t c=text[i];if(c==L'"'){
+        if(quoted && i+1<text.size() && text[i+1]==L'"'){value+=c;++i;}else quoted=!quoted;
+    }else if(!quoted && c==L','){cells.push_back(value);value.clear();}
+    else if(!quoted && c==L'\r' && i+1<text.size() && text[i+1]==L'\n'){
+        cells.push_back(value);rows.push_back(cells);cells.clear();value.clear();++i;
+    }else value+=c;}
+    Check(!quoted && value.empty() && !rows.empty(),"CSV terminated and balanced");
+    std::vector<std::map<std::wstring,std::wstring>> result;
+    for(size_t i=1;i<rows.size();++i){Check(rows[i].size()==rows[0].size(),"consistent CSV field count");std::map<std::wstring,std::wstring> row;
+        for(size_t n=0;n<rows[0].size();++n)row[rows[0][n]]=rows[i][n];result.push_back(std::move(row));}return result;
+}
+void Reports() {
+    Fixture f;f.Dir(f.root+L"\\recovery");Put(f.left+L"\\new,漢字.txt","NEW");Put(f.left+L"\\overwrite.txt","REPLACEMENT");Put(f.right+L"\\overwrite.txt","ORIGINAL");
+    Put(f.right+L"\\delete.txt","DELETE");Put(f.left+L"\\skip.txt","SKIP");Put(f.left+L"\\hidden.txt","HIDDEN");
+    Options options;options.asymmetric=true;auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);
+    ReportContext context;context.left=f.left;context.right=f.right;context.options=options;context.generated=ReportTime();
+    context.filters={false,true,true,true,false};context.profile=L"=SUM(1,2)\r\n\"Žluťoučký\"";
+    for(size_t i=0;i<snapshot.rows.size();++i){auto& row=snapshot.rows[i];context.defaults.push_back(row.action);
+        if(row.path!=L"hidden.txt")context.visible.push_back(i);
+        if(row.path==L"overwrite.txt")row.action=Action::CopyRight;if(row.path==L"skip.txt")row.action=Action::None;}
+    auto before=RenderReport(snapshot,context,nullptr,true);auto rows=CsvRecords(before);size_t comparisons=0;
+    for(const auto& row:rows)if(row.at(L"record")==L"comparison"){
+        ++comparisons;if(row.at(L"relative_path")==L"hidden.txt")Check(row.at(L"visible")==L"false","export retains hidden row explicitly");
+        if(row.at(L"relative_path")==L"skip.txt")Check(row.at(L"skipped")==L"true" && row.at(L"action")==L"none" && row.at(L"default_action")==L"copy_right","Skip distinct from default action");
+        if(row.at(L"relative_path")==L"new,漢字.txt")Check(row.at(L"left_size_bytes")==L"3" && row.at(L"right_path").empty(),"unpaired side blank and exact numeric byte size");
+    }else if(row.at(L"key")==L"current_profile")Check(row.at(L"value")==L"'"+context.profile,"CSV formula guard, quotes and embedded CRLF round-trip");
+    Check(comparisons==snapshot.rows.size() && before.find(L"operation_results")!=std::wstring::npos,"comparison-only export does not invent operation results");
+    auto batch=PrepareReport(snapshot,context,L"combined",true,f.root+L"\\recovery");
+    Check(batch.items.size()==5 && batch.omitted==1,"frozen combined report plans three main operations and two saves, excludes Skip and hidden");
+    std::atomic<SyncStage> stage{SyncStage::Checking};auto report=Synchronize(snapshot,context.visible,true,f.root+L"\\recovery",f.cancel,f.checking,f.progress,stage);
+    Check(report.complete,"real executor export fixture");CompleteReport(batch,report);batch.finished=ReportTime();snapshot.stale=true;snapshot.snapshot.reset();
+    Check(batch.complete && std::all_of(batch.items.begin(),batch.items.end(),[](const ReportOperation& item){return item.completed && item.changed;}),"completed actual executor results, including recovery");
+    context.visible.clear();context.filters.fill(false);rows=CsvRecords(RenderReport(snapshot,context,&batch,true));size_t completed=0;
+    for(const auto& row:rows)if(row.at(L"record")==L"operation"){
+        ++completed;Check(row.at(L"completed")==L"true" && row.at(L"execution_visible")==L"true","actual completed operation preserves execution scope after filters change");
+        if(row.at(L"operation")==L"save_original")Check(!row.at(L"saved_path").empty() && row.at(L"logged")==L"true","recovery export contains actual saved paths and logged state");
+    }else if(row.at(L"record")==L"comparison" && row.at(L"relative_path")==L"delete.txt")
+        Check(row.at(L"visible")==L"false" && row.at(L"execution_visible")==L"true" && !row.at(L"right_path").empty(),"stale snapshot remains historical, export filter does not rewrite batch scope");
+    Check(completed==5,"every main and recovery result exported once");
+    // Published data and completed operation are deliberately different.
+    ReportBatch partial;ReportOperation changed;changed.row=3;changed.kind=L"new_copy";partial.items.push_back(changed);
+    ReportOperation later;later.row=4;later.kind=L"new_copy";partial.items.push_back(later);
+    CopyReport failure;CopyOutcome outcome;outcome.row=3;outcome.status=CopyStatus::Failed;outcome.published=true;outcome.error=ERROR_WRITE_FAULT;outcome.remainingStage=L"stage";failure.items.push_back(outcome);
+    CompleteReport(partial,failure);Check(!partial.complete && partial.items[0].changed && !partial.items[0].completed && partial.items[1].status==L"not_reported","post-publication error and unreported later step never count as successful completion");
+    auto pending=CsvRecords(RenderReport(snapshot,context,&partial,true));
+    for(const auto& row:pending)if(row.at(L"record")==L"operation" && row.at(L"status")==L"not_reported")
+        Check(row.at(L"filesystem_changed").empty(),"unreturned outcome exports unknown filesystem change, not false evidence");
+    failure.cancelled=true;CompleteReport(partial,failure);Check(partial.cancelled && !partial.complete,"cancelled batch stays incomplete");
+    const auto data=RenderReport(snapshot,context,&batch,false);Check(data.find(L"[operation]")!=std::wstring::npos && data.find(L"Proposals are not completed operations.")!=std::wstring::npos,"text report separates proposals from recorded execution");
+    const auto destination=f.root+L"\\report-漢字.csv";
+    Check(!WriteReport(destination,before,false,{f.left,f.right,f.root+L"\\recovery"}),"write new UTF-8 Unicode report");
+    auto saved=Read(destination);Check(saved.rfind("\xef\xbb\xbf",0)==0 && saved.find("new,")!=std::string::npos,"UTF-8 BOM and CSV data written");
+    Check(WriteReport(destination,data,false,{f.left,f.right}) && Read(destination)==saved,"unapproved replacement preserves existing report");
+    Check(!WriteReport(destination,data,true,{f.left,f.right}) && Read(destination)!=saved,"explicit replacement publishes complete text report");
+    Check(WriteReport(f.left+L"\\export.csv",before,true,{f.left,f.right})==ERROR_ACCESS_DENIED &&
+        GetFileAttributesW(ApiPath(f.left+L"\\export.csv").c_str())==INVALID_FILE_ATTRIBUTES,"cannot export inside comparison tree");
+    Check(WriteReport(f.root+L"\\recovery\\export.csv",before,true,{f.root+L"\\recovery"})==ERROR_ACCESS_DENIED,"cannot export into recovery tree");
+    Check(WriteReport(f.root+L"\\missing\\report.csv",before,true,{}) && WriteReport(L"relative.csv",before,true,{})==ERROR_INVALID_NAME,"missing parent and relative output rejected");
+    Check(!WriteReport(f.root+L"\\failed-scan.csv",before,false,{L"invalid input",f.left,f.right}),"invalid scan input does not prevent exporting diagnostics outside valid trees");
+    Check(WriteReport(destination,std::wstring(1,wchar_t(0xd800)),true,{})==ERROR_NO_UNICODE_TRANSLATION && Read(destination).rfind("\xef\xbb\xbf",0)==0,"invalid UTF-16 never replaces previous output");
+    f.Junction(f.root+L"\\linked",f.right);Check(WriteReport(f.root+L"\\linked\\out.csv",before,true,{})==ERROR_ACCESS_DENIED,"report output rejects reparse parent");
+    std::wstring longParent=f.root;for(int i=0;i<7;++i){longParent+=L"\\výstup-漢字-"+std::wstring(30,L'x');f.Dir(longParent);}
+    Check(!WriteReport(longParent+L"\\report.csv",before,false,{f.left,f.right}) && Read(longParent+L"\\report.csv")==saved,"long Unicode report path preserves exact bytes");
+    f.NoStaging(f.root);
+}
 int main() {
     try { Success(); Scope(); ModifyOnlyDestination(); Boundaries(); Paths(); AfterPublication(); DiskSpace();
         RecoverySuccess(); RecoveryFailures(); RecoveryPaths(); OverwriteSuccess(); OverwriteFailures(); OverwritePaths();
-        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();
+        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();
         std::cout<<checks<<" copy/recovery/overwrite/delete assertions passed\n"; return 0; }
     catch(const std::exception& e) { std::cerr<<"FAILED: "<<e.what()<<"\n"; return 1; }
 }

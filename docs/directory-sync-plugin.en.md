@@ -6,9 +6,43 @@
 
 [Česky](directory-sync-plugin.md) · [Pilot instructions and bug reporting](directory-sync-plugin-pilot-guide.en.md)
 
-Current behavior as of 18 October 2026, plugin version 0.2.1 ALPHA for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
+Current behavior as of 19 October 2026, plugin version 0.2.2 ALPHA (development build) for Samandarin, without SDK extensions. This is the current user guide. Other documents retain the design and dated evidence from individual development stages; their old limitations and test counts do not describe the current state. The lowest tested host versions are 0.15.1 in user testing and unreleased 0.16 in AI-automated testing of a custom developer build.
 
 For pilot use, start with the [short instructions](directory-sync-plugin-pilot-guide.en.md), included in the package as `PILOT.md`. Since 0.1.4, the status bar has separate native sections for the operation state and individual counts/progress values. Widths adapt to their text and the window; tooltips expose the complete values.
+
+## Transfer progress (0.2.2)
+
+Confirmed file operations open a separate compact native progress window. It shows source/target paths (ellipsized on screen, complete in tooltips), the current phase, file transfer or verification progress, completed steps, transferred bytes, verification reads and elapsed time. The total bar counts steps, including saves of originals; it is not a byte-weighted time estimate. Directory operations use an indeterminate file bar. Verification reads include both source and copy.
+
+**Stop**, Escape and the window's close button request cancellation. The window stays open until the worker finishes stopping; already completed changes remain. The status bar remains available. Comparison alone continues to use the main window's progress. The plugin follows the host's appearance, but does not use the host's transfer queue/background window or add pause/speed limits through the current SDK.
+
+In Stored originals, item-menu commands explicitly say **Copy … path to clipboard** or **Open … directory in Explorer**. Opening can fail if an original's parent directory no longer exists or Explorer cannot handle the path.
+
+## Stored originals (0.2.2)
+
+Available in the **0.2.2 development build**, not the published 0.2.1 package. Open **Settings → Stored originals…** to read runs under the configured recovery directory. Keep originals may be off. A draft recovery-directory value in Settings is used without saving the settings first. Reading this overview never starts synchronization.
+
+Select a run above to see its items below: original path, saved path, recorded main-stream size (in the host's units), recovery-copy status and recorded operation result. Runs are ordered by their current directory creation time, newest first. Double-click a run or item for full paths and error codes. **Copy original / Copy saved**, or **Ctrl+C / Ctrl+Shift+C** in the items list, copy the full Unicode paths. In the runs list the same shortcuts copy the run or manifest path. Context menus also offer path copying and opening directories. Directory buttons open Windows' file browser; files are never launched. A deleted original's parent directory may itself be missing.
+
+**Refresh** (or F5 in a list) rereads the directory and retains the selected run if it is still present. Loading runs on a worker; closing requests cancellation and waits for the read to finish. The resizable native dialog follows the host's appearance. It does not save its window geometry or column widths.
+
+“Saved (recorded)” means the manifest records a successful verified save and the copy currently has the expected type and main-stream size. **It is not a fresh verification of contents, ADS or metadata.** “Replaced/deleted (recorded)” comes separately from the operation journal. A missing result means **not confirmed**, not proof that no operation happened. Incomplete/damaged records, missing copies, type/size changes and unsupported schemas remain visible with warnings. Refresh after external changes; this is a snapshot, not a live monitor.
+
+Only the current `pair-* / run-*` schema-1 layout is supported. Paths are absolute; moving a recovery tree does not rewrite its records. Reparse traversal and saved paths outside their run cannot be opened. A missing or inaccessible recovery root is reported, never created. Display limits are 1,000 runs, 20,000 total items and 8 MiB per record file; reaching a limit produces a warning. This first stage has **no automatic restore or backup cleanup**. Use the manual recovery procedure below and keep independent backups.
+
+## Export comparison and operation results (0.2.2)
+
+Choose **Synchronize… → Export comparison and results…** or the same command in the results context menu. The native Save dialog offers **CSV** and **Text**; its selected file type determines the format. Export becomes available after a comparison, including an empty, cancelled or failed comparison, and remains available after execution invalidates the plan. It is disabled while work is running. Export never validates or executes a synchronization plan.
+
+Both formats include **all rows loaded by that comparison**, not only visible or highlighted rows. Each comparison row records its default/current proposal, Skip, state/reason/errors, available left/right paths, type, exact main-stream byte size, UTC modification time and attributes. Items excluded by the scan mask/options and never loaded cannot be listed. Comparison metadata records the scan's actual options and time tolerance, mask/selected roots, current profile, cancellation/staleness, active display filters and any pending comparison-option changes. GUI sorting, hidden columns and relative size/time presentation do not remove or transform report data; rows follow model order.
+
+The report also contains the **last confirmed operation or combined batch for this comparison**, if any: frozen execution filters, row visibility at execution, recovery choice, start/finish times, errors, planned targets/sources and returned outcomes. Recovery saves have their own records and saved paths. Combined new copies, overwrites and deletions remain separate step kinds. Immediate recycling/permanent deletion is identified separately. `filesystem_changed=true` does not imply `completed=true`: a published/removed target followed by an error remains a failed/incomplete result. `not_reported` means no outcome was returned for that step; it is not proof that nothing happened. A worker exception also makes the batch incomplete. Records are a results snapshot, not a chronological, crash-safe execution journal.
+
+Changing filters after execution changes `visible`, while `execution_visible` retains the confirmed scope. Export does not refresh file metadata after a write: comparison rows describe the original scan and are marked stale. A new comparison or invalidating the paths/mask clears the previous operation report. Closing the window loses this in-memory report; existing recovery manifests remain independent. Export before comparing again or closing if you need it.
+
+Files use **UTF-8 with BOM**, CRLF, stable English field names/codes and exact numerical bytes/UTC FILETIME ticks. CSV uses a comma separator, quotes every field and doubles embedded quotes. For spreadsheet safety, text with leading formula prefixes receives an apostrophe; import columns as text when retaining very large integers exactly. Text output uses sections and `key: value` lines, escaping backslashes and control characters as `\\`, `\r`, `\n`, `\t`. An absent side has blank fields, not a zero-byte file.
+
+Save to an existing directory **outside both compared trees and the configured/current batch recovery roots**. Reparse parents are refused. The native dialog confirms replacement of an existing report. A complete temporary file is flushed and renamed in the output directory; a failed replacement preserves the previous report. Export creates no directories and changes no compared files. Large exports run synchronously with a wait cursor; there is no progress/Stop control during report generation/writing in this first implementation. The export contains paths and file details, so review it before sharing it in a bug report.
 
 ## Profiles (0.2.0)
 

@@ -280,6 +280,11 @@ int main()
         for(int id=IDS_IMMEDIATE_MENU;id<=IDS_IMMEDIATE_EMPTY;++id) Check(!text(id).empty(),"immediate removal strings localized");
         for(int id=IDS_PROFILE_PANELS;id<=IDS_PROFILE_TIP;++id) Check(!text(id).empty(),"profile interface fully localized");
         for(int id=IDS_SYNC_COMMAND;id<=IDS_SYNC_REPLACED;++id) Check(!text(id).empty(),"combined synchronization strings localized");
+        for(int id=IDS_STORED_DATE;id<=IDS_STORED_ERROR;++id)Check(!text(id).empty(),"stored originals interface localized");
+        for(int id=IDS_REPORT_EXPORT;id<=IDS_REPORT_HELP;++id)Check(!text(id).empty(),"report export interface localized");
+        for(int id=IDS_PROGRESS_PREPARE;id<=IDS_STORED_OPEN_SAVED_MENU;++id)Check(!text(id).empty(),"transfer progress and explicit recovery menu actions localized");
+        Test(IDD_TRANSFER_PROGRESS);
+        Test(IDD_STORED_ORIGINALS);
         Test(IDD_PREVIEW); Test(IDD_INFORMATION);Test(IDD_APPEARANCE);Test(IDD_PROFILE_NAME);Test(IDD_PROFILES);Test(IDD_PROFILE_CLOSE); std::cout << checks << " resource/layout checks passed\n"; return 0;
     }
     catch (const std::exception& e) { std::cerr << "FAILED: " << e.what() << "\n"; return 1; }

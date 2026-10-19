@@ -280,10 +280,12 @@ int main()
             Check(chosen.size()>260 && folderTest && folderTest(chosen.c_str())==3,"folder picker preserves long Unicode names and expands shell aliases; missing folder is refused");
             using ProposalTest=unsigned (WINAPI*)(const wchar_t*,const wchar_t*);
             auto proposals=reinterpret_cast<ProposalTest>(GetProcAddress(module.handle,"ProbeProposalRules"));
-            Check(proposals && proposals(scan.left.c_str(),scan.right.c_str())==96,"proposal eligibility, selected/visible plan scope, menu availability, restore/reverse, hit testing and long Unicode path lists");
+            Check(proposals && proposals(scan.left.c_str(),scan.right.c_str())==100,"proposal eligibility, selected/visible plan scope, export after stale/cancelled results, menu availability, restore/reverse, hit testing and long Unicode path lists");
             using StopTest=BOOL (WINAPI*)();
             auto stops=reinterpret_cast<StopTest>(GetProcAddress(module.handle,"ProbeStopControls"));
             Check(stops && stops(),"only the appropriate adjacent Stop can cancel scanning, validation or file operations");
+            auto transfer=reinterpret_cast<StopTest>(GetProcAddress(module.handle,"ProbeTransferDialog"));
+            Check(transfer && transfer(),"EN/CS native transfer window: real bars, long Unicode paths, verification, Close/keyboard Stop, worker join and cleanup");
             using PreviewTest=BOOL (WINAPI*)(const wchar_t*,const wchar_t*);
             auto preview=reinterpret_cast<PreviewTest>(GetProcAddress(module.handle,"ProbePreviewControls"));
             Check(preview && preview(scan.left.c_str(),scan.right.c_str()),"independent toggle combinations, retained results/options, muted Skip and edge-to-edge list");

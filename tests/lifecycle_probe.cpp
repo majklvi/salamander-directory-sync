@@ -19,6 +19,61 @@ bool RecoveryLogged()
             [](const dirsync::RecoveryItem& item) { return item.logged; }));
 }
 }
+// Real shipping progress resources and production callbacks; no file writes.
+extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
+    struct RestoreLanguage {HINSTANCE previous=language;~RestoreLanguage(){language=previous;}} restore;
+    bool ok=true;
+    for(const wchar_t* name:{L"dirsync_ui_tests.exe",L"dirsync_ui_czech_tests.exe"}) {
+        HMODULE resources=LoadLibraryExW(name,nullptr,LOAD_LIBRARY_AS_DATAFILE|LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+        if(!resources)return FALSE;language=resources;
+        struct Template {DLGTEMPLATE dialog;WORD menu=0,cls=0,title=0;} owner{};
+        owner.dialog.style=WS_POPUP;owner.dialog.cx=355;owner.dialog.cy=154;
+        HWND parent=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&owner.dialog,nullptr,EmptyDialog,0);
+        if(!parent){FreeLibrary(resources);return FALSE;}
+        {
+            Preview p;p.window=parent;p.running=true;p.copying=true;p.transferStarted=GetTickCount64();p.operationReport.items.resize(4);
+            const auto source=L"C:\\"+std::wstring(280,L'漢')+L"\\žluťoučký.txt";
+            const auto target=L"D:\\"+std::wstring(280,L'Ž')+L"\\kopie.txt";
+            p.copyProgress.BeginDisplay(source,target,dirsync::TransferKind::Copy,false,1000);
+            p.copyProgress.CopyDisplay(1000,500);p.copyProgress.phase=dirsync::CopyPhase::Copying;p.copyProgress.completed=1;
+            ShowTransfer(p);HWND progress=p.transferWindow;
+            ok &= IsWindow(progress) && IsWindowVisible(progress) && GetWindow(progress,GW_OWNER)==parent;
+            ok &= ControlText(progress,IDC_TRANSFER_SOURCE)==source && ControlText(progress,IDC_TRANSFER_TARGET)==target;
+            for(int id:{IDC_TRANSFER_SOURCE,IDC_TRANSFER_TARGET}) {
+                HWND path=GetDlgItem(progress,id);ok &= (GetWindowLongPtrW(path,GWL_STYLE)&SS_NOTIFY)!=0;
+                NMTTDISPINFOW tip{};tip.hdr.code=TTN_GETDISPINFOW;tip.hdr.idFrom=UINT_PTR(path);
+                SendMessageW(progress,WM_NOTIFY,0,LPARAM(&tip));
+                ok &= tip.lpszText && std::wstring(tip.lpszText)==(id==IDC_TRANSFER_SOURCE?source:target);
+            }
+            ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_FILE_BAR,PBM_GETPOS,0,0)==500;
+            ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_TOTAL_BAR,PBM_GETPOS,0,0)==250;
+            p.copyProgress.VerifyDisplay(1000);p.copyProgress.VerifiedDisplay(250);p.copyProgress.phase=dirsync::CopyPhase::Verifying;
+            UpdateTransfer(p);ok &= SendDlgItemMessageW(progress,IDC_TRANSFER_FILE_BAR,PBM_GETPOS,0,0)==250;
+            ok &= ControlText(progress,IDC_TRANSFER_PHASE).find(Text(IDS_PROGRESS_VERIFY))!=std::wstring::npos;
+            p.copyProgress.BeginDisplay(source,target,dirsync::TransferKind::Save,true);UpdateTransfer(p);
+            ok &= (GetWindowLongPtrW(GetDlgItem(progress,IDC_TRANSFER_FILE_BAR),GWL_STYLE)&PBS_MARQUEE)!=0;
+            ok &= ControlText(progress,IDC_TRANSFER_FILE_PERCENT)==L"—";
+            SendMessageW(progress,WM_CLOSE,0,0);
+            ok &= p.cancel && IsWindow(progress) && !IsWindowEnabled(GetDlgItem(progress,IDCANCEL));
+            p.running=false;SendMessageW(progress,WM_TIMER,1,0);
+            ok &= !p.transferWindow && !IsWindow(progress);
+            p.cancel=false;p.running=true;ShowTransfer(p);progress=p.transferWindow;
+            SendMessageW(GetDlgItem(progress,IDCANCEL),WM_KEYDOWN,VK_ESCAPE,0);
+            ok &= p.cancel && IsWindow(progress);p.CloseTransfer();
+            ok &= TransferPosition(UINT64_MAX-1,UINT64_MAX)==999 && TransferPosition(5,10)==500 && TransferPosition(11,10)==1000;
+        }
+        std::atomic<bool> ended{false};HWND visible=nullptr;
+        {
+            Preview p;p.window=parent;p.running=true;p.copying=true;
+            p.worker=std::thread([&]{while(!p.cancel)Sleep(1);ended=true;});ShowTransfer(p);visible=p.transferWindow;
+            ok &= IsWindow(visible)!=FALSE;
+            // Preview destruction requests Stop, joins, then removes the owned window.
+        }
+        ok &= ended && !IsWindow(visible);
+        DestroyWindow(parent);language=restore.previous;FreeLibrary(resources);
+    }
+    return ok;
+}catch(...){return FALSE;}
 // Exercise the same Unicode path expansion used by the native folder picker.
 extern "C" __declspec(dllexport) BOOL WINAPI ProbeTimeComparison()
 {
@@ -221,6 +276,10 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeProposalRules(const wchar_
         p.running=true;check(!PlanEnabled(p,PlanSummary));p.running=false;
         p.options.asymmetric=false;p.result.snapshot=dirsync::Compare(left,right,p.options,p.cancel,p.progress).snapshot;
         check(!PlanEnabled(p,PlanDelete));
+        check(!PlanEnabled(p,PlanExport));p.reportReady=true;
+        p.result.stale=true;p.result.snapshot.reset();check(PlanEnabled(p,PlanExport) && !PlanEnabled(p,PlanSync));
+        p.running=true;check(!PlanEnabled(p,PlanExport));p.running=false;
+        p.result.cancelled=true;p.failed=true;check(PlanEnabled(p,PlanExport));
     } catch(...) {return 0;}
     return checks;
 }

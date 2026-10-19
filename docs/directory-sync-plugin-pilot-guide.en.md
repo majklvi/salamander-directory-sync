@@ -6,11 +6,17 @@
 
 [Česky](directory-sync-plugin-pilot-guide.md) · [Full user guide](directory-sync-plugin.en.md)
 
-Plugin 0.2.1 ALPHA for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
+Plugin 0.2.2 ALPHA development build for Samandarin x64, with English and Czech interfaces. The unsigned package contains the compiled plugin; installation requires no compilation. This pilot is for **copies of local NTFS data**; SMB/network-drive tests and SDK changes are outside scope. Lowest tested host versions: 0.15.1 in user testing, and unreleased 0.16 in AI-automated tests of a custom developer build.
+
+New in the 0.2.2 development build: **Settings → Stored originals…** shows existing recovery runs without changing them, even with Keep originals off. Select a run, double-click an item for details, copy original/saved paths or open their directories. Ctrl+C / Ctrl+Shift+C copy the original/saved path in the items list; Refresh rereads records. Recorded success is not a new content verification. This browser offers no automatic restore or cleanup. See the [full guide](directory-sync-plugin.en.md#stored-originals-022).
 
 Click a heading to switch ascending/descending sorting within each directory. Right-click a heading or use **Settings → Columns** to hide/show optional columns. Both names, directory paths, and Action remain. Column choices/sorting persist; hiding a column does not exclude files from synchronization.
 
 Results are grouped by relative directory (`\` is the root). Headings are not action rows and do not select descendants. Groups disappear when filtering leaves no visible entries. A directory proposed for deletion has its own row in its parent group.
+
+In 0.2.2, **Synchronize… → Export comparison and results…** saves CSV/text containing all loaded rows, including hidden/Skip rows, and the last confirmed batch's recorded outcomes. Export before a new comparison or closing. Choose an output outside the compared/recovery trees and review paths before sharing a report. See the [export guide](directory-sync-plugin.en.md#export-comparison-and-operation-results-022).
+
+In 0.2.2, confirmed file operations also show a separate **Synchronization progress** window. Stop, Escape or its close button requests cancellation and waits for the worker; completed changes remain. The total bar counts steps including saved originals. See [transfer progress](directory-sync-plugin.en.md#transfer-progress-022).
 
 ## Profiles (0.2.0)
 

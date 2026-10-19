@@ -8,6 +8,8 @@
 #include "copy.h"
 #include "sync.h"
 #include "recovery.h"
+#include "recovery_catalog.h"
+#include "report.h"
 #include "overwrite.h"
 #include "delete.h"
 #include "shell_delete.h"
@@ -473,6 +475,11 @@ struct Preview
     bool deleting=false,hasDeleteReport=false;
     bool synchronizing=false,hasSyncReport=false;
     dirsync::SyncReport syncReport;
+    dirsync::ReportBatch operationReport;
+    bool reportReady=false;
+    HWND transferWindow=nullptr;
+    ULONGLONG transferStarted=0;
+    std::wstring transferTip;
     std::atomic<dirsync::SyncStage> syncStage{dirsync::SyncStage::Checking};
     uint64_t transferCount=0;
     std::thread worker;
@@ -480,7 +487,8 @@ struct Preview
     std::vector<std::pair<HWND, RECT>> controls;
     bool applyingProfile=false;
     bool running = false, closing = false, failed = false, validating = false, updatingList = false;
-    ~Preview() { Stop(); Join(); for(auto icon:buttonIcons) if(icon) DestroyIcon(icon); }
+    void CloseTransfer() {if(transferWindow){HWND window=transferWindow;transferWindow=nullptr;DestroyWindow(window);}}
+    ~Preview() { Stop(); Join(); CloseTransfer(); for(auto icon:buttonIcons) if(icon) DestroyIcon(icon); }
     void Stop()
     {
         cancel = true;
@@ -562,6 +570,8 @@ std::wstring Modified(uint64_t ticks)
     GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, 0, &time, nullptr, clock, 80);
     return std::wstring(date) + L" " + clock;
 }
+#include "recovery_browser.inc"
+
 std::wstring Cell(const dirsync::Row& row, int column,const Preview& p)
 {
     // Only regular-file pairs have a meaningful counterpart for relative metadata.
@@ -802,6 +812,7 @@ INT_PTR AppearanceBody(HWND window,UINT message,WPARAM w,LPARAM l)
             AppearanceSample(window,*appearance);return TRUE;
         }
         switch(id) {
+        case IDC_STORED_ORIGINALS: ShowStoredOriginals(window,ControlText(window,IDC_RECOVERY_ROOT));return TRUE;
         case IDC_BROWSE_RECOVERY: BrowseFolder(window,IDC_RECOVERY_ROOT,IDS_BROWSE_RECOVERY);return TRUE;
         case IDC_KEEP_ORIGINALS: RecoveryControls(window);return TRUE;
         case IDC_COLOR_RESET:
@@ -1162,9 +1173,12 @@ int StopControl(const Preview& p)
             p.intent==Preview::Intent::Overwrite || p.intent==Preview::Intent::Delete || p.intent==Preview::Intent::ImmediateDelete || p.intent==Preview::Intent::Sync));
     return files?IDC_STOP_SYNC:IDC_STOP;
 }
+#include "transfer_progress.inc"
 void ProfileControls(Preview& p);
 void Busy(Preview& p, bool busy)
 {
+    if(busy && TransferActive(p))PostMessageW(p.window,ShowTransferMessage,0,0);
+    if(!busy)p.CloseTransfer();
     // A list infotip can otherwise remain topmost over the operation dialog.
     HWND listTip=ListView_GetToolTips(GetDlgItem(p.window,IDC_LIST));
     if(busy) SendMessageW(listTip,TTM_POP,0,0);
@@ -1190,6 +1204,7 @@ void InvalidatePlan(Preview& p)
     p.hasOverwriteReport = false;
     p.hasDeleteReport = false;
     p.hasSyncReport = false;
+    p.operationReport={};p.reportReady=false;
     ListView_DeleteAllItems(GetDlgItem(p.window,IDC_LIST));ListView_RemoveAllGroups(GetDlgItem(p.window,IDC_LIST));
     Status(p);
 }
@@ -1465,6 +1480,7 @@ void ProfileMenu(Preview& p)
     else if(command>=100 && size_t(command-100)<settings.profiles.items.size()) SelectProfile(p,settings.profiles.items[size_t(command-100)].id);
 }
 
+#include "report_ui.inc"
 void Start(Preview& p)
 {
     if (p.running) return;
@@ -1606,10 +1622,11 @@ std::wstring RowPaths(const Preview& p,const std::vector<size_t>& rows,int side)
     return text;
 }
 // These commands always use the visible plan, even with no highlighted rows.
-constexpr int PlanSummary=30,PlanSave=31,PlanCopy=32,PlanOverwrite=33,PlanDelete=34,PlanSync=35;
+constexpr int PlanSummary=30,PlanSave=31,PlanCopy=32,PlanOverwrite=33,PlanDelete=34,PlanSync=35,PlanExport=36;
 constexpr UINT_PTR MenuHelpTimer=2;
 std::wstring PlanHelp(int command)
 {
+    if(command==PlanExport)return Text(IDS_REPORT_HELP);
     int id=0;
     switch(command) {
     case PlanSummary:id=IDS_PLAN_HELP_SUMMARY;break;
@@ -1669,6 +1686,7 @@ Preview::Intent PlanIntent(int command)
 }
 bool PlanEnabled(const Preview& p,int command)
 {
+    if(command==PlanExport)return !p.running && p.reportReady;
     if(p.running || !p.result.snapshot || p.result.stale || p.result.cancelled || p.failed) return false;
     if(command==PlanSummary) return true;
     if(command==PlanSync) return dirsync::BuildSyncPlan(p.result,p.visible).Count()!=0;
@@ -1683,7 +1701,7 @@ bool PlanEnabled(const Preview& p,int command)
 }
 void EnablePlanMenu(CGUIMenuPopupAbstract* menu,const Preview& p)
 {
-    for(int command=PlanSummary;command<=PlanSync;++command) menu->EnableItem(command+1,FALSE,PlanEnabled(p,command));
+    for(int command=PlanSummary;command<=PlanExport;++command) menu->EnableItem(command+1,FALSE,PlanEnabled(p,command));
 }
 void SynchronizeMenu(Preview& p)
 {
@@ -1694,6 +1712,8 @@ void SynchronizeMenu(Preview& p)
         {MNTT_IT,IDS_MENU_COPY_NEW,MNTS_B|MNTS_I|MNTS_A,PlanCopy+1,-1,0,nullptr},
         {MNTT_IT,IDS_MENU_OVERWRITE,MNTS_B|MNTS_I|MNTS_A,PlanOverwrite+1,-1,0,nullptr},
         {MNTT_IT,IDS_MENU_DELETE_FILES,MNTS_B|MNTS_I|MNTS_A,PlanDelete+1,-1,0,nullptr},
+        {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
+        {MNTT_IT,IDS_REPORT_EXPORT,MNTS_B|MNTS_I|MNTS_A,PlanExport+1,-1,0,nullptr},
         {MNTT_PE,0,0,0,-1,0,nullptr}};
     auto* menu=gui->CreateMenuPopup();if(!menu) return;DWORD command=0;
     if(menu->LoadFromTemplate(language,items,nullptr,nullptr,nullptr)) {
@@ -1701,11 +1721,14 @@ void SynchronizeMenu(Preview& p)
         command=TrackWithStatus(p,menu,MENU_TRACK_RETURNCMD|MENU_TRACK_NONOTIFY,r.left,r.bottom);
     }
     gui->DestroyMenuPopup(menu);
-    if(command && PlanEnabled(p,int(command)-1)) ValidatePreview(p,PlanIntent(int(command)-1));
+    if(command && PlanEnabled(p,int(command)-1)) {
+        if(int(command)-1==PlanExport)ExportResults(p);else ValidatePreview(p,PlanIntent(int(command)-1));
+    }
 }
 void PreviewCommand(Preview& p,const std::vector<size_t>& rows,int command)
 {
     if(p.running) return;
+    if(command==PlanExport){ExportResults(p);return;}
     if(PlanIntent(command)!=Preview::Intent::None) {
         if(PlanEnabled(p,command)) ValidatePreview(p,PlanIntent(command));return;
     }
@@ -1809,10 +1832,13 @@ void PreviewMenu(Preview& p,LPARAM position)
         {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
         {MNTT_IT,IDS_MENU_SAVE,MNTS_B|MNTS_I|MNTS_A,PlanSave+1,-1,0,nullptr},
         {MNTT_PE,0,0,0,-1,0,nullptr},
+        {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
+        {MNTT_IT,IDS_REPORT_EXPORT,MNTS_B|MNTS_I|MNTS_A,PlanExport+1,-1,0,nullptr},
         {MNTT_PE,0,0,0,-1,0,nullptr}};
     auto* menu=gui->CreateMenuPopup();if(!menu) return;DWORD command=0;
     if(menu->LoadFromTemplate(language,items,nullptr,nullptr,nullptr)) {
         if(auto* plan=menu->GetSubMenu(21,FALSE)) EnablePlanMenu(plan,p);
+        menu->EnableItem(PlanExport+1,FALSE,PlanEnabled(p,PlanExport));
         for(int proposal:{0,1,2,3,RestoreProposal,ReverseProposal}) {
             bool enabled=p.result.snapshot && !p.result.stale && !p.result.cancelled && !p.failed &&
                 CanChangeProposals(p,rows,proposal);
@@ -1960,6 +1986,7 @@ void SyncAll(Preview& p)
     Field(fields,IDS_UI_OMITTED,uint64_t(plan.omitted));Field(fields,IDS_UI_HIDDEN,uint64_t(p.result.rows.size()-p.visible.size()));
     Field(fields,IDS_UI_RECOVERY,Text(keep?IDS_UI_ON:IDS_UI_OFF));if(keep) Field(fields,IDS_UI_RECOVERY_FOLDER,root);
     if(!InformationBox(p.window,IDS_SYNC_CONFIRM,std::move(fields),Text(IDS_SYNC_POLICY),true)) return;
+    BeginReport(p,L"combined",keep,root);
     p.cancel=false;p.failed=false;p.running=true;p.synchronizing=true;p.syncReport={};p.syncStage=dirsync::SyncStage::Checking;
     p.hasSyncReport=p.hasCopyReport=p.hasRecoveryReport=p.hasOverwriteReport=p.hasDeleteReport=false;
     p.copyProgress.copied=0;p.copyProgress.verified=0;p.copyProgress.completed=0;p.copyProgress.item=0;p.copyProgress.phase=dirsync::CopyPhase::Checking;
@@ -2010,6 +2037,7 @@ void CopyNew(Preview& p)
     if (p.copyRows.empty()) { Message(p.window,IDS_COPY_EMPTY); return; }
     InfoRows fields;Field(fields,IDS_UI_FILES,uint64_t(p.copyRows.size())-directories);Field(fields,IDS_UI_DIRECTORIES,directories);Field(fields,IDS_UI_BYTES,bytes);Field(fields,IDS_UI_OMITTED,omitted);
     if(!InformationBox(p.window,IDS_UI_COPY_CONFIRM,std::move(fields),Text(IDS_UI_COPY_POLICY),true)) return;
+    BeginReport(p,L"new_copy",false,L"");
     p.cancel=false; p.failed=false; p.copying=true; p.running=true; p.hasCopyReport=false;
     p.copyProgress.copied=0; p.copyProgress.verified=0; p.copyProgress.completed=0; p.copyProgress.item=0;
     p.copyProgress.phase=dirsync::CopyPhase::Checking; p.copyReport={};
@@ -2066,6 +2094,7 @@ void SaveOriginals(Preview& p)
     InfoRows fields;Field(fields,IDS_UI_FILES,uint64_t(p.copyRows.size()));Field(fields,IDS_UI_ORIGINAL_BYTES,bytes);Field(fields,IDS_UI_OMITTED,omitted);
     Field(fields,IDS_UI_RECOVERY_FOLDER,p.recoveryRoot);
     if(!InformationBox(p.window,IDS_UI_SAVE_CONFIRM,std::move(fields),Text(IDS_UI_SAVE_POLICY),true)) return;
+    BeginReport(p,L"save_original",true,p.recoveryRoot);
     p.cancel=false; p.failed=false; p.saving=true; p.running=true; p.hasCopyReport=false; p.hasRecoveryReport=false;
     p.copyProgress.copied=0; p.copyProgress.verified=0; p.copyProgress.completed=0; p.copyProgress.item=0;
     p.copyProgress.phase=dirsync::CopyPhase::Checking; p.recoveryReport={};
@@ -2134,6 +2163,7 @@ void Overwrite(Preview& p)
     Field(fields,IDS_UI_RECOVERY,Text(keep?IDS_UI_ON:IDS_UI_OFF));if(keep)Field(fields,IDS_UI_RECOVERY_FOLDER,root);
     auto message=Text(IDS_UI_OVERWRITE_POLICY)+L"\n\n"+Text(keep?IDS_OVERWRITE_ON:IDS_OVERWRITE_OFF);
     if(!InformationBox(p.window,IDS_UI_OVERWRITE_CONFIRM,std::move(fields),message,true)) return;
+    BeginReport(p,L"overwrite",keep,root);
     p.cancel=false; p.failed=false; p.overwriting=true; p.running=true;
     p.hasCopyReport=p.hasRecoveryReport=p.hasOverwriteReport=p.hasDeleteReport=false; p.overwriteReport={};
     p.transferCount=uint64_t(p.copyRows.size())*(keep?2:1);
@@ -2207,6 +2237,7 @@ void DeleteFiles(Preview& p)
     if(keep)Field(fields,IDS_UI_RECOVERY_FOLDER,root);
     auto message=Text(IDS_UI_DELETE_POLICY)+L"\n\n"+Text(keep?IDS_DELETE_ON:IDS_DELETE_OFF);
     if(!InformationBox(p.window,IDS_UI_DELETE_CONFIRM,std::move(fields),message,true)) return;
+    BeginReport(p,L"delete",keep,root);
     p.cancel=false; p.failed=false; p.deleting=true; p.running=true;
     p.hasCopyReport=p.hasRecoveryReport=p.hasOverwriteReport=p.hasDeleteReport=false; p.deleteReport={};
     p.transferCount=uint64_t(p.copyRows.size())*(keep?2:1);
@@ -2237,6 +2268,7 @@ void ImmediateDeleteSelection(Preview& p)
     Field(fields,IDS_IMMEDIATE_SELECTED,uint64_t(candidates.size()));
     for(const auto& item:candidates) fields.push_back({Text(item.side?IDS_COLUMNS+9:IDS_COLUMNS),item.path});
     if(!InformationBox(p.window,IDS_IMMEDIATE_CONFIRM,std::move(fields),Text(IDS_IMMEDIATE_NOTE),true,false)) return;
+    BeginReport(p,recycle?L"recycle":L"permanent_delete",false,L"",p.requestedRows,side);
     p.cancel=false;p.failed=false;p.immediateReport={};p.immediateDeleting=true;p.running=true;
     p.progress.scanned=0;p.progress.compared=0;p.progress.readBytes=0;
     p.copyProgress.completed=0;p.copyProgress.item=0;p.copyProgress.copied=0;p.copyProgress.verified=0;
@@ -2366,7 +2398,10 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         return TRUE;
     case Done:
         p->Join(); p->running = false; KillTimer(window, 1);
+        p->CloseTransfer();
+        FinishReport(*p);
         if(!p->validating && !p->synchronizing && !p->copying && !p->saving && !p->overwriting && !p->deleting && !p->immediateDeleting) {
+            p->reportReady=true;
             p->defaults.clear();for(const auto& row:p->result.rows) p->defaults.push_back(row.action);
         }
         if (p->validating) { p->result = std::move(p->checkedResult); p->validating = false; }
@@ -2439,6 +2474,7 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         if (p->running) { p->closing = true; p->Stop(); }
         else ClosePreview(*p);
         return TRUE;
+    case ShowTransferMessage: ShowTransfer(*p);return TRUE;
     case WM_SETTINGCHANGE: case WM_THEMECHANGED: ReadPanelFormat(*p);UpdateGroupHeaders(*p);RememberColumns(*p);ConfigureDark(window);ColumnStyle(*p);ButtonIcons(*p);InvalidateRect(GetDlgItem(window,IDC_LIST),nullptr,FALSE); return TRUE;
     case WM_CONTEXTMENU:
         if(reinterpret_cast<HWND>(w)==GetDlgItem(window,IDC_LIST)) {PreviewMenu(*p,l);return TRUE;}
@@ -2698,6 +2734,7 @@ public:
         {
             if (!force) return FALSE;
             active->Stop(); active->Join();
+            active->CloseTransfer();
             if (active->window) EndDialog(active->window, 0);
         }
         DarkModeShutdown();
@@ -2762,7 +2799,7 @@ CPluginInterfaceAbstract* WINAPI SalamanderPluginEntry(CSalamanderPluginEntryAbs
     if (!language) return nullptr;
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES}; InitCommonControlsEx(&controls);
     ConfigureDark(nullptr);
-    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.2.1", VERSINFO_COPYRIGHT,
+    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.2.2", VERSINFO_COPYRIGHT,
                               general->LoadStr(language, IDS_DESCRIPTION), "DirectorySync");
     entry->SetPluginHomePageURL("https://github.com/majklvi/salamander-directory-sync");
     return &plugin;

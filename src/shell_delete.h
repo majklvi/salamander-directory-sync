@@ -170,6 +170,7 @@ inline ImmediateReport ImmediateDelete(Result snapshot,const std::vector<size_t>
 #endif
         if(cancel) {report.cancelled=true;report.error=HRESULT_FROM_WIN32(ERROR_CANCELLED);break;}
         report.items.push_back({item.path,L"",S_OK,false});auto& outcome=report.items.back();
+        progress.BeginDisplay(item.path,L"",recycle?TransferKind::Recycle:TransferKind::Delete,item.original.directory);
         progress.item=report.items.size()-1;
         HRESULT hr=ImmediateCheckpoint(item);
         if(SUCCEEDED(hr)) {

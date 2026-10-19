@@ -103,6 +103,7 @@ BEGIN
     LTEXT "Rec&overy folder:", IDC_RECOVERY_LABEL, 7, 246, 76, 10
     EDITTEXT IDC_RECOVERY_ROOT, 86, 243, 195, 14, ES_AUTOHSCROLL
     PUSHBUTTON "...", IDC_BROWSE_RECOVERY, 285, 243, 14, 14
+    PUSHBUTTON "Stored originals...", IDC_STORED_ORIGINALS, 7, 267, 116, 14
     DEFPUSHBUTTON "OK", IDOK, 169, 267, 62, 14
     PUSHBUTTON "Cancel", IDCANCEL, 237, 267, 62, 14
 END
@@ -477,4 +478,102 @@ BEGIN
     IDS_SYNC_NEW_COUNTS "New copies (files / directories)"
     IDS_SYNC_DELETE_COUNTS "Deletions (files / directories)"
     IDS_SYNC_REPLACED "Overwrites (completed / planned)"
+END
+
+IDD_STORED_ORIGINALS DIALOGEX 0, 0, 500, 292
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX
+CAPTION "Stored originals"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "Runs:", -1, 7, 7, 486, 10
+    CONTROL "", IDC_STORED_RUNS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 19, 486, 66
+    LTEXT "Items (double-click for details):", -1, 7, 91, 486, 10
+    CONTROL "", IDC_STORED_ITEMS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 103, 486, 138
+    LTEXT "", IDC_STORED_SUMMARY, 7, 247, 486, 17
+    PUSHBUTTON "Refresh", IDC_STORED_REFRESH, 7, 271, 65, 14
+    PUSHBUTTON "Copy original", IDC_STORED_COPY_ORIGINAL, 76, 271, 70, 14
+    PUSHBUTTON "Copy saved", IDC_STORED_COPY_SAVED, 150, 271, 70, 14
+    PUSHBUTTON "Original directory", IDC_STORED_OPEN_ORIGINAL, 224, 271, 90, 14
+    PUSHBUTTON "Saved directory", IDC_STORED_OPEN_SAVED, 318, 271, 90, 14
+    DEFPUSHBUTTON "Close", IDCANCEL, 431, 271, 62, 14
+END
+STRINGTABLE
+BEGIN
+    IDS_STORED_DATE "Created"
+    IDS_STORED_RUN "Run"
+    IDS_STORED_STATE "State"
+    IDS_STORED_ORIGINAL "Original path"
+    IDS_STORED_SAVED "Saved path"
+    IDS_STORED_SIZE "Size"
+    IDS_STORED_COPY "Recovery copy"
+    IDS_STORED_OPERATION "Operation result"
+    IDS_STORED_NOTE "Read only. Copies are not reverified."
+    IDS_STORED_LOADING "Reading recovery records..."
+    IDS_STORED_EMPTY "No recovery runs found."
+    IDS_STORED_INCOMPLETE "Incomplete"
+    IDS_STORED_COMPLETE "Manifest complete"
+    IDS_STORED_DAMAGED "Unreadable / damaged"
+    IDS_STORED_UNKNOWN "Not confirmed"
+    IDS_STORED_RECORDED "Saved (recorded)"
+    IDS_STORED_MISSING "Missing / unavailable"
+    IDS_STORED_DIFFERENT "Size / type differs"
+    IDS_STORED_UNSAFE "Outside run / reparse"
+    IDS_STORED_REPLACED "Replaced (recorded)"
+    IDS_STORED_DELETED "Deleted (recorded)"
+    IDS_STORED_NOT_STARTED "Not started (recorded)"
+    IDS_STORED_FAILED "Failed (recorded)"
+    IDS_STORED_CANCELLED "Cancelled (recorded)"
+    IDS_STORED_LIMIT "Display limit reached."
+    IDS_STORED_OPEN_ERROR "This directory is unavailable or contains a reparse point. Copy the path to inspect it manually."
+    IDS_STORED_COPY_RUN "Copy run path to clipboard"
+    IDS_STORED_OPEN_RUN "Open run directory in Explorer"
+    IDS_STORED_COPY_MANIFEST "Copy manifest path to clipboard"
+    IDS_STORED_UNSUPPORTED "Unsupported record version"
+    IDS_STORED_COUNTS "%llu runs, %llu items"
+    IDS_STORED_LEFT "Left directory"
+    IDS_STORED_RIGHT "Right directory"
+    IDS_STORED_MANIFEST "Manifest"
+    IDS_STORED_ERROR "Error code"
+    IDS_REPORT_EXPORT "Export comparison and results..."
+    IDS_REPORT_CSV "CSV report (*.csv)"
+    IDS_REPORT_TEXT "Text report (*.txt)"
+    IDS_REPORT_FAILED "Cannot export report"
+    IDS_REPORT_SAVED "Report saved:"
+    IDS_REPORT_POLICY "Choose an existing directory outside both compared trees and the recovery directory. The report contains paths and comparison details. It does not perform synchronization."
+    IDS_REPORT_HELP "Export all compared rows, including hidden and skipped items, and the last operation's recorded results. Highlighting does not limit the export."
+    IDS_PROGRESS_PREPARE "Preparing metadata"
+    IDS_PROGRESS_VERIFY "Verifying data"
+    IDS_PROGRESS_PUBLISH "Finalizing target"
+    IDS_PROGRESS_FINISH "Finishing / checking next stage"
+    IDS_PROGRESS_DATA "Copying data"
+    IDS_PROGRESS_RECYCLE "Moving to Recycle Bin"
+    IDS_PROGRESS_COUNTS "Completed steps: %llu / %llu (including recovery saves)"
+    IDS_PROGRESS_BYTES "Copied: %s; verification reads: %s"
+    IDS_PROGRESS_ELAPSED "Elapsed: %llu:%02u:%02u"
+    IDS_STORED_COPY_ORIGINAL_MENU "Copy original path to clipboard\tCtrl+C"
+    IDS_STORED_COPY_SAVED_MENU "Copy saved path to clipboard\tCtrl+Shift+C"
+    IDS_STORED_OPEN_ORIGINAL_MENU "Open original directory in Explorer"
+    IDS_STORED_OPEN_SAVED_MENU "Open saved directory in Explorer"
+END
+
+IDD_TRANSFER_PROGRESS DIALOGEX 0, 0, 355, 154
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Synchronization progress"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    RTEXT "From:", -1, 7, 9, 40, 10
+    LTEXT "", IDC_TRANSFER_SOURCE, 52, 9, 296, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
+    RTEXT "To:", -1, 7, 23, 40, 10
+    LTEXT "", IDC_TRANSFER_TARGET, 52, 23, 296, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
+    LTEXT "", IDC_TRANSFER_PHASE, 7, 40, 341, 10
+    RTEXT "File:", -1, 7, 57, 40, 10
+    CONTROL "", IDC_TRANSFER_FILE_BAR, "msctls_progress32", WS_BORDER, 52, 55, 244, 12
+    RTEXT "", IDC_TRANSFER_FILE_PERCENT, 300, 57, 48, 10
+    RTEXT "Total:", -1, 7, 74, 40, 10
+    CONTROL "", IDC_TRANSFER_TOTAL_BAR, "msctls_progress32", WS_BORDER, 52, 72, 244, 12
+    RTEXT "", IDC_TRANSFER_TOTAL_PERCENT, 300, 74, 48, 10
+    LTEXT "", IDC_TRANSFER_COUNTS, 7, 91, 341, 10
+    LTEXT "", IDC_TRANSFER_BYTES, 7, 104, 341, 21
+    LTEXT "", IDC_TRANSFER_ELAPSED, 7, 136, 270, 10
+    DEFPUSHBUTTON "Stop", IDCANCEL, 286, 133, 62, 14, WS_TABSTOP
 END

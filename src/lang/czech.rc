@@ -104,6 +104,7 @@ BEGIN
     LTEXT "Adresář &obnovy:", IDC_RECOVERY_LABEL, 7, 246, 76, 10
     EDITTEXT IDC_RECOVERY_ROOT, 86, 243, 195, 14, ES_AUTOHSCROLL
     PUSHBUTTON "...", IDC_BROWSE_RECOVERY, 285, 243, 14, 14
+    PUSHBUTTON "Uložené originály...", IDC_STORED_ORIGINALS, 7, 267, 116, 14
     DEFPUSHBUTTON "OK", IDOK, 169, 267, 62, 14
     PUSHBUTTON "Storno", IDCANCEL, 237, 267, 62, 14
 END
@@ -208,4 +209,102 @@ BEGIN
     IDS_SYNC_NEW_COUNTS "Nové kopie (soubory / adresáře)"
     IDS_SYNC_DELETE_COUNTS "Mazání (soubory / adresáře)"
     IDS_SYNC_REPLACED "Přepisy (hotové / plánované)"
+END
+
+IDD_STORED_ORIGINALS DIALOGEX 0, 0, 500, 292
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX
+CAPTION "Uložené originály"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "Běhy:", -1, 7, 7, 486, 10
+    CONTROL "", IDC_STORED_RUNS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 19, 486, 66
+    LTEXT "Položky (podrobnosti dvojklikem):", -1, 7, 91, 486, 10
+    CONTROL "", IDC_STORED_ITEMS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 103, 486, 138
+    LTEXT "", IDC_STORED_SUMMARY, 7, 247, 486, 17
+    PUSHBUTTON "Aktualizovat", IDC_STORED_REFRESH, 7, 271, 65, 14
+    PUSHBUTTON "Původní cesta", IDC_STORED_COPY_ORIGINAL, 76, 271, 70, 14
+    PUSHBUTTON "Uložená cesta", IDC_STORED_COPY_SAVED, 150, 271, 70, 14
+    PUSHBUTTON "Původní adresář", IDC_STORED_OPEN_ORIGINAL, 224, 271, 90, 14
+    PUSHBUTTON "Adresář kopie", IDC_STORED_OPEN_SAVED, 318, 271, 90, 14
+    DEFPUSHBUTTON "Zavřít", IDCANCEL, 431, 271, 62, 14
+END
+STRINGTABLE
+BEGIN
+    IDS_STORED_DATE "Vytvořeno"
+    IDS_STORED_RUN "Běh"
+    IDS_STORED_STATE "Stav"
+    IDS_STORED_ORIGINAL "Původní cesta"
+    IDS_STORED_SAVED "Uložená cesta"
+    IDS_STORED_SIZE "Velikost"
+    IDS_STORED_COPY "Kopie pro obnovu"
+    IDS_STORED_OPERATION "Výsledek operace"
+    IDS_STORED_NOTE "Pouze čtení. Kopie se znovu neověřují."
+    IDS_STORED_LOADING "Načítání záznamů obnovy..."
+    IDS_STORED_EMPTY "Nenalezeny žádné běhy obnovy."
+    IDS_STORED_INCOMPLETE "Neúplný"
+    IDS_STORED_COMPLETE "Manifest dokončen"
+    IDS_STORED_DAMAGED "Nečitelný / poškozený"
+    IDS_STORED_UNKNOWN "Nepotvrzeno"
+    IDS_STORED_RECORDED "Uloženo podle záznamu"
+    IDS_STORED_MISSING "Chybí / nedostupné"
+    IDS_STORED_DIFFERENT "Jiná velikost / typ"
+    IDS_STORED_UNSAFE "Mimo běh / reparse"
+    IDS_STORED_REPLACED "Přepsáno podle záznamu"
+    IDS_STORED_DELETED "Smazáno podle záznamu"
+    IDS_STORED_NOT_STARTED "Nezahájeno podle záznamu"
+    IDS_STORED_FAILED "Chyba podle záznamu"
+    IDS_STORED_CANCELLED "Zastaveno podle záznamu"
+    IDS_STORED_LIMIT "Dosažen limit zobrazení."
+    IDS_STORED_OPEN_ERROR "Adresář není dostupný nebo obsahuje reparse bod. Cestu lze zkopírovat pro ruční kontrolu."
+    IDS_STORED_COPY_RUN "Kopírovat cestu běhu do schránky"
+    IDS_STORED_OPEN_RUN "Otevřít adresář běhu v Průzkumníku"
+    IDS_STORED_COPY_MANIFEST "Kopírovat cestu manifestu do schránky"
+    IDS_STORED_UNSUPPORTED "Nepodporovaná verze záznamu"
+    IDS_STORED_COUNTS "Běhy: %llu; položky: %llu"
+    IDS_STORED_LEFT "Levý adresář"
+    IDS_STORED_RIGHT "Pravý adresář"
+    IDS_STORED_MANIFEST "Manifest"
+    IDS_STORED_ERROR "Kód chyby"
+    IDS_REPORT_EXPORT "Exportovat porovnání a výsledky..."
+    IDS_REPORT_CSV "Protokol CSV (*.csv)"
+    IDS_REPORT_TEXT "Textový protokol (*.txt)"
+    IDS_REPORT_FAILED "Protokol nelze exportovat"
+    IDS_REPORT_SAVED "Protokol uložen:"
+    IDS_REPORT_POLICY "Vyberte existující adresář mimo oba porovnávané stromy a adresář obnovy. Protokol obsahuje cesty a podrobnosti porovnání. Export neprovádí synchronizaci."
+    IDS_REPORT_HELP "Exportuje všechny porovnané řádky včetně skrytých a vynechaných položek a zaznamenané výsledky poslední operace. Zvýraznění export neomezuje."
+    IDS_PROGRESS_PREPARE "Příprava metadat"
+    IDS_PROGRESS_VERIFY "Ověřování dat"
+    IDS_PROGRESS_PUBLISH "Dokončení zápisu"
+    IDS_PROGRESS_FINISH "Dokončování / kontrola další etapy"
+    IDS_PROGRESS_DATA "Přenos dat"
+    IDS_PROGRESS_RECYCLE "Přesun do Koše"
+    IDS_PROGRESS_COUNTS "Dokončené kroky: %llu / %llu (včetně uchování originálů)"
+    IDS_PROGRESS_BYTES "Zkopírováno: %s; načteno při ověřování: %s"
+    IDS_PROGRESS_ELAPSED "Uplynulo: %llu:%02u:%02u"
+    IDS_STORED_COPY_ORIGINAL_MENU "Kopírovat původní cestu do schránky\tCtrl+C"
+    IDS_STORED_COPY_SAVED_MENU "Kopírovat uloženou cestu do schránky\tCtrl+Shift+C"
+    IDS_STORED_OPEN_ORIGINAL_MENU "Otevřít původní adresář v Průzkumníku"
+    IDS_STORED_OPEN_SAVED_MENU "Otevřít adresář kopie v Průzkumníku"
+END
+
+IDD_TRANSFER_PROGRESS DIALOGEX 0, 0, 355, 154
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Průběh synchronizace"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    RTEXT "Z:", -1, 7, 9, 40, 10
+    LTEXT "", IDC_TRANSFER_SOURCE, 52, 9, 296, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
+    RTEXT "Do:", -1, 7, 23, 40, 10
+    LTEXT "", IDC_TRANSFER_TARGET, 52, 23, 296, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
+    LTEXT "", IDC_TRANSFER_PHASE, 7, 40, 341, 10
+    RTEXT "Soubor:", -1, 7, 57, 40, 10
+    CONTROL "", IDC_TRANSFER_FILE_BAR, "msctls_progress32", WS_BORDER, 52, 55, 244, 12
+    RTEXT "", IDC_TRANSFER_FILE_PERCENT, 300, 57, 48, 10
+    RTEXT "Celkem:", -1, 7, 74, 40, 10
+    CONTROL "", IDC_TRANSFER_TOTAL_BAR, "msctls_progress32", WS_BORDER, 52, 72, 244, 12
+    RTEXT "", IDC_TRANSFER_TOTAL_PERCENT, 300, 74, 48, 10
+    LTEXT "", IDC_TRANSFER_COUNTS, 7, 91, 341, 10
+    LTEXT "", IDC_TRANSFER_BYTES, 7, 104, 341, 21
+    LTEXT "", IDC_TRANSFER_ELAPSED, 7, 136, 270, 10
+    DEFPUSHBUTTON "Zastavit", IDCANCEL, 286, 133, 62, 14, WS_TABSTOP
 END

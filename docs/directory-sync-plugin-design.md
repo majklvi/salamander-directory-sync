@@ -309,3 +309,7 @@ Zachované odkazy jsou u příslušných tvrzení; nahrazené zdroje lze dohleda
 ## Aktualizace profilů pro 0.2.0 (2026-10-18)
 
 Podrobný aktuální návrh a evidence: [Profily](directory-sync-plugin-profiles.md). Podle rozhodnutí uživatele zůstávají uchování originálů i adresář obnovy společné všem profilům; tato volba nahrazuje původní představu adresáře obnovy určeného profilem. Při otevření se načte naposledy použitý uložený profil, bez automatického porovnání nebo synchronizace.
+
+## Přehled uložených originálů pro 0.2.2 (2026-10-19)
+
+První etapa pouze čte existující běhy a jejich položky, odlišuje zaznamenané výsledky od současné dostupnosti kopií a umožňuje kopírovat cesty nebo otevřít adresáře. Nezavádí automatickou obnovu ani úklid záloh. Návrh a meze ověření: [Stored originals](directory-sync-plugin-stored-originals.md). Na následný pokyn uživatele je do 0.2.2 doplněn také export porovnání a výsledků operací včetně filtrů a Skip: [návrh a ověření exportu](directory-sync-plugin-report-export.md). SDK se nemění, SMB se netestuje.
