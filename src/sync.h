@@ -14,6 +14,7 @@ struct SyncReport {
     CopyReport copies;OverwriteReport overwrites;DeleteReport deletions;
     DWORD error=0;
     bool complete=false,cancelled=false,stale=false,keepOriginals=true;
+    bool finished=false; // returned terminal report, including Skip/failure/Stop
 };
 SyncPlan BuildSyncPlan(const Result& snapshot,const std::vector<size_t>& visible);
 SyncReport Synchronize(Result snapshot,const std::vector<size_t>& visible,bool keepOriginals,

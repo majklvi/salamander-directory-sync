@@ -1016,12 +1016,15 @@ SyncPlan BuildSyncPlan(const Result& snapshot,const std::vector<size_t>& visible
 SyncReport Synchronize(Result snapshot,const std::vector<size_t>& visible,bool keepOriginals,
     const std::wstring& recoveryRoot,std::atomic<bool>& cancel,Progress& checking,CopyProgress& progress,std::atomic<SyncStage>& stage)
 {
-    // Combined phase continuation is a later stage. Even an internal caller
-    // supplying a prompt must retain the current stop-first contract here.
-    struct PolicyScope {bool& value;bool previous;~PolicyScope(){value=previous;}} policy{progress.errors.stopOnFirstError,progress.errors.stopOnFirstError};
-    progress.errors.stopOnFirstError=true;
+    // One user command spans every phase. Retain matching Skip all decisions
+    // across its adapters, but never inherit them from a previous command.
+    progress.errors.skipped.clear();
     SyncReport report;report.plan=BuildSyncPlan(snapshot,visible);report.keepOriginals=keepOriginals;stage=SyncStage::Checking;
-    auto finish=[&]() {report.cancelled=report.cancelled || cancel.load();stage=SyncStage::Finished;Phase(progress,CopyPhase::Finished,L"");return report;};
+    auto finish=[&]() {
+        report.cancelled=report.cancelled || cancel.load();
+        if(report.cancelled){report.complete=false;if(!report.error)report.error=ERROR_CANCELLED;}
+        stage=SyncStage::Finished;Phase(progress,CopyPhase::Finished,L"");report.finished=true;return std::move(report);
+    };
     try {
         if(!report.plan.Count()) {report.complete=true;return finish();}
         Control(cancel,progress);
@@ -1036,18 +1039,29 @@ SyncReport Synchronize(Result snapshot,const std::vector<size_t>& visible,bool k
         auto checkpoint=[&](const std::vector<size_t>& pending) {
             if(!progress.Checkpoint(cancel)) {report.cancelled=true;report.error=ERROR_CANCELLED;return false;}
             if(!AdvanceExecutionSnapshot(snapshot,pending,cancel,checking)) {
-                report.stale=true;report.error=ERROR_FILE_INVALID;return false;
+                report.cancelled=cancel.load();report.stale=!report.cancelled;
+                report.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;return false;
             }
             return true;
+        };
+        bool allCompleted=true;
+        auto copySettled=[&](const std::vector<CopyOutcome>& items,size_t expected) {
+            bool settled=items.size()==expected;
+            for(const auto& item:items) {
+                if(item.status!=CopyStatus::Copied)allCompleted=false;
+                if(item.status!=CopyStatus::Copied && item.status!=CopyStatus::Skipped && item.status!=CopyStatus::DependencyBlocked) {
+                    settled=false;if(!report.error)report.error=item.error?item.error:ERROR_FILE_INVALID;
+                }
+            }
+            if(!settled && !report.error)report.error=ERROR_FILE_INVALID;return settled;
         };
         if(!report.plan.copies.empty()) {
             stage=SyncStage::NewItems;
             report.copies=CopyNewFiles(snapshot,report.plan.copies,cancel,checking,progress);
             report.stale=report.copies.stale;report.cancelled=report.copies.cancelled;
-            for(const auto& item:report.copies.items) if(item.error) {report.error=item.error;break;}
-            if(report.stale || report.cancelled || std::any_of(report.copies.items.begin(),report.copies.items.end(),
-                [](const CopyOutcome& item){return item.status!=CopyStatus::Copied;})) {
-                if(!report.error) report.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;return finish();
+            const bool settled=copySettled(report.copies.items,report.plan.copies.size());
+            if(report.stale || report.cancelled || !settled) {
+                if(!report.error)report.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;return finish();
             }
         }
         if(!report.plan.overwrites.empty()) {
@@ -1055,15 +1069,28 @@ SyncReport Synchronize(Result snapshot,const std::vector<size_t>& visible,bool k
             if(!checkpoint(pending)) return finish();stage=SyncStage::Overwrites;
             report.overwrites=OverwriteFiles(snapshot,report.plan.overwrites,keepOriginals,recoveryRoot,cancel,checking,progress);
             report.stale=report.overwrites.stale;report.cancelled=report.overwrites.cancelled;
-            if(!report.overwrites.complete) {report.error=report.overwrites.error?report.overwrites.error:ERROR_FILE_INVALID;return finish();}
+            report.error=report.overwrites.error;
+            const bool settled=copySettled(report.overwrites.items,report.plan.overwrites.size());
+            if(report.stale || report.cancelled || report.error || !settled) {
+                if(!report.error)report.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;return finish();
+            }
         }
         if(!report.plan.deletions.empty()) {
             if(!checkpoint(report.plan.deletions)) return finish();stage=SyncStage::Deletions;
             report.deletions=DeleteFiles(snapshot,report.plan.deletions,keepOriginals,recoveryRoot,cancel,checking,progress);
             report.stale=report.deletions.stale;report.cancelled=report.deletions.cancelled;
-            if(!report.deletions.complete) {report.error=report.deletions.error?report.deletions.error:ERROR_FILE_INVALID;return finish();}
+            report.error=report.deletions.error;bool settled=report.deletions.items.size()==report.plan.deletions.size();
+            for(const auto& item:report.deletions.items) {
+                if(item.status!=DeleteStatus::Deleted)allCompleted=false;
+                if(item.status!=DeleteStatus::Deleted && item.status!=DeleteStatus::Skipped && item.status!=DeleteStatus::DependencyBlocked) {
+                    settled=false;if(!report.error)report.error=item.error?item.error:ERROR_FILE_INVALID;
+                }
+            }
+            if(report.stale || report.cancelled || report.error || !settled) {
+                if(!report.error)report.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;return finish();
+            }
         }
-        report.complete=!cancel.load();if(!report.complete) report.error=ERROR_CANCELLED;
+        report.complete=allCompleted && !cancel.load();
     } catch(const Failure& failure) {report.error=failure.error;}
     catch(...) {report.error=ERROR_NOT_ENOUGH_MEMORY;}
     return finish();

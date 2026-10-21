@@ -200,10 +200,10 @@ BEGIN
     IDS_PROFILE_IMPORT_TITLE "Import profilů"
     IDS_PROFILE_EXPORT_TITLE "Export všech profilů"
     IDS_SYNC_COMMAND "&Provést viditelný plán..."
-    IDS_SYNC_HELP "Po jednom potvrzení provede viditelné nové kopie, potom přepisy a nakonec mazání. První chyba nebo Stop zastaví zbytek dávky."
+    IDS_SYNC_HELP "Po jednom potvrzení provede viditelné nové kopie, potom přepisy a nakonec mazání. Po přeskočení mohou pokračovat nezávislé operace a další etapy. Závažná chyba nebo Stop zastaví zbytek; platí i společná volba zastavení při první chybě."
     IDS_SYNC_CONFIRM "Potvrzení synchronizace"
     IDS_SYNC_RESULT "Výsledek synchronizace"
-    IDS_SYNC_POLICY "Pořadí: nové soubory a prázdné adresáře, přepisy, potom mazání (soubory před prázdnými adresáři od nejhlubších). První chyba nebo Stop zastaví celou zbývající dávku. Dokončené změny zůstanou; automatický návrat není k dispozici. Uchování originálů platí pro přepisy a mazání; při vypnutí nemají kopii pro obnovu v pluginu. Koš se nepoužívá."
+    IDS_SYNC_POLICY "Pořadí: nové soubory a prázdné adresáře, přepisy, potom mazání (soubory před prázdnými adresáři od nejhlubších). Opravitelné chyby položek nabídnou Opakovat / Přeskočit / Přeskočit vše / Zrušit, není-li zapnuté zastavení při první chybě. Přeskočení umožní pokračovat nezávislými operacemi a dalšími etapami. Neuchovaný originál blokuje svou destruktivní operaci, ponechaný potomek chrání rodiče. Závažná chyba, neplatný plán, chyba protokolu nebo Stop zastaví zbytek dávky. Dokončené změny zůstanou; automatický návrat není k dispozici. Uchování originálů platí pro přepisy a mazání; při vypnutí nemají kopii pro obnovu v pluginu. Koš se nepoužívá."
     IDS_SYNC_NEW "Nové kopie (hotové / plánované)"
     IDS_SYNC_OVERWRITE "Přepisy"
     IDS_SYNC_DELETE "Mazání (hotové / plánované)"
@@ -370,7 +370,7 @@ BEGIN
     IDS_ERROR_SOURCE "Kopírování nové položky — čtení zdroje"
     IDS_ERROR_TARGET "Kopírování nové položky — příprava nebo publikace cíle"
     IDS_ERROR_DATA "Kopírování nové položky — přenos dat"
-    IDS_ERROR_POLICY "Zastavit kopírování nových položek, uchování originálů, přepisy a asymetrické mazání při první chybě. Jinak se opravitelné chyby dotazují. Souhrnná synchronizace zatím vždy zastaví při první chybě."
+    IDS_ERROR_POLICY "Zastavit kopírování nových položek, uchování originálů, přepisy a asymetrické mazání při první chybě. Jinak se opravitelné chyby dotazují. Volba platí i pro souhrnnou synchronizaci."
     IDS_ERROR_SKIPPED_NOTE "Dokončeno s přeskočenými položkami; nebyly provedeny všechny plánované operace."
 END
 
@@ -396,4 +396,9 @@ END
 STRINGTABLE
 BEGIN
     IDS_STORED_DEPENDENCY_BLOCKED "Neprovedeno: závislá položka ponechána"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_SYNC_INCOMPLETE "Synchronizace není úplná. Dokončené změny zůstávají; před další operací znovu porovnejte adresáře."
 END

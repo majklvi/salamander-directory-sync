@@ -327,3 +327,7 @@ Na další pokyn uživatele byla doplněna část bodu 3: samostatné uchování
 ### 0.4.0: interactive asymmetric deletion
 
 [Implementation and verification](directory-sync-plugin-delete-errors-040.md): per-item R1–R5 decisions, exact saved-original dependencies, retained-child ancestor protection, and known-removal-aware pending-plan checks. Shared protocol failures and uncertain/finished removals stay fatal. Combined synchronization remains stop-first until its separate continuation stage; no SDK or SMB changes.
+
+### 0.4.0: combined continuation after Skip
+
+[Implementation and verification](directory-sync-plugin-combined-errors-040.md): the same frozen error/recovery policy spans new-item copies, overwrites and deletions. Healthy stages with explicit skips can continue independent confirmed work; failed/cancelled/stale stages and shared protocol failures stop later phases. Preserve exact saved-original and retained-parent dependencies, revalidate future stages, and distinguish skipped/blocked/unstarted final records. No SDK or SMB changes.

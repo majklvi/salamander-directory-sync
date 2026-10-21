@@ -448,10 +448,10 @@ BEGIN
     IDS_PROFILE_IMPORT_TITLE "Import profiles"
     IDS_PROFILE_EXPORT_TITLE "Export all profiles"
     IDS_SYNC_COMMAND "&Execute visible plan..."
-    IDS_SYNC_HELP "Runs visible new copies, then overwrites, then deletions after one confirmation. First error or Stop ends the remaining batch."
+    IDS_SYNC_HELP "Runs visible new copies, then overwrites, then deletions after one confirmation. Skip can continue independent work and later phases. Fatal errors or Stop end the remaining batch; the global stop-at-first-error setting also applies."
     IDS_SYNC_CONFIRM "Confirm synchronization"
     IDS_SYNC_RESULT "Synchronization result"
-    IDS_SYNC_POLICY "Order: new files and empty directories, overwrites, then deletions (files before empty directories, deepest first). The first error or Stop ends the entire remaining batch. Completed changes stay; no automatic rollback. Keep originals applies to overwrites and deletions; when OFF these have no plugin recovery copy. The Recycle Bin is not used."
+    IDS_SYNC_POLICY "Order: new files and empty directories, overwrites, then deletions (files before empty directories, deepest first). Recoverable item errors ask for Retry / Skip / Skip all / Cancel unless Stop at first error is enabled. Skip permits independent operations and later phases; an unsaved original blocks its destructive operation and retained children protect their parents. Fatal errors, invalid plans, protocol failures and Stop end the remaining batch. Completed changes stay; no automatic rollback. Keep originals applies to overwrites and deletions; when OFF these have no plugin recovery copy. The Recycle Bin is not used."
     IDS_SYNC_NEW "New copies (completed / planned)"
     IDS_SYNC_OVERWRITE "Overwrites"
     IDS_SYNC_DELETE "Deletions (completed / planned)"
@@ -618,7 +618,7 @@ BEGIN
     IDS_ERROR_SOURCE "Copy new item — read source"
     IDS_ERROR_TARGET "Copy new item — prepare or publish target"
     IDS_ERROR_DATA "Copy new item — transfer data"
-    IDS_ERROR_POLICY "Stop new-item copying, saving originals, overwrites and asymmetric deletion at the first error. Otherwise, recoverable errors ask for a decision. Combined synchronization currently always stops at the first error."
+    IDS_ERROR_POLICY "Stop new-item copying, saving originals, overwrites and asymmetric deletion at the first error. Otherwise, recoverable errors ask for a decision. This preference also applies to combined synchronization."
     IDS_ERROR_SKIPPED_NOTE "Finished with skipped items; not all planned operations were completed."
 END
 
@@ -644,4 +644,9 @@ END
 STRINGTABLE
 BEGIN
     IDS_STORED_DEPENDENCY_BLOCKED "Not executed: prerequisite or child retained"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_SYNC_INCOMPLETE "The synchronization is incomplete. Completed changes remain; Compare again before another operation."
 END

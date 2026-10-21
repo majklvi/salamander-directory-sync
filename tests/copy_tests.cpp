@@ -912,7 +912,7 @@ void CombinedSynchronization() {
         auto report=Synchronize(snapshot,visible,false,L"",f.cancel,f.checking,f.progress,stage);SetCopyHook({});
         CompleteReport(exported,report);
         Check(!exported.complete && exported.cancelled==report.cancelled && exported.stale==report.stale &&
-            std::all_of(exported.items.begin(),exported.items.end(),[](const ReportOperation& item){return item.kind!=L"delete" || (!item.changed && !item.completed && item.status==L"not_reported");}),
+            std::all_of(exported.items.begin(),exported.items.end(),[](const ReportOperation& item){return item.kind!=L"delete" || (!item.changed && !item.completed && item.status==L"not_started");}),
             "real Stop/failure/stale export does not fabricate later deletion results");
         if(report.complete || !report.error || !report.deletions.items.empty()) std::cerr<<"combined scenario "<<scenario<<" complete="<<report.complete<<" error="<<report.error<<" deletes="<<report.deletions.items.size()<<" cancel="<<report.cancelled<<"\n";
         Check(!report.complete && report.error && report.deletions.items.empty(),"failure, Stop or changed pending item prevents later deletion phase");
@@ -1478,7 +1478,7 @@ void InteractiveOriginalsAndOverwrites() {
         Fixture f;Put(f.left+L"\\a","NEW");Put(f.right+L"\\a","OLD DATA");auto plan=OverwritePlan(f);HeldFile source(f.left+L"\\a");unsigned prompts=0;
         f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::Skip;};std::atomic<SyncStage> stage{SyncStage::Checking};
         auto report=Synchronize(plan,{0},false,L"",f.cancel,f.checking,f.progress,stage);
-        Check(!report.complete && report.error && !prompts && !f.progress.errors.stopOnFirstError,"combined command stays noninteractive and restores caller policy");
+        Check(!report.complete && !report.error && prompts==1 && report.overwrites.items[0].status==CopyStatus::Skipped && !f.progress.errors.stopOnFirstError,"combined command honors interactive policy without changing caller settings");
     }
 }
 
@@ -1594,10 +1594,126 @@ void InteractiveDeletion() {
         Check(Exists(f.right+L"\\a")== (fault==0) && Exists(f.right+L"\\b")== (fault!=2),"journal failure reports real prior deletion effects");
     }
 }
+
+Result InteractiveSyncPlan(Fixture& f,std::vector<size_t>& visible) {
+    auto plan=DirectoryPlan(f);
+    for(size_t i=0;i<plan.rows.size();++i){visible.push_back(i);auto& row=plan.rows[i];
+        if(row.hasLeft && row.hasRight && !row.left.directory && !row.right.directory)row.action=Action::CopyRight;}
+    return plan;
+}
+void InteractiveCombined() {
+    {
+        Fixture f;Put(f.left+L"\\new","NEW");std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);
+        ReportContext context;context.left=f.left;context.right=f.right;context.visible=visible;auto batch=PrepareReport(plan,context,L"combined",false,L"");
+        SyncReport unknown;CompleteReport(batch,unknown);Check(!batch.items.empty() && batch.items[0].status==L"not_reported","missing worker report is unknown rather than fabricated not-started result");
+    }
+    for(bool keep:{false,true}) {
+        Fixture f;const auto recovery=f.root+L"\\recovery-漢字";f.Dir(recovery);f.Dir(f.left+L"\\new-empty");
+        Put(f.left+L"\\0-new-ok","NEW");for(auto n:{L"1-new-lock",L"2-new-lock"})Put(f.left+L"\\"+n,"LOCK");
+        for(auto n:{L"3-overwrite-ok",L"4-overwrite-lock",L"5-overwrite-lock"}){Put(f.left+L"\\"+n,"NEW DATA");Put(f.right+L"\\"+n,"OLD");}
+        f.Dir(f.right+L"\\tree");f.Dir(f.right+L"\\tree\\nested");
+        for(auto n:{L"a-lock",L"b-lock"})Put(f.right+L"\\tree\\nested\\"+n,"KEEP");Put(f.right+L"\\z-independent","DELETE");
+        std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);
+        HeldFile newA(f.left+L"\\1-new-lock"),newB(f.left+L"\\2-new-lock"),overwriteA(f.left+L"\\4-overwrite-lock"),overwriteB(f.left+L"\\5-overwrite-lock");
+        DeleteLock deleteA(f.right+L"\\tree\\nested\\a-lock"),deleteB(f.right+L"\\tree\\nested\\b-lock");std::vector<TransferKind> prompts;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){prompts.push_back(error.kind);return ErrorDecision::SkipAll;};
+        std::atomic<SyncStage> stage{SyncStage::Checking};auto report=Synchronize(plan,visible,keep,recovery,f.cancel,f.checking,f.progress,stage);
+        Check(!report.complete && !report.error && !report.stale && !report.cancelled && stage==SyncStage::Finished,"combined skipped phases finish without fatal or false all-success");
+        Check(prompts==std::vector<TransferKind>{TransferKind::Copy,TransferKind::Overwrite,TransferKind::Delete},"Skip all stays operation-specific across combined phases");
+        Check(Read(f.right+L"\\0-new-ok")=="NEW" && Exists(f.right+L"\\new-empty") && Read(f.right+L"\\3-overwrite-ok")=="NEW DATA" && !Exists(f.right+L"\\z-independent"),"independent copies overwrites and deletions continue in order after Skip");
+        unsigned skipped=0,automatic=0,blocked=0;
+        for(const auto* items:{&report.copies.items,&report.overwrites.items})for(const auto& item:*items){if(item.status==CopyStatus::Skipped)++skipped;if(item.automaticSkip)++automatic;}
+        for(const auto& item:report.deletions.items){if(item.status==DeleteStatus::Skipped)++skipped;if(item.automaticSkip)++automatic;if(item.status==DeleteStatus::DependencyBlocked){++blocked;Check(!item.removed && item.attempts==0 && !item.blockedBy.empty(),"combined retained-parent dependency is never attempted");}}
+        Check(skipped==6 && automatic==3 && blocked==2,"combined results count explicit automatic skips and both ancestors");
+        if(keep){Check(report.overwrites.recovery.complete && report.deletions.recovery.complete,"all originals retained although destructive actions skipped");auto catalog=ReadRecoveryCatalog(recovery,f.cancel);Check(!catalog.error && catalog.runs.size()==2 && !catalog.runs[0].error && !catalog.runs[1].error,"combined skipped recovery sessions remain readable");}
+        else Check(report.overwrites.journal.empty() && report.deletions.journal.empty(),"combined OFF creates no recovery journals");
+        ReportContext context;context.left=f.left;context.right=f.right;context.visible=visible;auto batch=PrepareReport(plan,context,L"combined",keep,recovery);CompleteReport(batch,report);
+        Check(!batch.complete && std::none_of(batch.items.begin(),batch.items.end(),[](const ReportOperation& item){return item.status==L"not_reported" || item.status==L"not_started";}),"settled skipped batch has no fabricated pending operations");
+        auto csv=RenderReport(plan,context,&batch,true),text=RenderReport(plan,context,&batch,false);
+        Check(csv.find(L"dependency_blocked")!=std::wstring::npos && text.find(L"automatic_skip: true")!=std::wstring::npos && text.find(L"blocked_by:")!=std::wstring::npos,"combined exports preserve execution and dependency outcomes");
+        f.NoStaging(f.right);
+    }
+    {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.left+L"\\new","NEW");
+        for(auto n:{L"a-overwrite-lock",L"b-overwrite-ok"}){Put(f.left+L"\\"+n,"REPLACEMENT");Put(f.right+L"\\"+n,"ORIGINAL");}
+        f.Dir(f.right+L"\\tree");Put(f.right+L"\\tree\\lock","KEEP");Put(f.right+L"\\z-independent","DELETE");
+        std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);HeldFile original(f.right+L"\\a-overwrite-lock"),child(f.right+L"\\tree\\lock");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.kind==TransferKind::Save,"combined saving-only Skip all context");return ErrorDecision::SkipAll;};
+        std::atomic<SyncStage> stage{SyncStage::Checking};auto report=Synchronize(plan,visible,true,recovery,f.cancel,f.checking,f.progress,stage);
+        Check(prompts==1 && !report.error && !report.complete && report.overwrites.recovery.processed && report.deletions.recovery.processed,"matching saving Skip all persists into deletion preservation phase");
+        Check(report.overwrites.items[0].status==CopyStatus::DependencyBlocked && report.deletions.recovery.items[0].copy.automaticSkip &&
+            Read(f.right+L"\\b-overwrite-ok")=="REPLACEMENT" && !Exists(f.right+L"\\z-independent") && Exists(f.right+L"\\tree"),"skipped originals block exact writes and ancestors without stopping unrelated later work");
+    }
+    for(bool keep:{false,true})for(bool afterOverwrite:{false,true}) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.left+L"\\new","NEW");Put(f.left+L"\\overwrite","REPLACEMENT");Put(f.right+L"\\overwrite","ORIGINAL");Put(f.right+L"\\delete","KEEP");
+        std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);HeldFile lock(f.left+(afterOverwrite?L"\\overwrite":L"\\new"));
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){Put(f.right+(afterOverwrite?L"\\delete":L"\\overwrite"),"EXTERNAL LONGER DATA",false);return ErrorDecision::Skip;};
+        std::atomic<SyncStage> stage{SyncStage::Checking};auto report=Synchronize(plan,visible,keep,recovery,f.cancel,f.checking,f.progress,stage);
+        Check(report.stale && report.error==ERROR_FILE_INVALID && !report.complete && report.deletions.items.empty() && (afterOverwrite || report.overwrites.items.empty()),"skipping earlier error cannot adopt changed future phase targets");
+    }
+    for(bool keep:{false,true})for(bool close:{false,true})for(int at=0;at<5;++at) {
+        if(!keep && (at==1 || at==3))continue;
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.left+L"\\new","NEW");Put(f.left+L"\\overwrite","REPLACEMENT");Put(f.right+L"\\overwrite","ORIGINAL");
+        f.Dir(f.right+L"\\tree");Put(f.right+L"\\tree\\delete","KEEP");std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);
+        std::unique_ptr<HeldFile> copyLock;std::unique_ptr<DeleteLock> deleteLock;
+        if(at==4)deleteLock=std::make_unique<DeleteLock>(f.right+L"\\tree\\delete");
+        else copyLock=std::make_unique<HeldFile>((at==0 || at==2?f.left:f.right)+(at==0?L"\\new":at==3?L"\\tree\\delete":L"\\overwrite"));
+        ErrorQuestion question;std::atomic<bool> posted{false},done{false};std::atomic<SyncStage> stage{SyncStage::Checking};SyncReport report;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){Check(error.kind==(at==0?TransferKind::Copy:at==2?TransferKind::Overwrite:at==4?TransferKind::Delete:TransferKind::Save),"combined waiting operation context");return question.Ask(error,f.cancel,[&]{posted=true;return true;});};
+        ControlWorker worker(f);worker.thread=std::thread([&]{report=Synchronize(plan,visible,keep,recovery,f.cancel,f.checking,f.progress,stage);done=true;});
+        Check(WaitForControl([&]{return posted.load();},done),"combined worker waits in requested phase");if(close)question.Cancel();else f.cancel=true;
+        const bool ended=WaitForControl([&]{return done.load();},done);question.Cancel();worker.Join();copyLock.reset();deleteLock.reset();
+        Check(ended && report.cancelled && !report.complete && stage==SyncStage::Finished && Exists(f.right+L"\\tree\\delete"),"Stop/Close ends combined wait and preserves unremoved child and parent");
+        Check(Exists(f.right+L"\\new")== (at!=0) && Read(f.right+L"\\overwrite")== (at>=3?"REPLACEMENT":"ORIGINAL"),"combined cancellation preserves exactly earlier completed phases");
+        ReportContext context;context.left=f.left;context.right=f.right;context.visible=visible;auto batch=PrepareReport(plan,context,L"combined",keep,recovery);CompleteReport(batch,report);
+        Check(batch.cancelled && !batch.complete && std::none_of(batch.items.begin(),batch.items.end(),[](const ReportOperation& item){return item.status==L"not_reported";}),"combined cancellation exports remaining planned operations as not started");
+    }
+    for(int fault=0;fault<3;++fault) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.left+L"\\new","NEW");Put(f.left+L"\\overwrite","REPLACEMENT");Put(f.right+L"\\overwrite","ORIGINAL");Put(f.right+L"\\delete","KEEP");
+        std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);std::atomic<SyncStage> stage{SyncStage::Checking};unsigned prompts=0;bool overwrite=false,deleting=false;
+        SetRecoveryLogHook([&](const std::wstring& line)->DWORD {if(line.find(L"\"operation\":\"overwrite\"")!=std::wstring::npos)overwrite=true;if(line.find(L"\"operation\":\"delete_right\"")!=std::wstring::npos)deleting=true;
+            bool result=line.find(L"\"event\":\"result\"")!=std::wstring::npos;
+            return result && ((fault==0 && !overwrite && stage==SyncStage::Overwrites) || (fault==1 && overwrite && !deleting) || (fault==2 && deleting))?ERROR_WRITE_FAULT:0;});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::SkipAll;};
+        auto report=Synchronize(plan,visible,true,recovery,f.cancel,f.checking,f.progress,stage);SetRecoveryLogHook({});
+        Check(!prompts && report.error==ERROR_WRITE_FAULT && !report.complete && Read(f.right+L"\\new")=="NEW" && Read(f.right+L"\\overwrite")== (fault==0?"ORIGINAL":"REPLACEMENT") && Exists(f.right+L"\\delete")== (fault!=2),"shared-protocol failure stops combined batch with truthful prior effects");
+    }
+    for(bool keep:{false,true})for(auto kind:{TransferKind::Copy,TransferKind::Save,TransferKind::Overwrite,TransferKind::Delete})for(bool verify:{false,true}) {
+        if((!keep && kind==TransferKind::Save) || (verify && kind==TransferKind::Delete))continue;
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.left+L"\\new","NEW");Put(f.left+L"\\overwrite","REPLACEMENT");Put(f.right+L"\\overwrite","ORIGINAL");Put(f.right+L"\\delete","KEEP");
+        std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);std::atomic<SyncStage> stage{SyncStage::Checking};bool reached=false;unsigned prompts=0;
+        SetCopyHook([&](CopyPhase phase,const std::wstring&){if(!reached && f.progress.Display().kind==kind && phase==(kind==TransferKind::Delete?CopyPhase::Deleting:verify?CopyPhase::Verifying:CopyPhase::Copying)){reached=true;f.cancel=true;}});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::Skip;};
+        auto report=Synchronize(plan,visible,keep,recovery,f.cancel,f.checking,f.progress,stage);SetCopyHook({});
+        Check(reached && !prompts && report.cancelled && !report.complete && Exists(f.right+L"\\delete"),"active transfer/Verify Stop does not enter later combined destructive phases");
+    }
+    for(bool keep:{false,true})for(int fault=0;fault<3;++fault) {
+        if(fault==2 && !keep)continue;
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.left+L"\\0-new-ok","NEW");Put(f.left+L"\\1-new-lock","SKIP");
+        Put(f.left+L"\\overwrite","REPLACEMENT");Put(f.right+L"\\overwrite","ORIGINAL");Put(f.right+L"\\delete","KEEP");
+        std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);HeldFile lock(f.left+L"\\1-new-lock");unsigned prompts=0;bool reached=false;
+        SetCopyHook([&](CopyPhase phase,const std::wstring& path){if(!reached && f.progress.Display().kind==TransferKind::Overwrite && phase==(fault==0?CopyPhase::Verifying:CopyPhase::Published)) {
+            if(fault==0){reached=true;Put(path,"CORRUPTED",false);}if(fault==1){reached=true;throw std::runtime_error("post-publication failure");}}});
+        if(fault==2)SetRecoveryLogHook([&](const std::wstring& line)->DWORD{if(line.find(L"\"operation\":\"overwrite\"")!=std::wstring::npos){reached=true;return ERROR_WRITE_FAULT;}return 0;});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.kind==TransferKind::Copy,"only initial recoverable copy prompts");return ErrorDecision::SkipAll;};
+        std::atomic<SyncStage> stage{SyncStage::Checking};auto report=Synchronize(plan,visible,keep,recovery,f.cancel,f.checking,f.progress,stage);SetCopyHook({});SetRecoveryLogHook({});
+        Check(reached && prompts==1 && report.error && !report.complete && report.deletions.items.empty() && Read(f.right+L"\\delete")=="KEEP" &&
+            Read(f.right+L"\\overwrite")== (fault==1?"REPLACEMENT":"ORIGINAL"),"fatal verification/publication/protocol error after Skip still prevents all later phases");
+        Check(Read(f.right+L"\\0-new-ok")=="NEW" && report.copies.items[1].status==CopyStatus::Skipped,"earlier completed copy and explicit Skip remain truthful after fatal later error");
+    }
+    for(bool stopFirst:{false,true}) {
+        Fixture f;Put(f.left+L"\\new","LOCKED");Put(f.right+L"\\delete","KEEP");std::vector<size_t> visible;auto plan=InteractiveSyncPlan(f,visible);HeldFile lock(f.left+L"\\new");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=stopFirst;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::SkipAll;};std::atomic<SyncStage> stage{SyncStage::Checking};
+        auto report=Synchronize(plan,visible,false,L"",f.cancel,f.checking,f.progress,stage);
+        Check(!report.complete && prompts==unsigned(!stopFirst) && Exists(f.right+L"\\delete")==stopFirst && f.progress.errors.stopOnFirstError==stopFirst,"combined command preserves chosen stop-first or interactive policy");
+        if(!stopFirst){auto next=DirectoryPlan(f);visible.clear();for(size_t i=0;i<next.rows.size();++i)visible.push_back(i);
+            report=Synchronize(next,visible,false,L"",f.cancel,f.checking,f.progress,stage);Check(prompts==2,"a new combined command resets previous Skip all decisions");}
+    }
+}
 int main() {
     try { Success(); Scope(); ModifyOnlyDestination(); Boundaries(); Paths(); AfterPublication(); DiskSpace();
         RecoverySuccess(); RecoveryFailures(); RecoveryPaths(); OverwriteSuccess(); OverwriteFailures(); OverwritePaths();
-        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();InteractiveErrors();InteractiveOriginalsAndOverwrites();InteractiveDeletion();
+        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();InteractiveErrors();InteractiveOriginalsAndOverwrites();InteractiveDeletion();InteractiveCombined();
         std::cout<<checks<<" copy/recovery/overwrite/delete assertions passed\n"; return 0; }
     catch(const std::exception& e) { std::cerr<<"FAILED: "<<e.what()<<"\n"; return 1; }
 }

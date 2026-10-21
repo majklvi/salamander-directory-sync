@@ -1,5 +1,7 @@
 # Interactive asymmetric deletion — 0.4.0
 
+**Historical checkpoint.** The subsequent [combined synchronization checkpoint](directory-sync-plugin-combined-errors-040.md) implements continuation between phases. Scope statements below describe this earlier commit.
+
 Implemented and verified on 2026-10-21, following approved [R1–R5](directory-sync-plugin-error-handling.md) and the [original-preservation/overwrite checkpoint](directory-sync-plugin-original-errors-040.md). Source baseline: `be3b5303a515084ff847b273f641aca4c42bd189`.
 
 ## Scope and decisions

@@ -2004,12 +2004,14 @@ void Summary(Preview& p)
 }
 void SyncSummary(Preview& p)
 {
-    const auto& report=p.syncReport;uint64_t copied=0,replaced=0,deleted=0,failed=0;std::wstring details;
+    const auto& report=p.syncReport;uint64_t copied=0,replaced=0,deleted=0,failed=0,skipped=0,blocked=0;std::wstring details;
     auto copies=[&](const auto& items,uint64_t& completed) {
         for(const auto& item:items) {
             if(item.status==dirsync::CopyStatus::Copied) ++completed;
+            else if(item.status==dirsync::CopyStatus::Skipped)++skipped;
+            else if(item.status==dirsync::CopyStatus::DependencyBlocked)++blocked;
             else if(item.status!=dirsync::CopyStatus::NotStarted) ++failed;
-            if(item.error && details.empty()) details=item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error)+
+            if(item.error && details.empty() && item.status!=dirsync::CopyStatus::Skipped && item.status!=dirsync::CopyStatus::DependencyBlocked) details=item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error)+
                 (item.published?L"\n"+Text(IDS_COPY_PUBLISHED_ERROR):L"");
             if(!item.remainingStage.empty()) details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.remainingStage;
         }
@@ -2017,22 +2019,31 @@ void SyncSummary(Preview& p)
     copies(report.copies.items,copied);copies(report.overwrites.items,replaced);
     for(const auto& item:report.deletions.items) {
         if(item.status==dirsync::DeleteStatus::Deleted) ++deleted;
+        else if(item.status==dirsync::DeleteStatus::Skipped)++skipped;
+        else if(item.status==dirsync::DeleteStatus::DependencyBlocked)++blocked;
         else if(item.status!=dirsync::DeleteStatus::NotStarted) ++failed;
-        if(item.error && details.empty()) details=item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error);
+        if(!report.error && !item.blockedBy.empty() && details.empty())details=item.target+L"\n"+Text(IDS_STORED_DEPENDENCY_BLOCKED)+L"\n"+item.blockedBy;
+        if(item.error && details.empty() && item.status!=dirsync::DeleteStatus::Skipped && item.status!=dirsync::DeleteStatus::DependencyBlocked) details=item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error);
     }
     InfoRows fields;Field(fields,IDS_SYNC_NEW,Number(copied)+L" / "+Number(report.plan.copies.size()));
     Field(fields,IDS_SYNC_REPLACED,Number(replaced)+L" / "+Number(report.plan.overwrites.size()));
     Field(fields,IDS_SYNC_DELETE,Number(deleted)+L" / "+Number(report.plan.deletions.size()));
-    Field(fields,IDS_UI_ERRORS,failed+(report.error && !failed?1:0));Field(fields,IDS_UI_PENDING,uint64_t(report.plan.Count())-copied-replaced-deleted-failed);
+    Field(fields,IDS_UI_ERRORS,failed+(report.error && !failed?1:0));Field(fields,IDS_UI_PENDING,uint64_t(report.plan.Count())-copied-replaced-deleted-failed-skipped-blocked);
+    Field(fields,IDS_UI_SKIPPED,skipped);Field(fields,IDS_STORED_DEPENDENCY_BLOCKED,blocked);
     Field(fields,IDS_UI_OMITTED,uint64_t(report.plan.omitted));Field(fields,IDS_UI_RECOVERY,Text(report.keepOriginals?IDS_UI_ON:IDS_UI_OFF));
     for(const auto* recovery:{&report.overwrites.recovery,&report.deletions.recovery}) {
         if(!recovery->journal.empty()) Field(fields,IDS_UI_MANIFEST,recovery->journal);
-        for(const auto& item:recovery->items) if(!item.copy.remainingStage.empty()) details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.copy.remainingStage;
+        for(const auto& item:recovery->items) {
+            if(item.copy.error && details.empty() && (!report.error || item.copy.status!=dirsync::CopyStatus::Skipped))details=item.original+L"\n"+Text(IDS_COPY_ERROR)+Number(item.copy.error);
+            if(!item.copy.remainingStage.empty())details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.copy.remainingStage;
+        }
     }
     for(const auto* journal:{&report.overwrites.journal,&report.deletions.journal}) if(!journal->empty()) Field(fields,IDS_UI_JOURNAL,*journal);
     if(report.error && details.empty()) details=Text(IDS_COPY_ERROR)+Number(report.error);
     if(!details.empty()) Field(fields,IDS_UI_ERROR_DETAILS,details);
     auto notes=Text(IDS_UI_RESULT_NOTE);if(report.stale) notes+=L"\n"+Text(IDS_STALE);if(report.cancelled) notes+=L"\n"+Text(IDS_COPY_STOPPED);
+    if(skipped || blocked)notes+=L"\n"+Text(IDS_ERROR_SKIPPED_NOTE);
+    if(!report.complete)notes+=L"\n"+Text(IDS_SYNC_INCOMPLETE);
     InformationBox(p.window,IDS_SYNC_RESULT,std::move(fields),notes);
 }
 void SyncAll(Preview& p)
@@ -2060,7 +2071,7 @@ void SyncAll(Preview& p)
     Field(fields,IDS_UI_OMITTED,uint64_t(plan.omitted));Field(fields,IDS_UI_HIDDEN,uint64_t(p.result.rows.size()-p.visible.size()));
     Field(fields,IDS_UI_RECOVERY,Text(keep?IDS_UI_ON:IDS_UI_OFF));if(keep) Field(fields,IDS_UI_RECOVERY_FOLDER,root);
     if(!InformationBox(p.window,IDS_SYNC_CONFIRM,std::move(fields),Text(IDS_SYNC_POLICY),true)) return;
-    BeginReport(p,L"combined",keep,root);
+    BeginReport(p,L"combined",keep,root);ConfigureErrorPolicy(p);
     p.cancel=false;p.failed=false;p.running=true;p.synchronizing=true;p.syncReport={};p.syncStage=dirsync::SyncStage::Checking;
     p.hasSyncReport=p.hasCopyReport=p.hasRecoveryReport=p.hasOverwriteReport=p.hasDeleteReport=false;
     p.copyProgress.copied=0;p.copyProgress.verified=0;p.copyProgress.completed=0;p.copyProgress.item=0;p.copyProgress.phase=dirsync::CopyPhase::Checking;

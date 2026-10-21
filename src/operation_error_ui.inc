@@ -41,7 +41,7 @@ INT_PTR CALLBACK OperationErrorDialog(HWND window,UINT message,WPARAM w,LPARAM l
     return FALSE;
 }
 void ShowOperationError(Preview& p) {
-    if(!p.running || !(p.copying || p.saving || p.overwriting || p.deleting) || p.cancel || p.errorWindow || !p.errorQuestion.Peek(p.operationError))return;
+    if(!p.running || !(p.copying || p.saving || p.overwriting || p.deleting || p.synchronizing) || p.cancel || p.errorWindow || !p.errorQuestion.Peek(p.operationError))return;
     ShowTransfer(p);
     HWND window=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_OPERATION_ERROR),
         p.transferWindow?p.transferWindow:p.window,OperationErrorDialog,LPARAM(&p));

@@ -119,7 +119,8 @@ void CompleteReport(ReportBatch& b,const RecoveryReport& r){Saved(b,r);b.error=r
 void CompleteReport(ReportBatch& b,const OverwriteReport& r){Replaced(b,r);b.error=r.error;b.complete=r.complete;b.cancelled=r.cancelled;b.stale=r.stale;}
 void CompleteReport(ReportBatch& b,const DeleteReport& r){Removed(b,r);b.error=r.error;b.complete=r.complete;b.cancelled=r.cancelled;b.stale=r.stale;}
 void CompleteReport(ReportBatch& b,const SyncReport& r){Copies(b,r.copies,L"new_copy");Replaced(b,r.overwrites);Removed(b,r.deletions);
-    b.error=r.error;b.complete=r.complete;b.cancelled=r.cancelled;b.stale=r.stale;}
+    b.error=r.error;b.complete=r.complete;b.cancelled=r.cancelled;b.stale=r.stale;
+    if(r.finished)for(auto& item:b.items)if(item.status==L"not_reported")item.status=L"not_started";}
 void CompleteReport(ReportBatch& b,const ImmediateReport& r){for(const auto& i:r.items)for(auto& out:b.items)if(out.target==i.path){
     out.status=i.deleted?(FAILED(i.error)?L"removed_with_error":L"removed"):FAILED(i.error)?L"failed":L"not_confirmed";
     out.error=ULONG(i.error);out.changed=i.deleted;out.completed=i.deleted && SUCCEEDED(i.error);out.saved=i.recycledPath;}

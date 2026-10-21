@@ -18,7 +18,7 @@ A native directory comparison and synchronization plugin for **Samandarin**, wit
 
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
-**0.4.0 in development:** interactive Retry / Skip / Skip all / Cancel for separate new-item copying, saving originals, overwrites and asymmetric deletion, with a remembered stop-at-first-error option. Skipping a failed original prevents its destructive operation; retained children protect every parent. Independent items may continue. Combined synchronization retains stop-first behavior. [Details and verification](docs/directory-sync-plugin-delete-errors-040.md). The download above remains the published 0.3.0 alpha.
+**0.4.0 in development:** interactive Retry / Skip / Skip all / Cancel for new-item copying, saving originals, overwrites, asymmetric deletion and the combined synchronization command, with a remembered stop-at-first-error option. Skipping a failed original prevents its destructive operation; retained children protect every parent. Independent operations and later phases may continue. Fatal errors or Stop/Close still end the remaining batch. [Details and verification](docs/directory-sync-plugin-combined-errors-040.md). The download above remains the published 0.3.0 alpha.
 
 ## Highlights
 
@@ -87,7 +87,7 @@ For manual recovery, find the run and `manifest.jsonl` named in the summary. Mat
 - Runtime testing covers **local NTFS x64**. SMB is untested. Win32/ARM64 builds are compile checks, not runtime validation.
 - Hidden/System items are included when matching the mask and scope, even when the host panels hide them. Their attributes appear in the row tooltip. By content compares the main data stream, not alternate data streams (ADS).
 - No synchronization history, automatic restore, or backup cleanup. Only physically empty directories can be copied as standalone directory items; new files create their required parent directories. Reparse points, EFS, and unsupported cloud/offline items are blocked. Read-only destinations are not forcibly overwritten or removed.
-- The first error stops the remaining batch. Completed changes are not rolled back. This is not transactional backup or a complete NTFS clone. Avoid modifying either tree through another program during a run.
+- The published 0.3.0 stops the remaining batch at its first error; the 0.4.0 development policy is described above. Completed changes are not rolled back. This is not transactional backup or a complete NTFS clone. Avoid modifying either tree through another program during a run.
 - Transfers use the plugin's own worker, without the host's background transfer window, speed limit, or shared queue. Live cross-monitor DPI remains unverified. Inspecting thousands of rows through UI Automation has caused delays in earlier pilot sessions.
 
 Report bugs in [Issues](https://github.com/majklvi/salamander-directory-sync/issues). Include package version/hash, host and Windows versions, language/theme/DPI, masks/options/filters, recovery mode, exact steps, and expected versus actual results. Copy a result dialog with **Ctrl+Shift+C**. Include errors and relevant journal excerpts with private paths removed; a small synthetic reproducer is best. After unexpected data changes, stop further writes and preserve the summary and recovery run.
