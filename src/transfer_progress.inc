@@ -183,7 +183,8 @@ INT_PTR CALLBACK TransferDialog(HWND window,UINT message,WPARAM w,LPARAM l) {
                 if(!bar){ // Standard-control fallback for allocation failure and the standalone harness.
                     HWND placeholder=GetDlgItem(window,id);RECT rect{};GetWindowRect(placeholder,&rect);
                     MapWindowPoints(nullptr,window,reinterpret_cast<POINT*>(&rect),2);DestroyWindow(placeholder);
-                    CreateWindowExW(0,PROGRESS_CLASSW,nullptr,WS_CHILD|WS_VISIBLE|WS_BORDER,
+                    // The standard progress class supplies its own frame too.
+                    CreateWindowExW(0,PROGRESS_CLASSW,nullptr,WS_CHILD|WS_VISIBLE,
                         rect.left,rect.top,rect.right-rect.left,rect.bottom-rect.top,window,HMENU(INT_PTR(id)),instance,nullptr);
                     SendDlgItemMessageW(window,id,PBM_SETRANGE32,0,1000);
                 }

@@ -72,6 +72,23 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
         owner.dialog.style=WS_POPUP;owner.dialog.cx=355;owner.dialog.cy=154;
         HWND parent=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&owner.dialog,nullptr,EmptyDialog,0);
         if(!parent){FreeLibrary(resources);return FALSE;}
+        {
+            HDC dc=GetDC(parent);auto old=SelectObject(dc,GetStockObject(DEFAULT_GUI_FONT));
+            for(const auto& path:{std::wstring(L"C:\\short\\A & B-ž.txt"),L"C:\\"+std::wstring(300,L'漢')+L"\\žluťoučký.txt",
+                L"C:\\"+std::wstring(300,L'漢')+L"-\U0001f4c1.txt",std::wstring(L"\\\\server\\share\\A & B-ž.txt")}) {
+                for(int width:{20,100,450,6000}) {
+                    const auto shown=ErrorDisplayPath(dc,path,width);SIZE full{},size{};
+                    GetTextExtentPoint32W(dc,path.c_str(),int(path.size()),&full);
+                    GetTextExtentPoint32W(dc,shown.c_str(),int(shown.size()),&size);ok &= size.cx<=width;
+                    if(full.cx<=width)ok &= shown==path;
+                    else {ok &= shown.find(L"...")!=std::wstring::npos;
+                        for(size_t i=0;i<shown.size();++i){if(IS_HIGH_SURROGATE(shown[i])){ok &= i+1<shown.size() && IS_LOW_SURROGATE(shown[i+1]);++i;}
+                            else ok &= !IS_LOW_SURROGATE(shown[i]);}
+                        if(width>=100)ok &= shown.ends_with(L".txt");}
+                }
+            }
+            SelectObject(dc,old);ReleaseDC(parent,dc);
+        }
         // Real modeless error dialog and channel: a worker can be joined after
         // Stop/Close without dispatching another UI message or answering it.
         for(auto kind:{dirsync::TransferKind::Copy,dirsync::TransferKind::Save,dirsync::TransferKind::Overwrite,dirsync::TransferKind::Delete})for(bool combined:{false,true})for(int scenario=0;scenario<7;++scenario) {
@@ -90,6 +107,23 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= ControlText(question,IDC_ERROR_CONTEXT)==Text(kind==dirsync::TransferKind::Delete?IDS_ERROR_DELETE_TARGET:kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
                 kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE);
             ok &= StaticCaptionFits(question,IDC_ERROR_DETAILS);
+            for(int id:{IDC_ERROR_SOURCE,IDC_ERROR_TARGET}) {
+                HWND path=GetDlgItem(question,id);const auto& value=id==IDC_ERROR_SOURCE?error.source:error.target;
+                NMTTDISPINFOW tip{};tip.hdr.code=TTN_GETDISPINFOW;tip.hdr.idFrom=UINT_PTR(path);
+                SendMessageW(question,WM_NOTIFY,0,LPARAM(&tip));
+                ok &= tip.lpszText && std::wstring(tip.lpszText)==value;
+                SetFocus(path);SendMessageW(path,EM_SETSEL,0,-1);DWORD start=0,end=0;
+                SendMessageW(path,EM_GETSEL,WPARAM(&start),LPARAM(&end));
+                ok &= start==0 && end==value.size() && ControlText(question,id)==value;
+                SetFocus(GetDlgItem(question,IDC_ERROR_RETRY));
+                // Rendering into a separate DC must not replace the control's
+                // complete value with the visible ellipsis presentation.
+                HDC dc=GetDC(path),memory=CreateCompatibleDC(dc);RECT box{};GetClientRect(path,&box);
+                HBITMAP bitmap=CreateCompatibleBitmap(dc,box.right,box.bottom);auto old=SelectObject(memory,bitmap);
+                SendMessageW(path,WM_PRINTCLIENT,WPARAM(memory),PRF_CLIENT);
+                ok &= ControlText(question,id)==value;
+                SelectObject(memory,old);DeleteObject(bitmap);DeleteDC(memory);ReleaseDC(path,dc);
+            }
             if(scenario<4)SendMessageW(question,WM_COMMAND,scenario==0?IDC_ERROR_RETRY:scenario==1?IDC_ERROR_SKIP:scenario==2?IDC_ERROR_SKIP_ALL:IDCANCEL,0);
             else if(scenario==4)SendMessageW(question,WM_CLOSE,0,0);
             else if(scenario==5)SendMessageW(p.transferWindow,WM_CLOSE,0,0);
@@ -218,6 +252,11 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             p.copyProgress.CopyDisplay(1000,500);p.copyProgress.phase=dirsync::CopyPhase::Copying;p.copyProgress.completed=1;
             ShowTransfer(p);HWND progress=p.transferWindow;
             ok &= IsWindow(progress) && IsWindowVisible(progress) && GetWindow(progress,GW_OWNER)==parent;
+            for(int id:{IDC_TRANSFER_FILE_BAR,IDC_TRANSFER_TOTAL_BAR}) {
+                HWND bar=GetDlgItem(progress,id);
+                ok &= !(GetWindowLongPtrW(bar,GWL_STYLE)&WS_BORDER) &&
+                    !(GetWindowLongPtrW(bar,GWL_EXSTYLE)&(WS_EX_CLIENTEDGE|WS_EX_STATICEDGE));
+            }
             ok &= ControlText(progress,IDC_TRANSFER_SOURCE)==source && ControlText(progress,IDC_TRANSFER_TARGET)==target;
             for(int id:{IDC_TRANSFER_SOURCE,IDC_TRANSFER_TARGET,IDC_TRANSFER_PHASE}) {
                 HWND path=GetDlgItem(progress,id);ok &= (GetWindowLongPtrW(path,GWL_STYLE)&SS_NOTIFY)!=0;
