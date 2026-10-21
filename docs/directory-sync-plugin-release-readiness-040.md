@@ -25,7 +25,9 @@ All five x64 suites passed in Debug and Release: 2,216 engine assertions, 6,730 
 
 ## Remaining release checks
 
-1. **Inspect new outcomes in the GUI consumers.** Use a settled mixed-result fixture to check CSV/text export and Stored originals against the same skipped, automatically skipped, blocked and cancelled outcomes. Automated record/format tests already cover these distinctions; this is a short GUI consistency check, not a repeat of every filesystem scenario.
+The GUI-consumer consistency check is complete: mixed and stopped local NTFS batches agree across result dialogs, actual GUI-created CSV/text exports, Stored originals and real recovery journals. The independent verifier passed 201 checks, including manual Skip, hidden rows, automatic skips, blocked dependencies, confirmation exclusions and unstarted work. No production fix was needed. See the [live outcome-consistency report](directory-sync-plugin-outcomes-gui-040.md) for exact coverage and limits.
+
+1. **Real low-space check for the current copy adapter.** Repeat the relevant isolated NTFS VHD case with the buffered main/ADS copy routine added for low-rate pacing. The previous successful real-VHD campaign used the earlier copy primitive; existing injected-error tests do not replace this check. Follow the [VHD runbook](directory-sync-plugin-vhd-runbook.md); no SMB test is needed.
 2. **Final distribution check.** Build a fresh x64 package, check clean installation and update from published 0.3.0, English/Czech registration after restart, profiles and global settings (especially recovery and Stop at first error). Verify current-head CI, changelog, release notes and download links. Publish only after a separate release request, retaining the alpha/data-loss warning.
 
-The next recommended step is item 1, consistency of mixed outcomes in exports and Stored originals. No additional feature is needed to finish this release scope. SMB testing and SDK changes remain excluded; restoration UI and large-list optimization are separate roadmap work.
+The next recommended step is item 1, the focused real-volume low-space check, followed by final distribution verification. No additional feature is needed to finish this release scope. SMB testing and SDK changes remain excluded; restoration UI and large-list optimization are separate roadmap work.

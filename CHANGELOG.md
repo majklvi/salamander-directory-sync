@@ -13,6 +13,8 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### 0.4.0 development — interactive operation errors
 
+- Verify mixed and stopped batches through the GUI across result summaries, actual CSV/text exports and Stored originals. Confirm hidden/manual-Skip rows, explicit/automatic execution skips, blocked prerequisites/parents, confirmation exclusions and cancelled/unstarted work against real JSONL records and disk data. All 201 independent checks pass; no production fix was needed. See the [outcome-consistency report](docs/directory-sync-plugin-outcomes-gui-040.md).
+
 - Add one shared, persistent history of 20 directories to the editable left/right root fields. Remember normalized Unicode roots after completed comparisons, deduplicate case-insensitively, preserve manual-proposal warnings and keep history selection separate from starting work. Widen native dropdowns for long paths within the monitor work area.
 
 - Gray the available-count caption and fade its configured-color arrow when a copy direction is unchecked in synchronization confirmation. Restore both immediately when re-enabled, retaining the available counts. Split synchronization-policy guidance into readable paragraphs in English and Czech.
