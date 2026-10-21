@@ -98,7 +98,7 @@ Samostatné **Remove selected… / Odstranit vybrané…** v kontextovém menu p
 
 ## Obnova, omezení a hlášení chyb
 
-Uchovat originály je standardně ON a nastavení se pamatuje. Zvolte adresář obnovy mimo oba stromy, který není ani jejich předkem; počítejte s místem pro zálohy a staging. Při ON se před přepisem či mazáním originály uloží a ověří. Při OFF nevzniká nová záloha ani trvalý protokol a synchronizační příkazy nepoužívají Koš. Staré zálohy se automaticky neuklízejí.
+Uchovat originály je v nové konfiguraci vypnuté, dokud si uživatel nezvolí cestu obnovy a volbu nezapne. Zapnutou volbu nelze potvrdit v Nastavení bez platné absolutní cesty; uložené nastavení se pamatuje. Zvolte adresář obnovy mimo oba stromy, který není ani jejich předkem; počítejte s místem pro zálohy a staging. Při ON se před přepisem či mazáním originály uloží a ověří. Při OFF nevzniká nová záloha ani trvalý protokol a synchronizační příkazy nepoužívají Koš. Staré zálohy se automaticky neuklízejí.
 
 Ruční obnova: podle souhrnu najděte běh a manifest.jsonl, u úspěšně uložené položky spárujte original a saved. Kopii nejprve přeneste do odděleného kontrolního adresáře; až po kontrole ji vraťte na původní místo. Strukturu vytvořte podle adresářových záznamů, nekopírujte celý pomocný strom běhu. Původní ACL ani všechny NTFS vlastnosti se automaticky neobnovují.
 

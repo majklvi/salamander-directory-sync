@@ -1047,7 +1047,8 @@ SyncPlan BuildSyncPlan(const Result& snapshot,const std::vector<size_t>& visible
     for(size_t i:visible) if(i<snapshot.rows.size() && unique.insert(i).second) {
         const auto& row=snapshot.rows[i];
         const bool copy=IsNewCopy(row),overwrite=IsFileOverwrite(row),remove=deletions.count(i)!=0;
-        const bool allowed=remove?selection.deleteRight:row.action==Action::CopyRight?selection.toRight:selection.toLeft;
+        const bool allowed=remove?selection.deleteRight:
+            (!overwrite || selection.overwrite) && (row.action==Action::CopyRight?selection.toRight:selection.toLeft);
         if((copy || overwrite || remove) && !allowed)plan.excluded.push_back(i);
         else if(copy)plan.copies.push_back(i);
         else if(overwrite)plan.overwrites.push_back(i);

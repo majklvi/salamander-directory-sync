@@ -45,7 +45,16 @@ bool RecoveryLogged()
 // Real shipping progress resources and production callbacks; no file writes.
 extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
     struct RestoreLanguage {HINSTANCE previous=language;~RestoreLanguage(){language=previous;}} restore;
+    struct RestorePreferences {Settings previous=settings;~RestorePreferences(){settings=previous;}} restorePreferences;
     bool ok=true;
+    // Clipboard menu commands must not depend on now-removed button handles.
+    dirsync::StoredOriginal stored;
+    for(int command:{IDC_STORED_COPY_ORIGINAL,IDC_STORED_COPY_SAVED,IDC_STORED_OPEN_ORIGINAL,IDC_STORED_OPEN_SAVED}) {
+        ok &= !StoredItemCommandEnabled(nullptr,command) && StoredItemCommandEnabled(&stored,command);
+        stored.copy=dirsync::StoredCopy::Unsafe;
+        ok &= StoredItemCommandEnabled(&stored,command)==(command!=IDC_STORED_OPEN_SAVED);
+        stored.copy=dirsync::StoredCopy::Unconfirmed;
+    }
     ok &= InsertTextValues(L"%n {a} {a} {unknown}",{{L"{a}",L"{b}"},{L"{b}",L"expanded"}})==L"%n {b} {b} {unknown}";
     struct NativeProgress final:CGUIProgressBarAbstract {
         DWORD value=0;
@@ -98,6 +107,49 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= dialog && choice.plan.Count()==2 && IsWindowEnabled(GetDlgItem(dialog,IDOK)) &&
                 StaticCaptionFits(dialog,IDC_SYNC_RIGHT_COUNTS) && StaticCaptionFits(dialog,IDC_SYNC_LEFT_COUNTS) &&
                 StaticCaptionFits(dialog,IDC_SYNC_NOTICE) && !IsWindowVisible(GetDlgItem(dialog,IDC_SYNC_DELETE));
+            auto bounds=[&](int id){RECT r{};GetWindowRect(GetDlgItem(dialog,id),&r);return r;};
+            ok &= bounds(IDC_SYNC_ROOT_SEPARATOR).top>bounds(IDC_SYNC_RIGHT_ROOT).bottom &&
+                bounds(IDC_SYNC_ROOT_SEPARATOR).bottom<bounds(IDC_SYNC_RIGHT).top &&
+                bounds(IDC_SYNC_RECOVERY_SEPARATOR).top>bounds(IDC_SYNC_OVERWRITE).bottom &&
+                bounds(IDC_SYNC_RECOVERY_SEPARATOR).bottom<bounds(IDC_SYNC_RECOVERY).top;
+            ok &= bounds(IDC_SYNC_RECOVERY).right<bounds(IDC_SYNC_RECOVERY_ROOT).left &&
+                bounds(IDC_SYNC_RECOVERY_ROOT).right<bounds(IDC_SYNC_SETTINGS).left &&
+                bounds(IDC_SYNC_SETTINGS).top<=bounds(IDC_SYNC_RECOVERY_ROOT).top &&
+                ControlText(dialog,IDC_SYNC_RECOVERY_ROOT).empty();
+            auto shown=[&](int id){return (GetWindowLongPtrW(GetDlgItem(dialog,id),GWL_STYLE)&WS_VISIBLE)!=0;};
+            ok &= !shown(IDC_SYNC_RECOVERY_ROOT) && !shown(IDC_SYNC_NOTICE) &&
+                bounds(IDC_SYNC_RIGHT_MARK).right<bounds(IDC_SYNC_RIGHT_COUNTS).left &&
+                bounds(IDC_SYNC_LEFT_MARK).right<bounds(IDC_SYNC_LEFT_COUNTS).left;
+            const bool originalDark=dark;
+            for(bool theme:{false,true}){
+                dark=theme;settings.colors[theme][size_t(Mark::Right)]=RGB(17,103,219);
+                settings.colors[theme][size_t(Mark::Left)]=RGB(203,41,137);
+                HBRUSH previousBackground=backgroundBrush;
+                backgroundBrush=CreateSolidBrush(theme?RGB(32,32,32):GetSysColor(COLOR_BTNFACE));
+                HDC screen=GetDC(parent),dc=CreateCompatibleDC(screen);HBITMAP bitmap=CreateCompatibleBitmap(screen,48,24);ReleaseDC(parent,screen);
+                if(dc && bitmap){auto old=SelectObject(dc,bitmap);
+                    for(auto pair:{std::pair{IDC_SYNC_RIGHT_MARK,Mark::Right},std::pair{IDC_SYNC_LEFT_MARK,Mark::Left}}){
+                        const int checkbox=pair.first==IDC_SYNC_RIGHT_MARK?IDC_SYNC_RIGHT:IDC_SYNC_LEFT;
+                        const int counts=pair.first==IDC_SYNC_RIGHT_MARK?IDC_SYNC_RIGHT_COUNTS:IDC_SYNC_LEFT_COUNTS;
+                        const auto originalCounts=ControlText(dialog,counts);
+                        for(bool selected:{false,true,false,true}) {
+                            CheckDlgButton(dialog,checkbox,selected?BST_CHECKED:BST_UNCHECKED);
+                            SendMessageW(dialog,WM_COMMAND,checkbox,0);
+                            ok &= (IsWindowEnabled(GetDlgItem(dialog,counts))!=FALSE)==selected && ControlText(dialog,counts)==originalCounts;
+                            DRAWITEMSTRUCT draw{};draw.CtlID=pair.first;draw.hwndItem=GetDlgItem(dialog,pair.first);draw.hDC=dc;draw.rcItem={0,0,48,24};
+                            SendMessageW(dialog,WM_DRAWITEM,pair.first,LPARAM(&draw));unsigned colored=0,active=0;
+                            const auto base=MarkColor(pair.second),bg=GetPixel(dc,0,0);
+                            const auto expected=selected?base:RGB((GetRValue(base)+GetRValue(bg))/2,
+                                (GetGValue(base)+GetGValue(bg))/2,(GetBValue(base)+GetBValue(bg))/2);
+                            for(int y=0;y<24;++y)for(int x=0;x<48;++x){const auto pixel=GetPixel(dc,x,y);
+                                if(pixel==expected)++colored;if(pixel==base)++active;}
+                            ok &= colored>=12 && (selected || active==0);
+                        }
+                    }SelectObject(dc,old);
+                }else ok=false;
+                if(bitmap)DeleteObject(bitmap);if(dc)DeleteDC(dc);
+                if(backgroundBrush)DeleteObject(backgroundBrush);backgroundBrush=previousBackground;
+            }dark=originalDark;
             CheckDlgButton(dialog,IDC_SYNC_LEFT,BST_UNCHECKED);SendMessageW(dialog,WM_COMMAND,IDC_SYNC_LEFT,0);
             ok &= choice.plan.Count()==1 && choice.plan.excluded.size()==1 && p.visible.size()==2 &&
                 p.result.rows[1].action==dirsync::Action::CopyLeft;
@@ -107,19 +159,86 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
                 HWND info=state->first->syncDetailsWindow;if(!info)return;
                 auto* data=reinterpret_cast<Information*>(GetWindowLongPtrW(info,DWLP_USER));
                 if(!data || !GetDlgItem(info,IDC_INFO_TABLE))return;KillTimer(owner,74);
-                state->second=!data->confirm &&
+                state->second=!data->confirm && StaticCaptionFits(info,IDC_INFO_NOTES) &&
                     std::find(data->rows.begin(),data->rows.end(),std::make_pair(Text(IDS_SYNC_EXCLUDED),L"1"))!=data->rows.end();
                 SendMessageW(info,WM_COMMAND,IDOK,0);
             });
             SendMessageW(dialog,WM_COMMAND,IDC_SYNC_DETAILS,0);
             ok &= detailState.second && IsWindow(dialog) && choice.plan.Count()==1 && !p.running;
             KillTimer(parent,74);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
+            for(bool accept:{false,true}){
+                settings.keepOriginals=false;settings.recoveryRoot=L"C:\\previous-ž";
+                struct PreferencesProbe {Preview* preview;bool accept,handled=false,seen=false,notice=false,validated=false;
+                    std::wstring path=L"C:\\"+std::wstring(300,L'漢')+L"\\recovery-ž";} preferences{&p,accept};
+                SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&preferences));
+                SetTimer(parent,76,20,[](HWND owner,UINT,UINT_PTR,DWORD){
+                    auto* state=reinterpret_cast<PreferencesProbe*>(GetWindowLongPtrW(owner,GWLP_USERDATA));
+                    HWND preferences=state->preview->syncSettingsWindow;
+                    if(preferences && !state->handled){state->handled=true;state->seen=GetWindow(preferences,GW_OWNER)==state->preview->syncConfirmationWindow;
+                        const auto previousColumns=settings.visibleColumns;
+                        CheckDlgButton(preferences,IDC_KEEP_ORIGINALS,BST_CHECKED);
+                        SendMessageW(preferences,WM_COMMAND,IDC_KEEP_ORIGINALS,0);
+                        state->validated=true;
+                        for(const auto* invalid:{L"",L"   ",L"relative\\recovery",L"C:\\recovery:ads"}) {
+                            SetDlgItemTextW(preferences,IDC_RECOVERY_ROOT,invalid);
+                            state->validated &= !IsWindowEnabled(GetDlgItem(preferences,IDOK));
+                            SendMessageW(preferences,WM_COMMAND,IDOK,0);
+                            state->validated &= IsWindow(preferences) && !settings.keepOriginals &&
+                                settings.recoveryRoot==L"C:\\previous-ž" && settings.visibleColumns==previousColumns;
+                        }
+                        CheckDlgButton(preferences,IDC_KEEP_ORIGINALS,BST_UNCHECKED);
+                        SendMessageW(preferences,WM_COMMAND,IDC_KEEP_ORIGINALS,0);
+                        state->validated &= IsWindowEnabled(GetDlgItem(preferences,IDOK))!=FALSE;
+                        CheckDlgButton(preferences,IDC_KEEP_ORIGINALS,BST_CHECKED);
+                        SendMessageW(preferences,WM_COMMAND,IDC_KEEP_ORIGINALS,0);
+                        SetDlgItemTextW(preferences,IDC_RECOVERY_ROOT,state->path.c_str());
+                        state->validated &= IsWindowEnabled(GetDlgItem(preferences,IDOK))!=FALSE;
+                        SendMessageW(preferences,WM_COMMAND,state->accept?IDOK:IDCANCEL,0);
+                    }
+                });
+                // Separate timer: saving is dispatched inside the first timer's
+                // callback and can enter a nested host-unavailable notice loop.
+                SetTimer(parent,78,20,[](HWND owner,UINT,UINT_PTR,DWORD){
+                    auto* state=reinterpret_cast<PreferencesProbe*>(GetWindowLongPtrW(owner,GWLP_USERDATA));
+                    if(!state->accept || !state->handled)return;
+                    EnumThreadWindows(GetCurrentThreadId(),[](HWND notice,LPARAM data)->BOOL{
+                        auto* state=reinterpret_cast<PreferencesProbe*>(data);
+                        if(GetWindow(notice,GW_OWNER)!=state->preview->syncSettingsWindow)return TRUE;
+                        const int button=GetDlgItem(notice,IDOK)?IDOK:IDCANCEL;if(!GetDlgItem(notice,button))return TRUE;
+                        state->notice=true;SendMessageW(notice,WM_COMMAND,button,0);return FALSE;
+                    },LPARAM(state));
+                });
+                SendMessageW(dialog,WM_COMMAND,IDC_SYNC_SETTINGS,0);
+                KillTimer(parent,76);KillTimer(parent,78);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
+                ok &= preferences.seen && preferences.validated && !p.syncSettingsWindow && !p.running && choice.plan.Count()==1 &&
+                    !Checked(dialog,IDC_SYNC_LEFT) && Checked(dialog,IDC_SYNC_RIGHT) && choice.keep==accept &&
+                    choice.recovery==(accept?preferences.path:L"C:\\previous-ž") &&
+                    ControlText(dialog,IDC_SYNC_RECOVERY_ROOT)==(accept?choice.recovery:L"") && (!accept || preferences.notice);
+                ok &= shown(IDC_SYNC_RECOVERY_ROOT)==accept && !shown(IDC_SYNC_NOTICE) &&
+                    ControlText(dialog,IDC_SYNC_RECOVERY)==Text(accept?IDS_SYNC_KEEP_ON:IDS_SYNC_KEEP_OFF);
+                NMTTDISPINFOW tooltip{};tooltip.hdr.code=TTN_GETDISPINFOW;tooltip.hdr.idFrom=UINT_PTR(GetDlgItem(dialog,IDC_SYNC_RECOVERY_ROOT));
+                SendMessageW(dialog,WM_NOTIFY,0,LPARAM(&tooltip));
+                ok &= tooltip.lpszText && std::wstring(tooltip.lpszText)==choice.recovery;
+                ok &= StaticCaptionFits(dialog,IDC_SYNC_RECOVERY);
+            }
             CheckDlgButton(dialog,IDC_SYNC_RIGHT,BST_UNCHECKED);SendMessageW(dialog,WM_COMMAND,IDC_SYNC_RIGHT,0);
             ok &= !choice.plan.Count() && !IsWindowEnabled(GetDlgItem(dialog,IDOK));
             DestroyWindow(dialog);p.syncConfirmationWindow=nullptr;
             p.visible={0};SyncConfirmation single{p,false,L""};
             dialog=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_SYNC_CONFIRMATION),parent,SyncConfirmationDialog,LPARAM(&single));
             ok &= IsWindowEnabled(GetDlgItem(dialog,IDC_SYNC_RIGHT)) && !IsWindowEnabled(GetDlgItem(dialog,IDC_SYNC_LEFT)) && !Checked(dialog,IDC_SYNC_LEFT);
+            ok &= !IsWindowEnabled(GetDlgItem(dialog,IDC_SYNC_OVERWRITE)) && !Checked(dialog,IDC_SYNC_OVERWRITE);
+            DestroyWindow(dialog);p.syncConfirmationWindow=nullptr;
+            // A direction may contain both new items and replacements. Declining
+            // replacement must leave new copying available and Details consistent.
+            auto& replacement=p.result.rows[1];replacement=p.result.rows[0];
+            replacement.path=L"replacement";replacement.hasRight=true;replacement.right=replacement.left;
+            replacement.state=dirsync::State::Different;replacement.action=dirsync::Action::CopyRight;
+            p.visible={0,1};SyncConfirmation mixed{p,false,L""};
+            dialog=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_SYNC_CONFIRMATION),parent,SyncConfirmationDialog,LPARAM(&mixed));
+            ok &= Checked(dialog,IDC_SYNC_OVERWRITE) && mixed.plan.overwrites.size()==1 && shown(IDC_SYNC_NOTICE);
+            CheckDlgButton(dialog,IDC_SYNC_OVERWRITE,BST_UNCHECKED);SendMessageW(dialog,WM_COMMAND,IDC_SYNC_OVERWRITE,0);
+            ok &= mixed.plan.copies.size()==1 && mixed.plan.overwrites.empty() && mixed.plan.excluded.size()==1 && IsWindowEnabled(GetDlgItem(dialog,IDOK)) && !shown(IDC_SYNC_NOTICE);
             DestroyWindow(dialog);p.syncConfirmationWindow=nullptr;
             // Real modal cancellation via the same owner-close/unload cleanup.
             SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&p));
@@ -130,6 +249,15 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             });
             ok &= !ChooseSynchronization(single) && !p.syncConfirmationWindow && !p.syncDetailsWindow && IsWindow(parent);
             KillTimer(parent,75);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
+            SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&p));bool settingsClosed=false;
+            std::pair<Preview*,bool*> closing{&p,&settingsClosed};SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&closing));
+            SetTimer(parent,77,20,[](HWND owner,UINT,UINT_PTR,DWORD){
+                auto* state=reinterpret_cast<std::pair<Preview*,bool*>*>(GetWindowLongPtrW(owner,GWLP_USERDATA));
+                if(state->first->syncSettingsWindow){*state->second=true;KillTimer(owner,77);state->first->CloseTransfer();}
+                else if(state->first->syncConfirmationWindow)SendMessageW(state->first->syncConfirmationWindow,WM_COMMAND,IDC_SYNC_SETTINGS,0);
+            });
+            ok &= !ChooseSynchronization(single) && settingsClosed && !p.syncSettingsWindow && !p.syncConfirmationWindow && IsWindow(parent);
+            KillTimer(parent,77);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
         }
 
         {
@@ -360,7 +488,17 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
                 CancelAnswer answer{&p,IDNO};cancelAnswer=&answer;
                 SendMessageW(progress,WM_COMMAND,IDCANCEL,0);cancelAnswer=nullptr;
                 ok &= answer.seen && answer.paused && !p.cancel && p.copyProgress.pauseRequested==alreadyPaused && IsWindow(progress);
+                SetWindowLongPtrW(parent,DWLP_USER,LONG_PTR(&p));
+                CancelAnswer mainClose{&p,IDNO};cancelAnswer=&mainClose;
+                DialogBody(parent,WM_CLOSE,0,0);cancelAnswer=nullptr;
+                ok &= mainClose.seen && mainClose.paused && !p.cancel && !p.closing && p.copyProgress.pauseRequested==alreadyPaused;
+                SetWindowLongPtrW(parent,DWLP_USER,0);
             }
+            SetWindowLongPtrW(parent,DWLP_USER,LONG_PTR(&p));
+            CancelAnswer mainYes{&p,IDYES};cancelAnswer=&mainYes;
+            DialogBody(parent,WM_CLOSE,0,0);cancelAnswer=nullptr;
+            ok &= mainYes.seen && p.closing && p.cancel && IsWindow(parent);
+            SetWindowLongPtrW(parent,DWLP_USER,0);p.closing=false;p.cancel=false;p.copyProgress.pauseRequested=false;
             SendMessageW(progress,WM_CLOSE,0,0);
             ok &= p.cancel && IsWindow(progress) && !IsWindowEnabled(GetDlgItem(progress,IDCANCEL));
             p.running=false;SendMessageW(progress,WM_TIMER,1,0);
@@ -674,6 +812,7 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeModelessPreview() try {
 }catch(...){return FALSE;}
 extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t* left,const wchar_t* right) try
 {
+    struct RestoreHistory {std::vector<std::wstring> previous=settings.directoryHistory;~RestoreHistory(){settings.directoryHistory=previous;}} restoreHistory;
     struct Template {DLGTEMPLATE dialog;WORD menu=0,cls=0,title=0;} dialog{};
     dialog.dialog.style=WS_POPUP;dialog.dialog.cx=610;dialog.dialog.cy=470;
     auto procedure=+[](HWND window,UINT message,WPARAM w,LPARAM l)->INT_PTR {
@@ -698,8 +837,21 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t*
     }
     for(int id:{IDC_RECURSIVE,IDC_CONTENT,IDC_IGNORE,IDC_ASYMMETRIC,IDC_EMPTY,IDC_SELECTED})
         ok &= CreateWindowExW(0,L"BUTTON",L"",WS_CHILD|BS_AUTOCHECKBOX,0,0,20,20,window,HMENU(INT_PTR(id)),instance,nullptr)!=nullptr;
-    for(int id:{IDC_LEFT,IDC_RIGHT})
-        ok &= CreateWindowExW(0,L"EDIT",id==IDC_LEFT?left:right,WS_CHILD,0,0,20,20,window,HMENU(INT_PTR(id)),instance,nullptr)!=nullptr;
+    for(int id:{IDC_LEFT,IDC_RIGHT}) {
+        HWND combo=CreateWindowExW(0,L"COMBOBOX",L"",WS_CHILD|CBS_DROPDOWN|CBS_AUTOHSCROLL,0,0,200,120,window,HMENU(INT_PTR(id)),instance,nullptr);
+        ok &= combo!=nullptr;SetWindowTextW(combo,id==IDC_LEFT?left:right);
+    }
+    settings.directoryHistory.clear();RememberDirectory(settings.directoryHistory,right);RememberDirectory(settings.directoryHistory,left);
+    FillDirectoryHistory(window);
+    for(int id:{IDC_LEFT,IDC_RIGHT}) {
+        ok &= SendDlgItemMessageW(window,id,CB_GETCOUNT,0,0)==LRESULT(settings.directoryHistory.size());
+        for(size_t i=0;i<settings.directoryHistory.size();++i) {
+            std::vector<wchar_t> text(settings.directoryHistory[i].size()+1);
+            SendDlgItemMessageW(window,id,CB_GETLBTEXT,i,LPARAM(text.data()));
+            ok &= text.data()==settings.directoryHistory[i];
+        }
+    }
+    ok &= CreateWindowExW(0,L"EDIT",L"*.*",WS_CHILD,0,0,30,15,window,HMENU(INT_PTR(IDC_MASK)),instance,nullptr)!=nullptr;
     HWND list=CreateWindowExW(0,WC_LISTVIEWW,L"",WS_CHILD|LVS_REPORT,8,100,500,300,window,HMENU(INT_PTR(IDC_LIST)),instance,nullptr);
     HWND bar=CreateWindowExW(0,STATUSCLASSNAMEW,L"",WS_CHILD,0,440,610,30,window,HMENU(INT_PTR(IDC_STATUS)),instance,nullptr);
     ok &= list!=nullptr && bar!=nullptr;
@@ -716,6 +868,63 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t*
     p.result=dirsync::Compare(left,right,p.options,p.cancel,p.progress);auto snapshot=p.result.snapshot;
     dirsync::Row row;row.path=L"skipped-漢字.txt";row.state=dirsync::State::Different;row.action=dirsync::Action::None;
     p.result.rows={row};p.defaults={dirsync::Action::CopyRight};p.visible={0};Filter(p);
+    {
+        struct ResourceScope {HINSTANCE previous=language;HMODULE resource=nullptr;
+            ~ResourceScope(){language=previous;if(resource)FreeLibrary(resource);}} resources;
+        const auto edited=p.result;const auto options=p.options;
+        auto restoreEdited=[&]{p.result=edited;p.defaults={dirsync::Action::CopyRight};p.visible={0};p.options=options;Filter(p);};
+        struct DiscardAnswer {Preview* preview;int answer;bool seen=false,fits=false;};
+        auto withAnswer=[&](int answer,auto action){
+            DiscardAnswer reply{&p,answer};SetWindowLongPtrW(window,GWLP_USERDATA,LONG_PTR(&reply));
+            SetTimer(window,83,15,[](HWND owner,UINT,UINT_PTR,DWORD){
+                auto* reply=reinterpret_cast<DiscardAnswer*>(GetWindowLongPtrW(owner,GWLP_USERDATA));
+                HWND question=reply->preview->discardQuestionWindow;if(!question)return;KillTimer(owner,83);
+                reply->seen=true;reply->fits=StaticCaptionFits(question,IDC_PROPOSAL_WARNING) &&
+                    LOWORD(SendMessageW(question,DM_GETDEFID,0,0))==IDCANCEL;
+                if(reply->answer)SendMessageW(question,WM_COMMAND,reply->answer,0);else reply->preview->CloseTransfer();
+            });
+            action();KillTimer(window,83);SetWindowLongPtrW(window,GWLP_USERDATA,0);
+            ok &= reply.seen && reply.fits && !p.discardQuestionWindow;
+        };
+        auto edit=[&](int id,const wchar_t* value){SetDlgItemTextW(window,id,value);
+            if(id!=IDC_MASK)SendMessageW(window,WM_COMMAND,MAKEWPARAM(id,CBN_EDITCHANGE),LPARAM(GetDlgItem(window,id)));};
+        for(const wchar_t* file:{L"dirsync_ui_tests.exe",L"dirsync_ui_czech_tests.exe"}){
+            resources.resource=LoadLibraryExW(file,nullptr,LOAD_LIBRARY_AS_DATAFILE|LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+            ok &= resources.resource!=nullptr;language=resources.resource;
+            ok &= EditedProposals(p);
+            p.result.rows[0].action=p.defaults[0];ok &= !EditedProposals(p) && ConfirmDiscardProposals(p);
+            p.result.rows[0].action=dirsync::Action::CopyLeft;ok &= EditedProposals(p);p.result.rows[0].action=dirsync::Action::None;
+            // Hidden edited rows still matter; Cancel Compare preserves the model.
+            p.visible.clear();
+            withAnswer(IDCANCEL,[&]{Start(p);});
+            ok &= !p.running && !p.worker.joinable() && p.result.snapshot==snapshot && p.visible.empty() && EditedProposals(p);
+            p.visible={0};
+            withAnswer(IDCANCEL,[&]{ClosePreview(p);});ok &= IsWindow(window) && EditedProposals(p);
+            for(int id:{IDC_LEFT,IDC_RIGHT,IDC_MASK}){
+                const auto previous=ControlText(window,id);
+                withAnswer(IDCANCEL,[&]{edit(id,L"C:\\changed-input");});
+                ok &= ControlText(window,id)==previous && p.result.snapshot==snapshot && EditedProposals(p);
+            }
+            RememberDirectory(settings.directoryHistory,L"C:\\history-漢字");FillDirectoryHistory(window);
+            for(int id:{IDC_LEFT,IDC_RIGHT}) {
+                const auto previous=ControlText(window,id);
+                SendDlgItemMessageW(window,id,CB_SETCURSEL,0,0);
+                withAnswer(IDCANCEL,[&]{
+                    SendMessageW(window,WM_COMMAND,MAKEWPARAM(id,CBN_SELENDOK),LPARAM(GetDlgItem(window,id)));
+                    MSG pending{};while(PeekMessageW(&pending,window,WM_COMMAND,WM_COMMAND,PM_REMOVE))DispatchMessageW(&pending);
+                });
+                ok &= ControlText(window,id)==previous && p.result.snapshot==snapshot && EditedProposals(p) && !p.running;
+            }
+            withAnswer(0,[&]{ok &= !ConfirmDiscardProposals(p);});ok &= IsWindow(window) && EditedProposals(p);
+            withAnswer(IDOK,[&]{Start(p);});
+            ok &= p.running && p.defaults.empty();p.Join();KillTimer(window,1);p.running=false;
+            restoreEdited();
+            withAnswer(IDOK,[&]{edit(IDC_LEFT,L"C:\\changed-input");});
+            ok &= !p.result.snapshot && p.result.rows.empty() && p.defaults.empty() && !p.running;
+            SetDlgItemTextW(window,IDC_LEFT,left);restoreEdited();
+            language=resources.previous;FreeLibrary(resources.resource);resources.resource=nullptr;
+        }
+    }
     CheckDlgButton(window,IDC_RECURSIVE,BST_CHECKED);p.options.selection={{L"item",false}};
     for(int id:{IDC_RECURSIVE,IDC_CONTENT,IDC_IGNORE,IDC_ASYMMETRIC,IDC_EMPTY,IDC_SELECTED}) {
         CheckDlgButton(window,id,Checked(window,id)?BST_UNCHECKED:BST_CHECKED);
@@ -963,7 +1172,6 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbePreviewControls(const wchar_t*
     for(int id:{IDC_PROFILE_SAVE,IDC_PROFILE_MENU})
         ok &= CreateWindowExW(0,L"BUTTON",L"",WS_CHILD,0,0,30,15,window,HMENU(INT_PTR(id)),instance,nullptr)!=nullptr;
     ok &= CreateWindowExW(0,L"COMBOBOX",L"",WS_CHILD|CBS_DROPDOWNLIST,0,0,200,100,window,HMENU(INT_PTR(IDC_PROFILE)),instance,nullptr)!=nullptr;
-    ok &= CreateWindowExW(0,L"EDIT",L"*.*",WS_CHILD,0,0,30,15,window,HMENU(INT_PTR(IDC_MASK)),instance,nullptr)!=nullptr;
     dirsync::Profile task;task.id=1;task.name=L"Žluťoučký 漢字 😀";task.left=left;task.right=right;task.flags=23;task.filters=10;
     settings.profiles.items={task};settings.profiles.selected=1;
     CheckDlgButton(window,IDC_SELECTED,BST_CHECKED);ApplyProfile(p,task);ProfileControls(p);
@@ -1101,11 +1309,31 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeSettingsTest()
     try {
         HKEY key=reinterpret_cast<HKEY>(UINT_PTR(1)); // opaque key used only by the fake SDK registry
         plugin.LoadConfiguration(nullptr,nullptr,&registry);
-        check(settings.keepOriginals && settings.recoveryRoot.empty());
+        check(!settings.keepOriginals && settings.recoveryRoot.empty());
         check(!settings.relativeSizes && !settings.relativeTimes);
         check(!settings.colorRows);
         check(!settings.stopOnFirstError);
         check(!settings.transferSpeed && settings.lastTransferSpeed==1024*1024);
+        check(settings.directoryHistory.empty());
+        for(int i=0;i<24;++i)check(RememberDirectory(settings.directoryHistory,L"C:\\history-漢字\\"+std::to_wstring(i)));
+        check(settings.directoryHistory.size()==DirectoryHistoryLimit && settings.directoryHistory.front()==L"C:\\history-漢字\\23");
+        check(RememberDirectory(settings.directoryHistory,L"c:\\HISTORY-漢字\\20\\") &&
+            settings.directoryHistory.size()==DirectoryHistoryLimit && settings.directoryHistory.front()==L"c:\\HISTORY-漢字\\20");
+        const auto beforeInvalid=settings.directoryHistory;
+        for(const auto* invalid:{L"",L"relative",L"C:\\bad:ads",L"C:\\?",L"C:\\\xd800"})check(!RememberDirectory(settings.directoryHistory,invalid));
+        check(settings.directoryHistory==beforeInvalid);
+        std::wstring longHistory=L"C:\\history-ž\\"+std::wstring(300,L'漢');
+        check(RememberDirectory(settings.directoryHistory,longHistory));
+        const auto expectedHistory=settings.directoryHistory;
+        plugin.SaveConfiguration(nullptr,key,&registry);settings={};plugin.LoadConfiguration(nullptr,key,&registry);
+        check(settings.directoryHistory==expectedHistory && settings.directoryHistory.front()==longHistory);
+        auto validHistory=registry.values["DirectoryHistoryUtf16V1"];
+        for(const auto& invalid:std::vector<std::vector<BYTE>>{{0},{0,0},{'C',0,':',0,'\\',0,0,0},{0,0,0,0,1,0}}) {
+            registry.values["DirectoryHistoryUtf16V1"].bytes=invalid;
+            plugin.LoadConfiguration(nullptr,key,&registry);check(settings.directoryHistory.empty());
+        }
+        registry.values["DirectoryHistoryUtf16V1"]=validHistory;
+        plugin.LoadConfiguration(nullptr,key,&registry);check(settings.directoryHistory==expectedHistory);
         for(uint64_t speed:{uint64_t(4096),MaxTransferSpeed,uint64_t(0)}) {
             settings.transferSpeed=speed;if(speed)settings.lastTransferSpeed=speed;
             plugin.SaveConfiguration(nullptr,key,&registry);settings={};plugin.LoadConfiguration(nullptr,key,&registry);
@@ -1168,7 +1396,7 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeSettingsTest()
         registry.fail=false;
         registry.values["KeepOriginals"].bytes={2,0,0,0};
         registry.values["RecoveryRootUtf16"].bytes={0,0,0};
-        plugin.LoadConfiguration(nullptr,key,&registry); check(settings.keepOriginals && settings.recoveryRoot.empty());
+        plugin.LoadConfiguration(nullptr,key,&registry); check(!settings.keepOriginals && settings.recoveryRoot.empty());
         for(const std::vector<BYTE>& invalid:{std::vector<BYTE>{'C',0},std::vector<BYTE>{0,0,'a',0,0,0},std::vector<BYTE>{0,0xd8,0,0}}) {
             registry.values["RecoveryRootUtf16"].bytes=invalid;
             plugin.LoadConfiguration(nullptr,key,&registry); check(settings.recoveryRoot.empty());
@@ -1176,7 +1404,7 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeSettingsTest()
         registry.values["RecoveryRootUtf16"].bytes.resize(65524);
         plugin.LoadConfiguration(nullptr,key,&registry); check(settings.recoveryRoot.empty());
         registry.values.clear(); plugin.LoadConfiguration(nullptr,key,&registry);
-        check(settings.keepOriginals && settings.recoveryRoot.empty());
+        check(!settings.keepOriginals && settings.recoveryRoot.empty());
         settings.keepOriginals=false;settings.recoveryRoot=L"C:\\shared-recovery-漢字";settings.colorRows=true;
         dirsync::Profile task;task.id=9;task.name=L"Dokumenty 😀";task.left=L"C:\\left-漢字";task.right=L"C:\\right-žluťoučký";task.filters=9;task.flags=23;
         settings.profiles.items.push_back(task);settings.profiles.selected=9;
@@ -1273,7 +1501,10 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeDeleteFinish(unsigned mode
         if(!plugin.Release(nullptr,FALSE) && !probe->cancel && !finished) status|=1;
         if(plugin.Release(nullptr,TRUE)) status|=2;
     } else {
+        CancelAnswer answer{probe.get(),IDYES};
+        if(mode&256){cancelAnswer=&answer;SetTimer(probe->window,63,15,AnswerTransferCancel);}
         DialogBody(probe->window,(mode&256)?WM_CLOSE:WM_COMMAND,(mode&256)?0:IDC_STOP_SYNC,0);
+        if(mode&256){KillTimer(probe->window,63);cancelAnswer=nullptr;if(!answer.seen)return 0;}
         if(probe->cancel) status|=1;
         if(probe->closing==((mode&256)!=0)) status|=2;
         probe->Join();
@@ -1319,7 +1550,10 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeCopyCancel(BOOL close)
 {
     if(!probe) return 0;
     // Same handler called by the dialog message loop, on its owner thread.
+    CancelAnswer answer{probe.get(),IDYES};
+    if(close){cancelAnswer=&answer;SetTimer(probe->window,63,15,AnswerTransferCancel);}
     DialogBody(probe->window,close?WM_CLOSE:WM_COMMAND,close?0:IDC_STOP_SYNC,0);
+    if(close){KillTimer(probe->window,63);cancelAnswer=nullptr;if(!answer.seen)return 0;}
     unsigned status=probe->cancel?1u:0u;
     if(probe->closing==(close!=FALSE)) status|=2;
     probe->Join();

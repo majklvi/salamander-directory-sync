@@ -44,7 +44,7 @@ BEGIN
     IDS_TIP_MASK "Masky souborů, například *.txt; oddělujte je mezerami nebo středníky. Před vyloučené masky vložte |."
     IDS_TIP_KEEP "Před přepisem a smazáním uchovat ověřené originály. Vyžaduje další místo na disku. Při vypnutí nové kopie pro obnovu nevznikají; existující zálohy zůstanou zachovány."
     IDS_TIP_DELETE "Všechny viditelné způsobilé soubory a adresáře pouze vpravo v asymetrickém režimu. Zvýraznění neomezuje operaci. Řádky skryté filtrem a přeskočené řádky jsou vynechány. Adresáře vyžadují všechny potomky ve viditelném plánu mazání."
-    IDS_TIP_SCOPE "Potvrzení viditelných návrhů s nezávislými směry kopírování a samostatným mazáním. Podrobnosti zobrazí vybranou podmnožinu. Zvýraznění rozsah neomezuje; skryté a přeskočené řádky se vynechají."
+    IDS_TIP_SCOPE "Potvrzení viditelných návrhů s nezávislými směry, přepisy a mazáním. Šipka otevře samostatné operace a export. Podrobnosti zobrazí vybranou podmnožinu. Zvýraznění rozsah neomezuje; skryté a přeskočené řádky se vynechají."
     IDS_TIP_SELECTION "Při dalším porovnání použít výběr původně zachycený ze souborových panelů, nikoli zvýrazněné řádky náhledu. Aktuální výsledky zůstanou zachovány."
     IDS_TIP_EMPTY "Při dalším porovnání zahrnout prázdné adresáře. Aktuální výsledky zůstanou zachovány. V asymetrii zahrnout také adresáře pouze vpravo k mazání."
     IDS_COLOR_FIRST "Shoda"

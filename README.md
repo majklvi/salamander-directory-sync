@@ -78,7 +78,7 @@ The separate **Remove selected…** command immediately removes highlighted item
 
 ## Recovery
 
-With **Keep originals ON**, synchronization saves and verifies originals before overwrites/deletions and records the run in the recovery directory. With it **OFF**, these commands make no new recovery copy or persistent execution journal and do not use the Recycle Bin. Existing backups remain untouched.
+**Keep originals** defaults to OFF in a new configuration. Enabling it requires a valid absolute recovery path before Settings can be saved; existing saved preferences are preserved. With **Keep originals ON**, synchronization saves and verifies originals before overwrites/deletions and records the run in the recovery directory. With it **OFF**, these commands make no new recovery copy or persistent execution journal and do not use the Recycle Bin. Existing backups remain untouched.
 
 For manual recovery, find the run and `manifest.jsonl` named in the summary. Match a successfully saved item's `original` and `saved` paths. First copy saved data into a separate checking directory and inspect it before restoring to the original location. Recreate directory structure from directory records as needed; do not copy the entire run directory into the original tree. Original ACLs and every NTFS property are not automatically restored. See the [detailed user guide](docs/directory-sync-plugin.en.md) and [recovery records (Czech)](docs/directory-sync-plugin-recovery.md).
 

@@ -14,10 +14,10 @@ CAPTION "Directory Synchronization"
 FONT 8, "MS Shell Dlg"
 BEGIN
     LTEXT "&Left folder:", -1, 8, 9, 52, 10
-    EDITTEXT IDC_LEFT, 62, 6, 206, 14, ES_AUTOHSCROLL
+    COMBOBOX IDC_LEFT, 62, 6, 206, 120, CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON "...", IDC_BROWSE_LEFT, 272, 6, 14, 14
     LTEXT "&Right folder:", IDC_RIGHT_LABEL, 300, 9, 52, 10
-    EDITTEXT IDC_RIGHT, 354, 6, 206, 14, ES_AUTOHSCROLL
+    COMBOBOX IDC_RIGHT, 354, 6, 206, 120, CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON "...", IDC_BROWSE_RIGHT, 564, 6, 14, 14
     CONTROL "Profiles", IDC_PROFILE_MENU, "Button", BS_PUSHBUTTON | BS_ICON | WS_TABSTOP, 588, 6, 14, 14
     LTEXT "&Masks:", -1, 8, 29, 28, 10
@@ -42,25 +42,40 @@ BEGIN
     CONTROL "", IDC_LIST, "SysListView32", LVS_REPORT | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 0, 70, 610, 404
     CONTROL "", IDC_STATUS, "msctls_statusbar32", SBARS_SIZEGRIP | SBARS_TOOLTIPS, 0, 474, 610, 16
 END
-IDD_SYNC_CONFIRMATION DIALOGEX 0, 0, 300, 205
+IDD_SYNC_CONFIRMATION DIALOGEX 0, 0, 300, 227
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Synchronize"
 FONT 8, "MS Shell Dlg"
 BEGIN
     LTEXT "", IDC_SYNC_LEFT_ROOT, 7, 7, 286, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
     LTEXT "", IDC_SYNC_RIGHT_ROOT, 7, 20, 286, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
-    CONTROL "Left to &right", IDC_SYNC_RIGHT, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 36, 286, 12
-    LTEXT "", IDC_SYNC_RIGHT_COUNTS, 18, 50, 275, 18, SS_NOPREFIX
-    CONTROL "Right to &left", IDC_SYNC_LEFT, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 71, 286, 12
-    LTEXT "", IDC_SYNC_LEFT_COUNTS, 18, 85, 275, 18, SS_NOPREFIX
-    CONTROL "&Delete on the right", IDC_SYNC_DELETE, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 106, 286, 12
-    LTEXT "", IDC_SYNC_DELETE_COUNTS, 18, 120, 275, 12, SS_NOPREFIX
-    LTEXT "", IDC_SYNC_RECOVERY, 7, 138, 286, 10, SS_NOPREFIX
-    LTEXT "", IDC_SYNC_RECOVERY_ROOT, 7, 151, 286, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
-    LTEXT "", IDC_SYNC_NOTICE, 7, 165, 286, 16, SS_NOPREFIX
-    PUSHBUTTON "De&tails...", IDC_SYNC_DETAILS, 7, 184, 78, 14
-    DEFPUSHBUTTON "OK", IDOK, 163, 184, 62, 14
-    PUSHBUTTON "Cancel", IDCANCEL, 231, 184, 62, 14
+    CONTROL "", IDC_SYNC_ROOT_SEPARATOR, "Static", SS_ETCHEDHORZ, 7, 33, 286, 1
+    CONTROL "Left to &right", IDC_SYNC_RIGHT, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 40, 286, 12
+    CONTROL "", IDC_SYNC_RIGHT_MARK, "Static", SS_OWNERDRAW, 14, 54, 14, 12
+    LTEXT "", IDC_SYNC_RIGHT_COUNTS, 35, 54, 258, 18, SS_NOPREFIX
+    CONTROL "Right to &left", IDC_SYNC_LEFT, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 75, 286, 12
+    CONTROL "", IDC_SYNC_LEFT_MARK, "Static", SS_OWNERDRAW, 14, 89, 14, 12
+    LTEXT "", IDC_SYNC_LEFT_COUNTS, 35, 89, 258, 18, SS_NOPREFIX
+    CONTROL "&Delete on the right", IDC_SYNC_DELETE, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 110, 286, 12
+    LTEXT "", IDC_SYNC_DELETE_COUNTS, 18, 124, 275, 12, SS_NOPREFIX
+    CONTROL "Allow &overwriting", IDC_SYNC_OVERWRITE, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 140, 286, 12
+    CONTROL "", IDC_SYNC_RECOVERY_SEPARATOR, "Static", SS_ETCHEDHORZ, 7, 157, 286, 1
+    LTEXT "", IDC_SYNC_RECOVERY, 7, 170, 113, 10, SS_LEFTNOWORDWRAP | SS_NOPREFIX
+    LTEXT "", IDC_SYNC_RECOVERY_ROOT, 126, 170, 99, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
+    PUSHBUTTON "&Settings...", IDC_SYNC_SETTINGS, 231, 167, 62, 14
+    LTEXT "", IDC_SYNC_NOTICE, 7, 187, 286, 16, SS_NOPREFIX
+    PUSHBUTTON "De&tails...", IDC_SYNC_DETAILS, 7, 206, 78, 14
+    DEFPUSHBUTTON "OK", IDOK, 163, 206, 62, 14
+    PUSHBUTTON "Cancel", IDCANCEL, 231, 206, 62, 14
+END
+IDD_PROPOSAL_DISCARD DIALOGEX 0, 0, 250, 60
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Discard manual changes?"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "This action will discard your manual changes to the proposed operations. Continue?", IDC_PROPOSAL_WARNING, 7, 7, 236, 24, SS_NOPREFIX
+    PUSHBUTTON "OK", IDOK, 113, 39, 62, 14
+    DEFPUSHBUTTON "Cancel", IDCANCEL, 181, 39, 62, 14
 END
 IDD_INFORMATION DIALOGEX 0, 0, 300, 188
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX
@@ -171,7 +186,7 @@ BEGIN
     IDS_TIP_MASK "File masks, for example *.txt; separate masks with spaces or semicolons. Use | before exclusions."
     IDS_TIP_KEEP "Save verified originals before overwrites and deletions. Uses additional disk space. When off, no new recovery copies are created; existing backups are kept."
     IDS_TIP_DELETE "All visible eligible right-only files and directories in asymmetric mode. Highlighting does not limit the operation. Filtered out and Skip rows are excluded. Directories require all descendants in the visible deletion plan."
-    IDS_TIP_SCOPE "Confirm visible proposals with independent copy directions and separate deletion. Details shows the selected subset. Highlighted rows do not limit the scope; hidden and Skip rows are excluded."
+    IDS_TIP_SCOPE "Confirm visible proposals with independent directions, overwrites and deletion. The arrow opens separate operations and export. Details shows the selected subset. Highlighting does not limit the scope; hidden and Skip rows are excluded."
     IDS_TIP_SELECTION "On the next Compare, scan the selection originally captured from the file panels, not highlighted preview rows. Current results remain unchanged."
     IDS_TIP_EMPTY "Include empty folders on the next Compare. Current results remain unchanged. In asymmetric mode also include right-only directories for deletion."
     IDS_COLOR_FIRST "Equal"
@@ -408,7 +423,7 @@ BEGIN
     IDS_PROFILE_INVALID_PATH "Enter valid absolute directory paths and a valid mask before saving."
     IDS_PROFILE_INVALID_NAME "Enter a unique profile name (1–128 characters)."
     IDS_PROFILE_DELETE_CONFIRM "Delete this saved profile? Files and current comparison results will not be deleted."
-    IDS_PROFILE_SWITCH_CONFIRM "Changing the profile discards unsaved profile changes and current comparison results. Continue?"
+    IDS_PROFILE_SWITCH_CONFIRM "Changing the profile discards unsaved profile changes and comparison results, including manual proposals. Continue?"
     IDS_PROFILE_MANAGE "Manage profiles..."
     IDS_PROFILE_ON "On"
     IDS_PROFILE_OFF "Off"
@@ -468,9 +483,9 @@ BEGIN
     IDS_PROFILE_EXPORT_TITLE "Export all profiles"
     IDS_SYNC_COMMAND "&Execute visible plan..."
     IDS_SYNC_HELP "Runs visible new copies, then overwrites, then deletions after one confirmation. Skip can continue independent work and later phases. Fatal errors or Stop end the remaining batch; the global stop-at-first-error setting also applies."
-    IDS_SYNC_CONFIRM "Confirm synchronization"
+    IDS_SYNC_CONFIRM "Synchronization details"
     IDS_SYNC_RESULT "Synchronization result"
-    IDS_SYNC_POLICY "Order: new files and empty directories, overwrites, then deletions (files before empty directories, deepest first). Recoverable item errors ask for Retry / Skip / Skip all / Cancel unless Stop at first error is enabled. Skip permits independent operations and later phases; an unsaved original blocks its destructive operation and retained children protect their parents. Fatal errors, invalid plans, protocol failures and Stop end the remaining batch. Completed changes stay; no automatic rollback. Keep originals applies to overwrites and deletions; when OFF these have no plugin recovery copy. The Recycle Bin is not used."
+    IDS_SYNC_POLICY "Order: new files and empty directories, overwrites, then deletions (files before empty directories, deepest first).\n\nRecoverable item errors ask for Retry / Skip / Skip all / Cancel unless Stop at first error is enabled. Skip permits independent operations and later phases; an unsaved original blocks its destructive operation and retained children protect their parents.\n\nFatal errors, invalid plans, protocol failures and Stop end the remaining batch. Completed changes stay; no automatic rollback.\n\nKeep originals applies to overwrites and deletions; when OFF these have no plugin recovery copy. The Recycle Bin is not used."
     IDS_SYNC_NEW "New copies (completed / planned)"
     IDS_SYNC_OVERWRITE "Overwrites"
     IDS_SYNC_DELETE "Deletions (completed / planned)"
@@ -490,10 +505,8 @@ BEGIN
     CONTROL "", IDC_STORED_ITEMS, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 103, 486, 138
     LTEXT "", IDC_STORED_SUMMARY, 7, 247, 486, 17
     PUSHBUTTON "Refresh", IDC_STORED_REFRESH, 7, 271, 65, 14
-    PUSHBUTTON "Copy original", IDC_STORED_COPY_ORIGINAL, 76, 271, 70, 14
-    PUSHBUTTON "Copy saved", IDC_STORED_COPY_SAVED, 150, 271, 70, 14
-    PUSHBUTTON "Original directory", IDC_STORED_OPEN_ORIGINAL, 224, 271, 90, 14
-    PUSHBUTTON "Saved directory", IDC_STORED_OPEN_SAVED, 318, 271, 90, 14
+    PUSHBUTTON "Original directory...", IDC_STORED_OPEN_ORIGINAL, 76, 271, 100, 14
+    PUSHBUTTON "Saved directory...", IDC_STORED_OPEN_SAVED, 180, 271, 100, 14
     DEFPUSHBUTTON "Close", IDCANCEL, 431, 271, 62, 14
 END
 STRINGTABLE
@@ -684,8 +697,13 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_SYNC_KEEP_ON "Keep originals: ON"
+    IDS_SYNC_KEEP_ON "Keep originals:"
     IDS_SYNC_KEEP_OFF "Keep originals: OFF"
     IDS_SYNC_ROOT_LEFT "Left directory"
     IDS_SYNC_ROOT_RIGHT "Right directory"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_SYNC_RECOVERY_EMPTY "(not set)"
 END

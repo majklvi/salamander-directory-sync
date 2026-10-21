@@ -40,11 +40,19 @@ void StoredRow(HWND list,int index,const std::vector<std::wstring>& cells) {
         item.iSubItem=int(column);item.pszText=const_cast<wchar_t*>(cells[column].c_str());
         SendMessageW(list,column?LVM_SETITEMTEXTW:LVM_INSERTITEMW,column?WPARAM(index):0,LPARAM(&item));}
 }
+bool StoredItemCommandEnabled(const dirsync::StoredOriginal* item,int command) {
+    if(!item)return false;
+    switch(command){
+    case IDC_STORED_COPY_ORIGINAL:case IDC_STORED_COPY_SAVED:case IDC_STORED_OPEN_ORIGINAL:return true;
+    case IDC_STORED_OPEN_SAVED:return item->copy!=dirsync::StoredCopy::Unsafe;
+    default:return false;
+    }
+}
 void StoredButtons(StoredBrowser& b) {
     auto item=b.Item();auto run=b.Run();
     EnableWindow(GetDlgItem(b.window,IDC_STORED_REFRESH),!b.loading);
-    for(int id:{IDC_STORED_COPY_ORIGINAL,IDC_STORED_COPY_SAVED,IDC_STORED_OPEN_ORIGINAL,IDC_STORED_OPEN_SAVED})
-        EnableWindow(GetDlgItem(b.window,id),item && (id!=IDC_STORED_OPEN_SAVED || item->copy!=dirsync::StoredCopy::Unsafe));
+    for(int id:{IDC_STORED_OPEN_ORIGINAL,IDC_STORED_OPEN_SAVED})
+        EnableWindow(GetDlgItem(b.window,id),StoredItemCommandEnabled(item,id));
     std::wstring note=Text(b.loading?IDS_STORED_LOADING:IDS_STORED_NOTE);
     if(!b.loading){note+=L"  "+InsertTextValues(Text(IDS_STORED_COUNTS),
             {{L"{runs}",Number(b.catalog.runs.size())},{L"{items}",Number(run?run->items.size():0)}});
@@ -107,7 +115,7 @@ void StoredMenu(StoredBrowser& b,HWND list,LPARAM position) {
     }else{for(int id:{IDC_STORED_COPY_ORIGINAL,IDC_STORED_COPY_SAVED,IDC_STORED_OPEN_ORIGINAL,IDC_STORED_OPEN_SAVED}){
         if(id==IDC_STORED_OPEN_ORIGINAL)AppendMenuW(menu,MF_SEPARATOR,0,nullptr);
         const int labels[]{IDS_STORED_COPY_ORIGINAL_MENU,IDS_STORED_COPY_SAVED_MENU,IDS_STORED_OPEN_ORIGINAL_MENU,IDS_STORED_OPEN_SAVED_MENU};
-        add(id,Text(labels[id-IDC_STORED_COPY_ORIGINAL]),IsWindowEnabled(GetDlgItem(b.window,id))!=FALSE);}}
+        add(id,Text(labels[id-IDC_STORED_COPY_ORIGINAL]),StoredItemCommandEnabled(b.Item(),id));}}
     int command=int(TrackPopupMenuEx(menu,TPM_RETURNCMD|TPM_RIGHTBUTTON,point.x,point.y,b.window,nullptr));DestroyMenu(menu);
     if(command)StoredCommand(b,command);
 }
@@ -167,7 +175,7 @@ INT_PTR CALLBACK StoredDialog(HWND window,UINT message,WPARAM w,LPARAM l) {
                 if(id==IDC_STORED_ITEMS){r.right+=dx;r.bottom+=dy;}
                 else if(id==IDC_STORED_RUNS)r.right+=dx;
                 else if(id==IDC_STORED_SUMMARY){r.top+=dy;r.bottom+=dy;r.right+=dx;}
-                else if(id==IDCANCEL || id==IDC_STORED_REFRESH || id==IDC_STORED_COPY_ORIGINAL || id==IDC_STORED_COPY_SAVED || id==IDC_STORED_OPEN_ORIGINAL || id==IDC_STORED_OPEN_SAVED){
+                else if(id==IDCANCEL || id==IDC_STORED_REFRESH || id==IDC_STORED_OPEN_ORIGINAL || id==IDC_STORED_OPEN_SAVED){
                     r.top+=dy;r.bottom+=dy;if(id==IDCANCEL){r.left+=dx;r.right+=dx;}}
                 MoveWindow(control.first,r.left,r.top,r.right-r.left,r.bottom-r.top,TRUE);}}return TRUE;
         case WM_SETTINGCHANGE:case WM_THEMECHANGED:ConfigureDark(window);return TRUE;

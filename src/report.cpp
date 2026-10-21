@@ -177,6 +177,7 @@ std::wstring RenderReport(const Result& result,const ReportContext& c,const Repo
             doc.Meta(L"selected_left_to_right",B(b.selection.toRight),kind);
             doc.Meta(L"selected_right_to_left",B(b.selection.toLeft),kind);
             doc.Meta(L"selected_delete_right",B(b.selection.deleteRight),kind);
+            doc.Meta(L"selected_overwrites",B(b.selection.overwrite),kind);
             doc.Meta(L"confirmation_excluded_rows",N(confirmationExcluded.size()),kind);
         }
         for(const auto& item:b.items)doc.Add(L"operation",{{L"row",N(item.row+1)},{L"execution_visible",B(executionVisible.count(item.row)!=0)},

@@ -13,6 +13,20 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### 0.4.0 development — interactive operation errors
 
+- Add one shared, persistent history of 20 directories to the editable left/right root fields. Remember normalized Unicode roots after completed comparisons, deduplicate case-insensitively, preserve manual-proposal warnings and keep history selection separate from starting work. Widen native dropdowns for long paths within the monitor work area.
+
+- Gray the available-count caption and fade its configured-color arrow when a copy direction is unchecked in synchronization confirmation. Restore both immediately when re-enabled, retaining the available counts. Split synchronization-policy guidance into readable paragraphs in English and Czech.
+
+- Mark **Execute visible plan…** as the native default (bold) command in plan menus. Remove ambiguous stored-original path-copy buttons, retaining explicit context-menu commands and keyboard shortcuts. Add ellipses to directory-opening buttons and keep menu availability independent of button handles.
+
+- Start new configurations with **Keep originals OFF** until the user chooses recovery settings. Require a valid absolute recovery path before accepting Preferences with recovery enabled; preserve existing saved choices. Erase stale compact-confirmation captions after recovery changes and keep the OFF path empty and hidden.
+
+- Confirm before discarding manual proposals on Compare, root/mask edits or normal preview Close, including hidden rows; Cancel preserves proposals and rejected input values. Add configured-color direction marks beside compact confirmation counts, hide the recovery path when OFF, omit redundant ON/scope text, and title the read-only window **Synchronization details**.
+
+- Separate paths, operation choices and recovery in compact confirmation with native horizontal rules. Show the configured recovery directory beside its ON/OFF state and open global **Settings…** there; refresh the confirmation and execute with the newly accepted preferences while retaining selected operation categories.
+
+- Confirm main-window Close during file operations using the same native Yes/No question as progress-window cancellation; No restores the preceding pause state. Restore the separate operation/export menu on the Synchronize split-button arrow. Add **Allow overwriting** to combined confirmation; clearing it retains new copies while excluding replacements and their recovery saves. [Follow-up verification](docs/directory-sync-plugin-sync-confirmation-followup-040.md).
+
 - Open a compact synchronization confirmation directly from the main button, with independent copy directions, separate asymmetric deletion, visible recovery status and read-only **Details…**. Apply the same selected subset to execution, progress, results and CSV/text; distinguish confirmation exclusions from hidden and execution-skipped rows. See the [implementation and verification](docs/directory-sync-plugin-sync-confirmation-040.md).
 
 - Remember the transfer speed limit globally across operations and restarts, including the last positive value when unlimited is selected. Pace actual main/ADS writes with smaller blocks at low limits instead of waiting after large system-copy blocks; retain staging, permissions and verification. Confirm progress-window cancellation with a native Yes/No question and restore the prior pause state on No. See the [host comparison and verification](docs/directory-sync-plugin-transfer-controls-040.md).

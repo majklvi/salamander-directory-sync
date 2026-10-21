@@ -135,6 +135,9 @@ void Test(int dialog)
         const auto& left=control(IDC_LEFT);const auto& right=control(IDC_RIGHT);
         Check(left.y==right.y && left.x+left.width<right.x,"roots side by side without overlap");
         Check(left.width==right.width,"equally sized root inputs");
+        for(const auto* root:{&left,&right})Check(root->type==0x85 &&
+            (root->style&3)==CBS_DROPDOWN && (root->style&CBS_AUTOHSCROLL) && (root->style&WS_TABSTOP),
+            "both roots use native editable directory-history combos");
         for(auto pair:{std::pair<DWORD,DWORD>{IDC_LEFT,IDC_BROWSE_LEFT},{IDC_RIGHT,IDC_BROWSE_RIGHT}}) {
             const auto& edit=control(pair.first);const auto& browse=control(pair.second);
             Check(browse.y==edit.y && browse.x==edit.x+edit.width+4 && browse.width==14,"native adjacent folder browse button");
@@ -171,6 +174,13 @@ void Test(int dialog)
         Check(control(IDC_LIST).height>height*3/4 && control(IDC_LIST).y+control(IDC_LIST).height==control(IDC_STATUS).y && control(IDC_LIST).x==0 && control(IDC_LIST).width==width,"file list touches side edges and status bar");
         for(const auto& c:controls) Check(c.id!=IDC_ACTION && c.id!=IDC_APPLY && c.id!=IDC_SUMMARY && c.id!=IDC_COPY_NEW && c.id!=IDC_OVERWRITE && c.id!=IDC_SAVE_ORIGINALS && c.id!=IDC_DELETE_FILES && c.text!=L"Show:","secondary commands live in menus, no filter label");
         for(const auto& c:controls) Check(c.id!=IDC_KEEP_ORIGINALS && c.id!=IDC_RECOVERY_ROOT,"recovery settings only in preferences");
+    }
+    if(dialog==IDD_STORED_ORIGINALS) {
+        for(const auto& c:controls)Check(c.id!=IDC_STORED_COPY_ORIGINAL && c.id!=IDC_STORED_COPY_SAVED,"clipboard commands stay in the stored-item context menu, without duplicate buttons");
+        for(int id:{IDC_STORED_OPEN_ORIGINAL,IDC_STORED_OPEN_SAVED}) {
+            const auto at=std::find_if(controls.begin(),controls.end(),[&](const Control& c){return c.id==DWORD(id);});
+            Check(at!=controls.end() && at->text.size()>=3 && at->text.compare(at->text.size()-3,3,L"...")==0,"directory-opening buttons have ellipses");
+        }
     }
     if(dialog==IDD_APPEARANCE) {
         auto control=[&](DWORD id)->const Control& {for(const auto& c:controls) if(c.id==id) return c;throw std::runtime_error("missing preference control");};
@@ -240,6 +250,9 @@ void Test(int dialog)
             bounds.push_back(box);
             if (c.text.empty() || (c.type==0x80 && (c.style&BS_ICON))) continue;
             auto text = Caption(c.text); SIZE size{};
+            if(c.id==IDC_PROPOSAL_WARNING){RECT measured{0,0,box.right-box.left,0};
+                DrawTextW(dc,text.c_str(),int(text.size()),&measured,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX);
+                Check(measured.bottom<=box.bottom-box.top,"manual-proposal warning wraps within compact dialog at requested DPI");continue;}
             Check(GetTextExtentPoint32W(dc, text.c_str(), int(text.size()), &size) != FALSE, "caption metrics");
             int padding = c.type == 0x80 ? MulDiv((c.style & 0xf) == BS_AUTOCHECKBOX ? 20 : 12, dpi, 96) : 0;
             if (size.cx + padding > MulDiv(c.width, baseX, 4) || size.cy > MulDiv(h, baseY, 8))
@@ -326,7 +339,7 @@ int main()
         for(int id=IDS_STORED_DATE;id<=IDS_STORED_ERROR;++id)Check(!text(id).empty(),"stored originals interface localized");
         for(int id=IDS_REPORT_EXPORT;id<=IDS_REPORT_HELP;++id)Check(!text(id).empty(),"report export interface localized");
         for(int id=IDS_PROGRESS_PREPARE;id<=IDS_STORED_OPEN_SAVED_MENU;++id)Check(!text(id).empty(),"transfer progress and explicit recovery menu actions localized");
-        Test(IDD_SYNC_CONFIRMATION);Test(IDD_OPERATION_ERROR);
+        Test(IDD_PROPOSAL_DISCARD);Test(IDD_SYNC_CONFIRMATION);Test(IDD_OPERATION_ERROR);
         for(int id=IDS_ERROR_WAIT;id<=IDS_SYNC_INCOMPLETE;++id)Check(!text(id).empty(),"operation-error strings localized");
         Check(!text(IDS_TRANSFER_CANCEL_CONFIRM).empty(),"transfer cancellation question localized");
         Test(IDD_TRANSFER_PROGRESS);

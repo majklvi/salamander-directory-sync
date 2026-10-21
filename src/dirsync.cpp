@@ -46,6 +46,37 @@ HBRUSH backgroundBrush = nullptr;
 bool dark = false;
 using Palette = std::array<COLORREF,7>;
 constexpr uint64_t MaxTransferSpeed=uint64_t(1)<<40;
+constexpr size_t DirectoryHistoryLimit=20,DirectoryHistoryBytes=(DirectoryHistoryLimit*32760+1)*sizeof(wchar_t);
+bool RememberDirectory(std::vector<std::wstring>& history,const std::wstring& input)
+{
+    std::wstring path;
+    if(!dirsync::NormalizeRoot(input,path) ||
+        !WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,path.c_str(),-1,nullptr,0,nullptr,nullptr))return false;
+    const auto previous=history;
+    history.erase(std::remove_if(history.begin(),history.end(),[&](const auto& value){
+        return CompareStringOrdinal(value.c_str(),-1,path.c_str(),-1,TRUE)==CSTR_EQUAL;
+    }),history.end());
+    history.insert(history.begin(),std::move(path));
+    if(history.size()>DirectoryHistoryLimit)history.resize(DirectoryHistoryLimit);
+    return previous!=history;
+}
+std::vector<std::wstring> DecodeDirectoryHistory(const std::vector<wchar_t>& data)
+{
+    std::vector<std::wstring> history;
+    if(data.size()<2 || data.back()!=0 || data[data.size()-2]!=0)return history;
+    size_t at=0;
+    while(at+1<data.size() && data[at]) {
+        auto end=std::find(data.begin()+at,data.end(),L'\0');
+        if(end==data.end() || history.size()==DirectoryHistoryLimit)return {};
+        std::wstring path(data.begin()+at,end),normalized;
+        if(!dirsync::NormalizeRoot(path,normalized) || normalized!=path ||
+            !WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,path.c_str(),-1,nullptr,0,nullptr,nullptr))return {};
+        for(const auto& value:history)if(CompareStringOrdinal(value.c_str(),-1,path.c_str(),-1,TRUE)==CSTR_EQUAL)return {};
+        history.push_back(std::move(path));at=size_t(end-data.begin())+1;
+    }
+    if(at+1!=data.size() && !(history.empty() && data.size()==2))return {};
+    return history;
+}
 Palette DefaultPalette(bool night)
 {
     return night?Palette{RGB(109,220,144),RGB(244,209,105),RGB(109,220,144),RGB(112,190,255),RGB(185,185,185),RGB(255,148,133),RGB(255,148,133)}:
@@ -53,10 +84,11 @@ Palette DefaultPalette(bool night)
 }
 struct Settings {
     dirsync::Profiles profiles;
+    std::vector<std::wstring> directoryHistory;
     DWORD visibleColumns=0x3ff;
     int sortColumn=0;
     bool sortDescending=false;
-    bool keepOriginals=true;
+    bool keepOriginals=false;
     bool stopOnFirstError=false;
     uint64_t transferSpeed=0,lastTransferSpeed=1024*1024;
     bool actionLabels=false;
@@ -71,7 +103,13 @@ void LoadSettings(HKEY key,CSalamanderRegistryAbstract* registry)
 {
     settings={};
     if(!key || !registry) return;
-    DWORD enabled=1,bytes=0;
+    DWORD enabled=0,bytes=0;
+    if(registry->GetSize(key,"DirectoryHistoryUtf16V1",REG_BINARY,bytes) && bytes>=2*sizeof(wchar_t) &&
+        bytes<=DirectoryHistoryBytes && bytes%sizeof(wchar_t)==0) {
+        std::vector<wchar_t> data(bytes/sizeof(wchar_t));
+        if(registry->GetValue(key,"DirectoryHistoryUtf16V1",REG_BINARY,data.data(),bytes))
+            settings.directoryHistory=DecodeDirectoryHistory(data);
+    }
     if(registry->GetValue(key,"KeepOriginals",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
         settings.keepOriginals=enabled!=0;
     enabled=0;
@@ -161,7 +199,12 @@ bool StoreSettings(HKEY key,CSalamanderRegistryAbstract* registry)
         auto data=dirsync::EncodeProfiles(settings.profiles);
         profilesSaved=registry->SetValue(key,"ProfilesV1",REG_BINARY,data.data(),DWORD(data.size()))!=FALSE;
     } catch(...) {}
-    return mode && path && appearance && profilesSaved;
+    std::vector<wchar_t> history;
+    for(const auto& value:settings.directoryHistory){history.insert(history.end(),value.begin(),value.end());history.push_back(0);}
+    if(history.empty())history.push_back(0);history.push_back(0);
+    bool historySaved=history.size()*sizeof(wchar_t)<=DirectoryHistoryBytes &&
+        registry->SetValue(key,"DirectoryHistoryUtf16V1",REG_BINARY,history.data(),DWORD(history.size()*sizeof(wchar_t)))!=FALSE;
+    return mode && path && appearance && profilesSaved && historySaved;
 }
 void WINAPI SettingsCallback(BOOL load,HKEY key,CSalamanderRegistryAbstract* registry,void* param)
 {
@@ -200,6 +243,36 @@ std::wstring ControlText(HWND dialog, int id)
     std::vector<wchar_t> text(size_t(count) + 1);
     GetWindowTextW(edit, text.data(), int(text.size()));
     return text.data();
+}
+void SizeDirectoryHistory(HWND combo)
+{
+    RECT bounds{};GetWindowRect(combo,&bounds);int width=bounds.right-bounds.left;
+    HDC dc=GetDC(combo);auto font=SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(combo,WM_GETFONT,0,0)));
+    for(const auto& path:settings.directoryHistory) {
+        SIZE text{};if(GetTextExtentPoint32W(dc,path.c_str(),int(path.size()),&text))
+            width=std::max(width,int(text.cx)+GetSystemMetrics(SM_CXVSCROLL)+12);
+    }
+    SelectObject(dc,font);ReleaseDC(combo,dc);
+    MONITORINFO monitor{sizeof(monitor)};
+    if(GetMonitorInfoW(MonitorFromWindow(combo,MONITOR_DEFAULTTONEAREST),&monitor))
+        width=std::min(width,std::max(int(bounds.right-bounds.left),int((monitor.rcWork.right-monitor.rcWork.left)*3/4)));
+    SendMessageW(combo,CB_SETDROPPEDWIDTH,width,0);
+}
+void FillDirectoryHistory(HWND window)
+{
+    for(int id:{IDC_LEFT,IDC_RIGHT}) {
+        HWND combo=GetDlgItem(window,id);COMBOBOXINFO info{sizeof(info)};
+        if(!GetComboBoxInfo(combo,&info))continue;
+        auto text=ControlText(window,id);
+        DWORD selection=DWORD(SendMessageW(combo,CB_GETEDITSEL,0,0));
+        SendMessageW(combo,CB_RESETCONTENT,0,0);
+        for(const auto& path:settings.directoryHistory)SendMessageW(combo,CB_ADDSTRING,0,LPARAM(path.c_str()));
+        SendMessageW(combo,CB_LIMITTEXT,32759,0);
+        SendMessageW(combo,CB_SETMINVISIBLE,8,0);
+        SetWindowTextW(combo,text.c_str());
+        SendMessageW(combo,CB_SETEDITSEL,0,selection);
+        SizeDirectoryHistory(combo);
+    }
 }
 bool Checked(HWND dialog, int id) { return IsDlgButtonChecked(dialog, id) == BST_CHECKED; }
 void ConfigureDark(HWND dialog)
@@ -265,7 +338,13 @@ void BrowseFolder(HWND parent,int edit,int title)
     std::wstring full;
     // The shell can return an 8.3 alias for a long path, even through wide APIs.
     if(FAILED(resolved) || !path || !FolderSelectionPath(path.get(),full)) {Message(parent,IDS_BROWSE_FAILED);return;}
-    if(choice.initial!=full) SetDlgItemTextW(parent,edit,full.c_str());
+    if(choice.initial!=full) {
+        SetDlgItemTextW(parent,edit,full.c_str());
+        // Unlike EDIT, a combo does not notify its parent about programmatic
+        // text changes. Keep browse selection on the same invalidation path.
+        if(edit==IDC_LEFT || edit==IDC_RIGHT)
+            SendMessageW(parent,WM_COMMAND,MAKEWPARAM(edit,CBN_EDITCHANGE),LPARAM(GetDlgItem(parent,edit)));
+    }
 }
 void Field(InfoRows& rows, int label, const std::wstring& value)
 { rows.push_back({Text(label), value}); }
@@ -503,7 +582,8 @@ struct Preview
     dirsync::ReportBatch operationReport;
     bool reportReady=false;
     HWND transferWindow=nullptr,transferSpeedWindow=nullptr;
-    HWND syncConfirmationWindow=nullptr,syncDetailsWindow=nullptr;
+    HWND syncConfirmationWindow=nullptr,syncDetailsWindow=nullptr,syncSettingsWindow=nullptr;
+    HWND discardQuestionWindow=nullptr;
     bool transferCancelQuestion=false;
     CGUIProgressBarAbstract* transferFileBar=nullptr;
     CGUIProgressBarAbstract* transferTotalBar=nullptr;
@@ -521,7 +601,7 @@ struct Preview
     bool running = false, closing = false, failed = false, validating = false, updatingList = false;
     bool modeless=false;
     void CloseTransfer() {
-        for(HWND* child:{&syncDetailsWindow,&syncConfirmationWindow})if(*child){EndDialog(*child,IDCANCEL);*child=nullptr;}
+        for(HWND* child:{&discardQuestionWindow,&syncSettingsWindow,&syncDetailsWindow,&syncConfirmationWindow})if(*child){EndDialog(*child,IDCANCEL);*child=nullptr;}
         errorQuestion.Cancel();
         if(errorWindow){HWND window=errorWindow;errorWindow=nullptr;DestroyWindow(window);}
         if(transferSpeedWindow){EndDialog(transferSpeedWindow,IDCANCEL);transferSpeedWindow=nullptr;}
@@ -828,6 +908,7 @@ void ButtonIcons(Preview& p)
 }
 struct Appearance {
     Settings draft=settings;
+    HWND* activeWindow=nullptr;
     int theme=0;
     std::array<CGUIColorArrowButtonAbstract*,7> buttons{};
 };
@@ -837,6 +918,8 @@ void RecoveryControls(HWND window)
 {
     bool keep=Checked(window,IDC_KEEP_ORIGINALS);
     for(int id:{IDC_RECOVERY_ROOT,IDC_RECOVERY_LABEL,IDC_BROWSE_RECOVERY}) EnableWindow(GetDlgItem(window,id),keep);
+    std::wstring root;
+    EnableWindow(GetDlgItem(window,IDOK),!keep || dirsync::NormalizeRoot(ControlText(window,IDC_RECOVERY_ROOT),root));
 }
 void AppearanceSample(HWND window,Appearance& appearance)
 {
@@ -852,7 +935,8 @@ INT_PTR AppearanceBody(HWND window,UINT message,WPARAM w,LPARAM l)
     if(message==WM_INITDIALOG) {
         appearance=reinterpret_cast<Appearance*>(l);
         SetWindowLongPtrW(window,DWLP_USER,l);
-        ConfigureDark(window);appearance->theme=dark?1:0;
+        if(appearance->activeWindow)*appearance->activeWindow=window;
+        if(general)ConfigureDark(window);appearance->theme=dark?1:0;
         CheckDlgButton(window,IDC_ACTION_LABELS,appearance->draft.actionLabels?BST_CHECKED:BST_UNCHECKED);
         CheckDlgButton(window,IDC_COLOR_ROWS,appearance->draft.colorRows?BST_CHECKED:BST_UNCHECKED);
         CheckDlgButton(window,IDC_KEEP_ORIGINALS,appearance->draft.keepOriginals?BST_CHECKED:BST_UNCHECKED);
@@ -903,10 +987,21 @@ INT_PTR AppearanceBody(HWND window,UINT message,WPARAM w,LPARAM l)
         case IDC_STORED_ORIGINALS: ShowStoredOriginals(window,ControlText(window,IDC_RECOVERY_ROOT));return TRUE;
         case IDC_BROWSE_RECOVERY: BrowseFolder(window,IDC_RECOVERY_ROOT,IDS_BROWSE_RECOVERY);return TRUE;
         case IDC_KEEP_ORIGINALS: RecoveryControls(window);return TRUE;
+        case IDC_RECOVERY_ROOT:
+            if(HIWORD(w)==EN_CHANGE)RecoveryControls(window);
+            return TRUE;
         case IDC_COLOR_RESET:
             appearance->draft.colors[appearance->theme]=DefaultPalette(appearance->theme!=0);
             AppearanceSample(window,*appearance);return TRUE;
         case IDOK:
+            // Validate before changing any global preference, including when
+            // Enter or a command reaches the dialog despite a disabled OK.
+            {
+                std::wstring root;
+                if(Checked(window,IDC_KEEP_ORIGINALS) && !dirsync::NormalizeRoot(ControlText(window,IDC_RECOVERY_ROOT),root)) {
+                    SetFocus(GetDlgItem(window,IDC_RECOVERY_ROOT));return TRUE;
+                }
+            }
             for(size_t i=0;i<OptionalColumns.size();++i) {
                 DWORD bit=1u<<OptionalColumns[i];
                 if(Checked(window,IDC_COLUMN_FIRST+int(i))) settings.visibleColumns|=bit;
@@ -934,11 +1029,12 @@ INT_PTR CALLBACK AppearanceDialog(HWND window,UINT message,WPARAM w,LPARAM l)
     try {return AppearanceBody(window,message,w,l);}
     catch(...) {EndDialog(window,IDCANCEL);return TRUE;}
 }
-void ConfigureAppearance(HWND parent)
+void ConfigureAppearance(HWND parent,HWND* activeWindow=nullptr)
 {
-    Appearance appearance;
+    Appearance appearance;appearance.activeWindow=activeWindow;
     DialogBoxParamW(language,MAKEINTRESOURCEW(IDD_APPEARANCE),parent,AppearanceDialog,LPARAM(&appearance));
-    ConfigureDark(nullptr);
+    if(activeWindow)*activeWindow=nullptr;
+    if(general)ConfigureDark(nullptr);
 }
 LRESULT CALLBACK TooltipLifetime(HWND window,UINT message,WPARAM w,LPARAM l,UINT_PTR id,DWORD_PTR data)
 {
@@ -1037,7 +1133,7 @@ bool SyncAvailable(const Preview& p) {
 }
 void Status(Preview& p)
 {
-    EnableWindow(GetDlgItem(p.window,IDC_SYNCHRONIZE),SyncAvailable(p));
+    EnableWindow(GetDlgItem(p.window,IDC_SYNCHRONIZE),!p.running && (p.reportReady || SyncAvailable(p)));
     std::wstring state;std::vector<std::wstring> metrics;
     auto metric=[&](int id,uint64_t value) {wchar_t text[128]{};swprintf_s(text,Text(id).c_str(),value);metrics.emplace_back(text);};
     if(p.running) {
@@ -1292,6 +1388,32 @@ void Busy(Preview& p, bool busy)
     for(int id:{IDC_STOP,IDC_STOP_SYNC}) EnableWindow(GetDlgItem(p.window,id),busy && id==StopControl(p));
     ProfileControls(p);
 }
+bool EditedProposals(const Preview& p)
+{
+    if(!p.result.snapshot || p.result.stale || p.result.cancelled || p.defaults.size()!=p.result.rows.size())return false;
+    for(size_t i=0;i<p.defaults.size();++i)if(p.result.rows[i].action!=p.defaults[i])return true;
+    return false;
+}
+INT_PTR CALLBACK DiscardProposalsDialog(HWND window,UINT message,WPARAM w,LPARAM l)
+{
+    PreviewCallback callback;
+    if(message==WM_INITDIALOG){auto* p=reinterpret_cast<Preview*>(l);p->discardQuestionWindow=window;
+        if(general){ConfigureDark(window);general->MultiMonCenterWindow(window,GetParent(window),FALSE);}
+        else {DarkModeApplyWindow(window);DarkModeApplyTree(window);}
+        SetFocus(GetDlgItem(window,IDCANCEL));return FALSE;}
+    LRESULT brush=0;if(dark && DarkModeHandleCtlColor(message,w,l,brush))return brush;
+    if(message==WM_COMMAND && (LOWORD(w)==IDOK || LOWORD(w)==IDCANCEL)){EndDialog(window,LOWORD(w));return TRUE;}
+    if(message==WM_CLOSE){EndDialog(window,IDCANCEL);return TRUE;}return FALSE;
+}
+bool ConfirmDiscardProposals(Preview& p)
+{
+    if(!EditedProposals(p))return true;
+    if(p.discardQuestionWindow)return false;
+    PreviewCallback callback;
+    const auto answer=DialogBoxParamW(language,MAKEINTRESOURCEW(IDD_PROPOSAL_DISCARD),p.window,DiscardProposalsDialog,LPARAM(&p));
+    p.discardQuestionWindow=nullptr;
+    return answer==IDOK && p.window && IsWindow(p.window);
+}
 void InvalidatePlan(Preview& p)
 {
     if (p.running) return;
@@ -1349,6 +1471,7 @@ INT_PTR CALLBACK ProfileCloseProc(HWND window,UINT message,WPARAM w,LPARAM l)
 }
 void ClosePreview(Preview& p)
 {
+    if(!ConfirmDiscardProposals(p))return;
     if(DirtyProfile(p)) {
         const auto choice=DialogBoxParamW(language,MAKEINTRESOURCEW(IDD_PROFILE_CLOSE),p.window,ProfileCloseProc,0);
         if(choice!=IDYES && choice!=IDNO) return;
@@ -1581,8 +1704,11 @@ void ProfileMenu(Preview& p)
 void Start(Preview& p)
 {
     if (p.running) return;
+    if(!ConfirmDiscardProposals(p))return;
     if(Checked(p.window,IDC_SELECTED)) {
+        p.applyingProfile=true;
         SetDlgItemTextW(p.window,IDC_LEFT,p.panelLeft.c_str());SetDlgItemTextW(p.window,IDC_RIGHT,p.panelRight.c_str());
+        p.applyingProfile=false;
     }
     p.left = ControlText(p.window, IDC_LEFT); p.right = ControlText(p.window, IDC_RIGHT);
     p.options.mask = ControlText(p.window, IDC_MASK);
@@ -1799,10 +1925,35 @@ bool PlanEnabled(const Preview& p,int command)
 void EnablePlanMenu(CGUIMenuPopupAbstract* menu,const Preview& p)
 {
     for(int command=PlanSummary;command<=PlanExport;++command) menu->EnableItem(command+1,FALSE,PlanEnabled(p,command));
+    menu->SetDefaultItem(PlanSync+1,FALSE);
+}
+void PreviewCommand(Preview& p,const std::vector<size_t>& rows,int command);
+void SynchronizeOperations(Preview& p)
+{
+    if(p.running || !gui)return;
+    const MENU_TEMPLATE_ITEM items[]={
+        {MNTT_PB,0,0,0,-1,0,nullptr},
+        {MNTT_IT,IDS_SYNC_COMMAND,MNTS_B|MNTS_I|MNTS_A,PlanSync+1,-1,0,nullptr},
+        {MNTT_IT,IDS_MENU_SUMMARY,MNTS_B|MNTS_I|MNTS_A,PlanSummary+1,-1,0,nullptr},
+        {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
+        {MNTT_IT,IDS_MENU_COPY_NEW,MNTS_B|MNTS_I|MNTS_A,PlanCopy+1,-1,0,nullptr},
+        {MNTT_IT,IDS_MENU_OVERWRITE,MNTS_B|MNTS_I|MNTS_A,PlanOverwrite+1,-1,0,nullptr},
+        {MNTT_IT,IDS_MENU_DELETE_FILES,MNTS_B|MNTS_I|MNTS_A,PlanDelete+1,-1,0,nullptr},
+        {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
+        {MNTT_IT,IDS_MENU_SAVE,MNTS_B|MNTS_I|MNTS_A,PlanSave+1,-1,0,nullptr},
+        {MNTT_IT,IDS_REPORT_EXPORT,MNTS_B|MNTS_I|MNTS_A,PlanExport+1,-1,0,nullptr},
+        {MNTT_PE,0,0,0,-1,0,nullptr}};
+    auto* menu=gui->CreateMenuPopup();if(!menu)return;DWORD command=0;
+    if(menu->LoadFromTemplate(language,items,nullptr,nullptr,nullptr)){
+        EnablePlanMenu(menu,p);RECT bounds{};GetWindowRect(GetDlgItem(p.window,IDC_SYNCHRONIZE),&bounds);
+        command=TrackWithStatus(p,menu,MENU_TRACK_RETURNCMD|MENU_TRACK_NONOTIFY,bounds.left,bounds.bottom);
+    }
+    gui->DestroyMenuPopup(menu);if(command)PreviewCommand(p,{},int(command)-1);
 }
 void SynchronizeMenu(Preview& p)
 {
     if(PlanEnabled(p,PlanSync))ValidatePreview(p,Preview::Intent::Sync);
+    else SynchronizeOperations(p);
 }
 void PreviewCommand(Preview& p,const std::vector<size_t>& rows,int command)
 {
@@ -2052,13 +2203,27 @@ void SyncSummary(Preview& p)
     if(!report.complete)notes+=L"\n"+Text(IDS_SYNC_INCOMPLETE);
     InformationBox(p.window,IDS_SYNC_RESULT,std::move(fields),notes);
 }
+void ConfigurePreviewAppearance(Preview& p,HWND owner,HWND* activeWindow=nullptr)
+{
+    RememberColumns(p);
+    const int previousSort=settings.sortColumn;const bool previousDescending=settings.sortDescending;
+    const bool previousSizes=settings.relativeSizes,previousTimes=settings.relativeTimes;
+    ConfigureAppearance(owner,activeWindow);
+    if(!p.window || !IsWindow(p.window) || !GetDlgItem(p.window,IDC_LIST))return;
+    ConfigureDark(p.window);ButtonIcons(p);ActionColumn(p.window);
+    p.columnWidths[3]=ListView_GetColumnWidth(GetDlgItem(p.window,IDC_LIST),3);
+    GrowRelativeColumns(p,settings.relativeSizes && !previousSizes,settings.relativeTimes && !previousTimes);
+    ColumnStyle(p);
+    if(previousSort!=settings.sortColumn || previousDescending!=settings.sortDescending)Filter(p);
+    InvalidateRect(GetDlgItem(p.window,IDC_LIST),nullptr,TRUE);Status(p);
+}
 #include "sync_confirmation.inc"
 void SyncAll(Preview& p)
 {
-    const bool keep=settings.keepOriginals;const auto root=settings.recoveryRoot;
-    SyncConfirmation choice{p,keep,root};
+    SyncConfirmation choice{p,settings.keepOriginals,settings.recoveryRoot};
     if(!ChooseSynchronization(choice))return;
     if(!p.window || !IsWindow(p.window))return;
+    const bool keep=choice.keep;const auto root=choice.recovery;
     const auto selection=choice.selection;
     const auto plan=dirsync::BuildSyncPlan(p.result,p.visible,selection);
     if(!plan.Count())return;
@@ -2395,6 +2560,7 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         ReadPanelFormat(*p);
         SetWindowLongPtrW(window, DWLP_USER, reinterpret_cast<LONG_PTR>(p));
         SetDlgItemTextW(window, IDC_LEFT, p->left.c_str()); SetDlgItemTextW(window, IDC_RIGHT, p->right.c_str());
+        FillDirectoryHistory(window);
         SetDlgItemTextW(window, IDC_MASK, L"*.*");
         CheckDlgButton(window, IDC_RECURSIVE, BST_CHECKED);
         CheckDlgButton(window, IDC_SELECTED, p->options.selection.empty() ? BST_UNCHECKED : BST_CHECKED);
@@ -2426,10 +2592,15 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         {
             if(GetDlgCtrlID(child)==IDC_STATUS) continue;
             RECT bounds{}; GetWindowRect(child, &bounds); MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&bounds), 2);
+            if(GetDlgCtrlID(child)==IDC_LEFT || GetDlgCtrlID(child)==IDC_RIGHT) {
+                RECT dropped{};if(SendMessageW(child,CB_GETDROPPEDCONTROLRECT,0,LPARAM(&dropped)))
+                    bounds.bottom=bounds.top+dropped.bottom-dropped.top;
+            }
             p->controls.push_back({child, bounds});
         }
         LayoutFilters(*p,0);
-        ConfigureDark(window);ButtonIcons(*p); Tooltips(window);ActionColumn(window);
+        ConfigureDark(window);if(gui)gui->AttachButton(window,IDC_SYNCHRONIZE,BTF_DROPDOWN);
+        ButtonIcons(*p); Tooltips(window);ActionColumn(window);
         for(int i=0;i<10;++i) p->columnWidths[size_t(i)]=ListView_GetColumnWidth(list,i);
         GrowRelativeColumns(*p,settings.relativeSizes,settings.relativeTimes);
         if(auto* profile=settings.profiles.Find(settings.profiles.selected)) ApplyProfile(*p,*profile);
@@ -2494,6 +2665,14 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         if(!p->validating && !p->synchronizing && !p->copying && !p->saving && !p->overwriting && !p->deleting && !p->immediateDeleting) {
             p->reportReady=true;
             p->defaults.clear();for(const auto& row:p->result.rows) p->defaults.push_back(row.action);
+            if(!p->failed && !p->result.cancelled && !p->result.stale && p->result.snapshot && !p->cancel) {
+                const auto previous=settings.directoryHistory;
+                RememberDirectory(settings.directoryHistory,p->right);RememberDirectory(settings.directoryHistory,p->left);
+                if(settings.directoryHistory!=previous) {
+                    p->applyingProfile=true;FillDirectoryHistory(window);p->applyingProfile=false;
+                    if(general)PersistSettings(window);
+                }
+            }
         }
         if (p->validating) { p->result = std::move(p->checkedResult); p->validating = false; }
         if(p->synchronizing) {
@@ -2562,9 +2741,15 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         }
         return TRUE;
     case WM_CLOSE:
-        if (p->running) { p->closing = true; p->Stop(); }
+        if (p->running) {
+            if(TransferActive(*p) && !ConfirmTransferCancel(*p,true))return TRUE;
+            if(p->running){p->closing=true;p->Stop();}
+            else ClosePreview(*p);
+        }
         else ClosePreview(*p);
         return TRUE;
+    case WM_USER_BUTTONDROPDOWN:
+        if(w==IDC_SYNCHRONIZE){SynchronizeOperations(*p);return TRUE;}break;
     case ShowTransferMessage: ShowTransfer(*p);return TRUE;
     case OperationErrorMessage: ShowOperationError(*p);return TRUE;
     case WM_SETTINGCHANGE: case WM_THEMECHANGED: ReadPanelFormat(*p);UpdateGroupHeaders(*p);RememberColumns(*p);ConfigureDark(window);ColumnStyle(*p);ButtonIcons(*p);InvalidateRect(GetDlgItem(window,IDC_LIST),nullptr,FALSE); return TRUE;
@@ -2584,15 +2769,7 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         case IDC_SYNCHRONIZE: SynchronizeMenu(*p);return TRUE;
         case IDC_SETTINGS:
             if(!p->running) {
-                RememberColumns(*p);
-                const int previousSort=settings.sortColumn;const bool previousDescending=settings.sortDescending;
-                const bool previousSizes=settings.relativeSizes,previousTimes=settings.relativeTimes;
-                ConfigureAppearance(window);ConfigureDark(window);ButtonIcons(*p);ActionColumn(window);
-                p->columnWidths[3]=ListView_GetColumnWidth(GetDlgItem(window,IDC_LIST),3);
-                GrowRelativeColumns(*p,settings.relativeSizes && !previousSizes,settings.relativeTimes && !previousTimes);
-                ColumnStyle(*p);
-                if(previousSort!=settings.sortColumn || previousDescending!=settings.sortDescending) Filter(*p);
-                InvalidateRect(GetDlgItem(window,IDC_LIST),nullptr,TRUE);Status(*p);
+                ConfigurePreviewAppearance(*p,window);
             }
             return TRUE;
         case IDCANCEL: SendMessageW(window, WM_CLOSE, 0, 0); return TRUE;
@@ -2614,8 +2791,24 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
             return TRUE;
         case IDC_SELECTED: case IDC_RECURSIVE: case IDC_CONTENT: case IDC_IGNORE: case IDC_ASYMMETRIC: case IDC_EMPTY:
             if(HIWORD(w)==BN_CLICKED && !p->running) {Busy(*p,false);Status(*p);} return TRUE;
-        case IDC_LEFT: case IDC_RIGHT: case IDC_MASK:
-            if (HIWORD(w) == EN_CHANGE && !p->applyingProfile) {InvalidatePlan(*p);ProfileControls(*p);} return TRUE;
+        case IDC_LEFT: case IDC_RIGHT: case IDC_MASK: {
+            const int id=LOWORD(w);
+            if(id!=IDC_MASK && HIWORD(w)==CBN_DROPDOWN) {SizeDirectoryHistory(GetDlgItem(window,id));return TRUE;}
+            if(id!=IDC_MASK && !p->applyingProfile && !p->running &&
+                (HIWORD(w)==CBN_SELENDOK || (HIWORD(w)==CBN_SELCHANGE && !SendDlgItemMessageW(window,id,CB_GETDROPPEDSTATE,0,0)))) {
+                // Selection notifications can precede the native edit update.
+                // Read the final value after the dropdown finishes committing.
+                PostMessageW(window,WM_COMMAND,MAKEWPARAM(id,CBN_EDITCHANGE),l);return TRUE;
+            }
+            if ((HIWORD(w)==EN_CHANGE || (id!=IDC_MASK && HIWORD(w)==CBN_EDITCHANGE)) && !p->applyingProfile && !p->running) {
+                const auto previous=id==IDC_LEFT?p->left:id==IDC_RIGHT?p->right:p->options.mask;
+                if(ControlText(window,id)==previous)return TRUE;
+                if(!ConfirmDiscardProposals(*p)){
+                    p->applyingProfile=true;SetDlgItemTextW(window,id,previous.c_str());p->applyingProfile=false;return TRUE;
+                }
+                InvalidatePlan(*p);ProfileControls(*p);
+            } return TRUE;
+        }
         }
         break;
     case WM_NOTIFY:

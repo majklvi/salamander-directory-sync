@@ -157,8 +157,9 @@ void TransferMenu(Preview& p,bool keyboard) {
             PersistSettings(p.transferWindow);}}
     p.copyProgress.pauseRequested=command==1?!wasPaused:wasPaused;UpdateTransfer(p);
 }
-void ConfirmTransferCancel(Preview& p) {
-    if(!p.running || p.cancel || p.transferCancelQuestion)return;
+bool ConfirmTransferCancel(Preview& p,bool closePreview=false) {
+    if(p.transferCancelQuestion)return false;
+    if(!p.running || p.cancel)return true;
     PreviewCallback callback;
     const bool wasPaused=p.copyProgress.pauseRequested.load();
     p.transferCancelQuestion=true;p.copyProgress.pauseRequested=true;UpdateTransfer(p);
@@ -167,6 +168,7 @@ void ConfirmTransferCancel(Preview& p) {
     const auto question=Text(IDS_TRANSFER_CANCEL_CONFIRM),caption=Text(IDS_NAME);
     const UINT flags=MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2;
     int answer=IDNO;
+    const HWND owner=closePreview || !p.transferWindow?p.window:p.transferWindow;
     if(general) {
         // The host's message-box service decodes UTF-8 (also on the tested
         // 0.15.1 base), supplies its own localized buttons and ignores Escape
@@ -180,12 +182,13 @@ void ConfirmTransferCancel(Preview& p) {
             return text;
         };
         const auto message=utf8(question),title=utf8(caption);
-        answer=general->SalMessageBox(p.transferWindow,message.c_str(),title.c_str(),flags);
-    } else answer=MessageBoxW(p.transferWindow,question.c_str(),caption.c_str(),flags);
+        answer=general->SalMessageBox(owner,message.c_str(),title.c_str(),flags);
+    } else answer=MessageBoxW(owner,question.c_str(),caption.c_str(),flags);
     p.transferCancelQuestion=false;
-    if(answer==IDYES)p.Stop();
+    if(answer==IDYES){if(closePreview)p.closing=true;p.Stop();}
     else if(!p.cancel)p.copyProgress.pauseRequested=wasPaused;
     UpdateTransfer(p);
+    return answer==IDYES;
 }
 LRESULT CALLBACK TransferButton(HWND button,UINT message,WPARAM w,LPARAM l,UINT_PTR id,DWORD_PTR) {
     if(message==WM_GETDLGCODE)return DefSubclassProc(button,message,w,l)|DLGC_WANTALLKEYS|DLGC_WANTTAB;

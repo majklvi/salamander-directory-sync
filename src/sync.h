@@ -4,7 +4,7 @@
 #include "delete.h"
 namespace dirsync {
 enum class SyncStage {Checking,NewItems,Overwrites,Deletions,Finished};
-struct SyncSelection { bool toRight=true,toLeft=true,deleteRight=true; };
+struct SyncSelection { bool toRight=true,toLeft=true,deleteRight=true,overwrite=true; };
 struct SyncPlan {
     std::vector<size_t> copies,overwrites,deletions;
     std::vector<size_t> excluded; // eligible visible proposals declined in confirmation
