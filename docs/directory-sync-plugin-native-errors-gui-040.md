@@ -1,5 +1,7 @@
 # Native operation-error dialogs and pending-question lifetime — 0.4.0
 
+> Terminology update (2026-10-21): Cancel captions in this report are normalized to the plugin's current Czech **Zrušit**. This does not change the dated test results or assert a new live GUI test. The host's original Czech wording differs.
+
 Verified 2026-10-21. Version 0.4.0 is in development; this is not a release or an SMB test.
 
 ## Host source and adaptation
@@ -8,7 +10,7 @@ Reviewed the host checkout at `e1efc2863e4bbee5ee78f27cacc8d8bcf7ed31d4`: `src/l
 
 The pinned SDK exposes synchronous `DialogError(HWND, DWORD, const char*, const char*, const char*)` with one narrow filename and no externally managed question handle. Direct reuse would change the plugin's two complete Unicode path fields and its cancellable modeless question lifetime. Therefore the plugin retains its existing `CreateDialog`/worker decision channel and adapts the host's resource layout rather than invoking the blocking SDK dialog. No SDK or executor change is required.
 
-The plugin layout is 350 × 104 DLU: the extra space accommodates operation/phase context and separate source/target lines. Paths use borderless, read-only, horizontally scrolling native controls, preserving selection and complete Unicode values. The error description is an ordinary wrapping Static caption. The English button grid follows the host's 50 × 14 DLU buttons; Czech uses 56 × 14 DLU so **Přeskočit vše** fits, with **Storno** matching the host's Czech convention. Colors follow the host. Retry/Skip/Skip all/Cancel semantics are unchanged.
+The plugin layout is 350 × 104 DLU: the extra space accommodates operation/phase context and separate source/target lines. Paths use borderless, read-only, horizontally scrolling native controls, preserving selection and complete Unicode values. The error description is an ordinary wrapping Static caption. The English button grid follows the host's 50 × 14 DLU buttons; Czech uses 56 × 14 DLU so **Přeskočit vše** fits, with a localized Czech Cancel caption. Colors follow the host. Retry/Skip/Skip all/Cancel semantics are unchanged.
 
 Shared confirmation/result explanations are also ordinary wrapping captions, without a Notes/Poznámky label, edit border, scrollbar or Tab stop. Initial height measures the complete explanation. The existing resizable table, Ctrl+C value copying and Ctrl+Shift+C full-summary copying remain available; the full summary still includes the explanation.
 

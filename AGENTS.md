@@ -3,6 +3,7 @@
 - Preserve binary compatibility with the current Samandarin 0.16 SDK. Update the pinned SDK dependency only when explicitly requested; do not require new host interfaces.
 - Use wide Win32 APIs and preserve long and Unicode paths. Do not introduce `MAX_PATH` buffers or ACP round trips where wide data is already available.
 - Follow Salamander's compact native dialog layout: `MS Shell Dlg` 8, small standard gaps, OK/Cancel, English and Czech localization, and host-controlled appearance. For unsaved changes use the conventional Save / Don't save / Cancel buttons, not radio choices followed by OK. Do not introduce a separate visual style.
+- Translate Cancel consistently as **Zrušit** in Czech buttons, help text and documentation, including operation-error and transfer dialogs. Preserve the existing cancellation behavior.
 - Preserve staging, data/metadata verification, and the remembered Keep originals preference. Directory deletion must be explicitly planned and limited to empty directories; never fall back to recursive deletion after an error.
 - Build, test, and package through this repository's `tools/` scripts. Do not depend on the surrounding host checkout, shared host property sheets, a local certificate, or a global output directory.
 - Verify all five x64 test suites in Debug and Release, together with the relevant build matrix. An ARM64 build is not a runtime test. Do not claim SMB, live GUI, or actual cloud CodeQL verification without performing the corresponding check.

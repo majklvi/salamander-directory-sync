@@ -1,5 +1,7 @@
 # 0.3.0 x64 package: clean installation and upgrade
 
+> Terminology update (2026-10-21): Cancel captions in this report are normalized to the plugin's current Czech **Zrušit**. This does not change the dated test results or assert a new live GUI test. The host's original Czech wording differs.
+
 Verified on 2026-10-19. This prepares the final local package; it does not publish a GitHub release or tag. The public download remains 0.2.1 until publication is requested.
 
 > [!CAUTION]
@@ -27,7 +29,7 @@ Built through `tools/build.ps1 -Configuration Release -Platform x64`; packaged t
 | `lang/english.slg` | 49664 | `948a66b85ac19598f37fa22b4b7e648e71517edc94cde573ae471c0d89376464` |
 | `lang/czech.slg` | 50688 | `900bfc9a8a8036985782e41b7267782df1177ae61d8e6732bb68bad1ed5b0aac` |
 
-The original candidate used the previous Czech SLG. Live verification found two English Cancel captions in the Czech profile manager/name dialog; these are now Storno. Both corrected dialogs were reopened and checked in the upgraded host. The SPL and English SLG did not change.
+The original candidate used the previous Czech SLG. Live verification found two English Cancel captions in the Czech profile manager/name dialog; these were translated into Czech (current caption: **Zrušit**). Both corrected dialogs were reopened and checked in the upgraded host. The SPL and English SLG did not change.
 
 The corrected test archive is under `out/releases/0.3.0-20261019-install-verified`, SHA-256 `c5d8eccb57ad4a8f3d5a33b37b6acdfa97ab7d151b85aa63feeccb3338aeff2a`. It records the modified test worktree and is evidence, not the final deliverable. Both stopped test installations were brought to its complete extracted payload; all **15 installed files** were independently matched against the extraction (14 manifest entries plus the manifest itself).
 

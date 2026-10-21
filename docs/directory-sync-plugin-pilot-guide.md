@@ -54,7 +54,7 @@ Vyzkoušejte běžné kopírování, přepis a malé vlastní odstranění; pot�
 
 ## Přímé odstranění z kontextového menu
 
-Horní „Označit ke kopírování…“ / „Označit k přeskočení“ pouze mění návrhy. Oddělené **Odstranit vybrané… → Vlevo… / Vpravo… / Na obou stranách…** odstraňuje právě zvýrazněné položky. Bez Shiftu do Koše, se Shiftem při aktivaci příkazu strany trvale. Režim a skutečné cesty ověřte v potvrzení OK/Storno. Uchovat originály se na tento příkaz nevztahuje; trvalé mazání nemá zálohu pluginu. Adresáře musí být prázdné, rodič nevybírá potomky. První chyba zastaví dávku a po běhu je nutné nové Porovnat. Obnovu z Koše provádějte v Koši Windows.
+Horní „Označit ke kopírování…“ / „Označit k přeskočení“ pouze mění návrhy. Oddělené **Odstranit vybrané… → Vlevo… / Vpravo… / Na obou stranách…** odstraňuje právě zvýrazněné položky. Bez Shiftu do Koše, se Shiftem při aktivaci příkazu strany trvale. Režim a skutečné cesty ověřte v potvrzení OK/Zrušit. Uchovat originály se na tento příkaz nevztahuje; trvalé mazání nemá zálohu pluginu. Adresáře musí být prázdné, rodič nevybírá potomky. První chyba zastaví dávku a po běhu je nutné nové Porovnat. Obnovu z Koše provádějte v Koši Windows.
 
 ## Obnova a hlavní omezení
 

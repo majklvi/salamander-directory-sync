@@ -19,7 +19,7 @@ V souborových řádcích neměly H/S zvláštní viditelnou značku atributu an
 
 F1 přímo ze souhrnu uvádí, že globální Delete all empty directories může odstranit i pravé prázdné adresáře, které stále existují vlevo. **Globální úklid není totéž jako odstranění pravostranných položek plánu.** Tento průchod nově zjistil jeho dostupnost při Empty directories OFF v uvedené místní sadě; starší evidence tuto podmínku neurčila.
 
-Žádné potvrzení provedení nebylo přijato, souhrny byly stornované. Nebylo testováno skutečné pořadí odstranění, chování při chybě či Stop ani obnovování adresářů v referenční aplikaci. Z náhledu se takové závěry nevyvozují. Skryté položky byly zahrnuté v aktuální konfiguraci; alternativní INI režimy nebyly v GUI přepínané.
+Žádné potvrzení provedení nebylo přijato, souhrny byly zrušené. Nebylo testováno skutečné pořadí odstranění, chování při chybě či Stop ani obnovování adresářů v referenční aplikaci. Z náhledu se takové závěry nevyvozují. Skryté položky byly zahrnuté v aktuální konfiguraci; alternativní INI režimy nebyly v GUI přepínané.
 
 Dokumentované alternativy pro H/S: parametr `SyncHideHiddenSystem` rozlišuje zahrnutí všech položek (0), vynechání při H/S na obou stranách (1) nebo na kterékoli straně (2); přičtení 4 navazuje na nastavení hlavního programu. Jde o nápovědu citovanou ve fóru předlohy (historický zdroj v archivu původního forku), dostupnou také v zveřejněném feedu (historický zdroj v archivu původního forku). Jednotlivé režimy včetně jejich dosahu na adresáře tento průchod nepotvrdil. Obecný popis: Synchronize directories (historický zdroj v archivu původního forku).
 

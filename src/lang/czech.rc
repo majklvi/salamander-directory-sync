@@ -51,7 +51,7 @@ BEGIN
     CONTROL "", IDC_INFO_TABLE, "SysListView32", LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 7, 7, 286, 84
     LTEXT "", IDC_INFO_NOTES, 7, 96, 286, 54, SS_NOPREFIX
     PUSHBUTTON "OK", IDOK, 137, 167, 76, 14
-    DEFPUSHBUTTON "Storno", IDCANCEL, 219, 167, 74, 14
+    DEFPUSHBUTTON "Zrušit", IDCANCEL, 219, 167, 74, 14
 END
 IDD_APPEARANCE DIALOGEX 0, 0, 306, 287
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
@@ -106,7 +106,7 @@ BEGIN
     PUSHBUTTON "...", IDC_BROWSE_RECOVERY, 285, 243, 14, 14
     PUSHBUTTON "Uložené originály...", IDC_STORED_ORIGINALS, 7, 267, 116, 14
     DEFPUSHBUTTON "OK", IDOK, 169, 267, 62, 14
-    PUSHBUTTON "Storno", IDCANCEL, 237, 267, 62, 14
+    PUSHBUTTON "Zrušit", IDCANCEL, 237, 267, 62, 14
 END
 #include "czech-strings.rc2"
 
@@ -129,7 +129,7 @@ BEGIN
     LTEXT "&Název:", -1, 8, 10, 34, 10
     EDITTEXT IDC_PROFILE_NAME, 44, 7, 148, 14, ES_AUTOHSCROLL
     DEFPUSHBUTTON "OK", IDOK, 88, 36, 50, 14
-    PUSHBUTTON "Storno", IDCANCEL, 142, 36, 50, 14
+    PUSHBUTTON "Zrušit", IDCANCEL, 142, 36, 50, 14
 END
 STRINGTABLE
 BEGIN
@@ -190,7 +190,7 @@ BEGIN
     PUSHBUTTON "Import...", IDC_PROFILE_IMPORT, 7, 237, 50, 14
     PUSHBUTTON "Export...", IDC_PROFILE_EXPORT, 63, 237, 50, 14
     DEFPUSHBUTTON "OK", IDOK, 167, 237, 50, 14
-    PUSHBUTTON "Storno", IDCANCEL, 223, 237, 50, 14
+    PUSHBUTTON "Zrušit", IDCANCEL, 223, 237, 50, 14
 END
 STRINGTABLE
 BEGIN
@@ -304,7 +304,7 @@ BEGIN
     LTEXT "", IDC_TRANSFER_PHASE, 46, 69, 304, 8, SS_LEFTNOWORDWRAP | SS_NOPREFIX | SS_NOTIFY
     PUSHBUTTON "&Minimalizovat", IDC_TRANSFER_MINIMIZE, 92, 87, 54, 14, WS_TABSTOP
     PUSHBUTTON "&Pozastavit", IDC_TRANSFER_PAUSE, 152, 87, 50, 14, WS_TABSTOP
-    DEFPUSHBUTTON "Storno", IDCANCEL, 212, 87, 50, 14, WS_TABSTOP
+    DEFPUSHBUTTON "Zrušit", IDCANCEL, 212, 87, 50, 14, WS_TABSTOP
 END
 
 IDD_TRANSFER_SPEED DIALOGEX 16, 24, 234, 88
@@ -320,7 +320,7 @@ BEGIN
     COMBOBOX IDC_TRANSFER_SPEED_UNITS, 166, 32, 35, 49, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL "", -1, "Static", SS_ETCHEDHORZ | WS_GROUP, 7, 61, 221, 1
     DEFPUSHBUTTON "OK", IDOK, 33, 67, 50, 14, WS_GROUP
-    PUSHBUTTON "Storno", IDCANCEL, 92, 67, 50, 14
+    PUSHBUTTON "Zrušit", IDCANCEL, 92, 67, 50, 14
     PUSHBUTTON "Nápověda", IDHELP, 151, 67, 50, 14
 END
 STRINGTABLE
@@ -330,7 +330,7 @@ BEGIN
     IDS_TRANSFER_SPEED_MB "MB/s"
     IDS_TRANSFER_SPEED_B "B/s"
     IDS_TRANSFER_SPEED_GB "GB/s"
-    IDS_TRANSFER_SPEED_HELP "Zvolte přenos bez omezení nebo zadejte kladné celé číslo a jednotku (1024 B = 1 KB). Maximum je 1 TB/s. Limit platí pro kopírovaná data včetně pojmenovaných proudů a kopií pro obnovu, pouze pro tuto dávku. Čtení při ověřování se neomezuje. Storno ponechá předchozí nastavení."
+    IDS_TRANSFER_SPEED_HELP "Zvolte přenos bez omezení nebo zadejte kladné celé číslo a jednotku (1024 B = 1 KB). Maximum je 1 TB/s. Limit platí pro kopírovaná data včetně pojmenovaných proudů a kopií pro obnovu, pouze pro tuto dávku. Čtení při ověřování se neomezuje. Zrušit ponechá předchozí nastavení."
 END
 
 STRINGTABLE
@@ -362,7 +362,7 @@ BEGIN
     DEFPUSHBUTTON "&Opakovat", IDC_ERROR_RETRY, 54, 80, 56, 14, WS_GROUP
     PUSHBUTTON "&Přeskočit", IDC_ERROR_SKIP, 116, 80, 56, 14
     PUSHBUTTON "Přeskočit &vše", IDC_ERROR_SKIP_ALL, 178, 80, 56, 14
-    PUSHBUTTON "&Storno", IDCANCEL, 240, 80, 56, 14
+    PUSHBUTTON "&Zrušit", IDCANCEL, 240, 80, 56, 14
 END
 STRINGTABLE
 BEGIN

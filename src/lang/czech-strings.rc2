@@ -230,7 +230,7 @@ BEGIN
     IDS_IMMEDIATE_PERMANENT "Trvale odstranit bez Koše"
     IDS_IMMEDIATE_SIDE "Strana"
     IDS_IMMEDIATE_SELECTED "Vybrané položky"
-    IDS_IMMEDIATE_NOTE "Pouze zvýrazněné položky na uvedené straně. Shift při aktivaci příkazu volí trvalé odstranění; způsob je uveden výše. Uchování originálů se nepoužije. Adresáře se odstraní pouze prázdné; nevybraný obsah zůstane. OK provede uvedenou operaci, Storno nic nezmění."
+    IDS_IMMEDIATE_NOTE "Pouze zvýrazněné položky na uvedené straně. Shift při aktivaci příkazu volí trvalé odstranění; způsob je uveden výše. Uchování originálů se nepoužije. Adresáře se odstraní pouze prázdné; nevybraný obsah zůstane. OK provede uvedenou operaci, Zrušit nic nezmění."
     IDS_IMMEDIATE_DONE "Odstraněno"
     IDS_IMMEDIATE_ERROR "Kód chyby (HRESULT)"
     IDS_IMMEDIATE_RESULT_NOTE "Porovnání již není aktuální; spusťte nové Porovnat. Dokončené změny zůstávají zachované. Položky přesunuté do Koše lze obnovit z Koše Windows; trvalé odstranění nemá obnovu pluginu."

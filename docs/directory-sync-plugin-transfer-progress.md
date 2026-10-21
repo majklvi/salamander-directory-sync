@@ -67,6 +67,8 @@ A final production Release smoke test used SPL SHA-256 `acb330e20c6a74a167b0a24d
 
 The earlier four CodeQL findings predate this feature, including one in the pinned SDK; they are separate from the four new findings corrected here. No SDK files were modified.
 
+> Terminology update (2026-10-21): Cancel captions in this report are normalized to the plugin's current Czech **Zrušit**. This does not change the dated test results or assert a new live GUI test. The host's original Czech wording differs.
+
 ## Native host-dialog alignment (2026-10-19)
 
 The later UI revision follows the actual single-stream copying dialog, rather than the initial 355 × 154 Windows-progress layout documented above. Read-only source inspection used Samandarin integration checkout `9d58fb8f2200fec5048e2efe6f521258c69caf0e`:
@@ -78,7 +80,7 @@ The later UI revision follows the actual single-stream copying dialog, rather th
 
 Computer Use observed an actual F5 copy of the isolated synthetic `a-large.bin` (1,879,048,192 bytes) in the private 0.16 x64 host. The live window showed the two native blue bars with centered 3% text, path lines, compact footer (Minimize / Pause / Cancel) and percentage title. This copy completed before the subsequent Pause input could take effect; this session therefore does not claim live Pause behavior. Source and target SHA-256 matched (`9820ca93c478db6b8b4a322f6f601f0222523689af268a6b396bcc1ac163d122`). Only that verified synthetic destination was removed through the filesystem to recover test space. Local evidence: `C:\Samandarin\builds\dirsync-native-progress-20261019\native-copy.json`.
 
-The plugin now uses the same 355 × 110 resource grid and attaches actual host progress bars through `gui->AttachProgressBar`, passing only numeric progress and no translated ANSI text. Long Unicode paths remain wide Win32 labels with full tooltips. Czech bar labels use the full existing left-label column to avoid clipping. Percentages move inside the bars; the title carries total progress. One status line replaces the separate phase/count/bytes/time rows; its tooltip preserves all the detailed values. Cancel/Storno is centered at the native footer position. Stop, Escape and title-bar Close retain the existing worker cancellation/join contract. A standard-progress fallback is used only if the host cannot supply a bar or in the standalone test harness. Borrowed SDK interfaces are cleared when the controls are destroyed, never deleted by the plugin.
+The plugin now uses the same 355 × 110 resource grid and attaches actual host progress bars through `gui->AttachProgressBar`, passing only numeric progress and no translated ANSI text. Long Unicode paths remain wide Win32 labels with full tooltips. Czech bar labels use the full existing left-label column to avoid clipping. Percentages move inside the bars; the title carries total progress. One status line replaces the separate phase/count/bytes/time rows; its tooltip preserves all the detailed values. Cancel/Zrušit is centered at the native footer position. Stop, Escape and title-bar Close retain the existing worker cancellation/join contract. A standard-progress fallback is used only if the host cannot supply a bar or in the standalone test harness. Borrowed SDK interfaces are cleared when the controls are destroyed, never deleted by the plugin.
 
 The adaptation deliberately keeps truthful plugin semantics: Total counts completed steps (including recovery saves), not byte-weighted progress. File progress switches to verification reads during Verify. The plugin does not add decorative Pause/Minimize buttons, host queue, speed limit, or background transfer without the corresponding executor/API support; those previously deferred capabilities remain deferred. The full core dialog is not claimed to have been reused.
 
@@ -88,7 +90,7 @@ Production Release SPL SHA-256: `82971682af97cde350a1570ffaae8339ce1ca295f90624d
 
 | Case | Observed active transfer | Input | Result |
 | --- | --- | --- | --- |
-| Light `plugin-light` | Large file 28%, native blue bar, total 33% / 1 of 3 | Storno | 1 completed, 1 cancelled, 1 unstarted |
+| Light `plugin-light` | Large file 28%, native blue bar, total 33% / 1 of 3 | Zrušit | 1 completed, 1 cancelled, 1 unstarted |
 | Dark `plugin-dark` | Large file 25%, native blue bar on dark host colors, total 33% / 1 of 3 | Progress title-bar X | 1 completed, 1 cancelled, 1 unstarted |
 
 Both screenshots match the native host's bar geometry and internal percentage rendering. Independent enumeration found only the correct 13-byte `0-done.txt` in each target, no large/following file or staging residue. The progress window disappeared before the result summary; dismissing the summary returned to idle preview. Host dark mode was selected through its Colors configuration, not through a plugin palette. The private preview and host were then closed normally; installed user instances were untouched.

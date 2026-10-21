@@ -1,5 +1,7 @@
 # Directory Synchronization: balíček a čistá konfigurace 0.16
 
+> Terminology update (2026-10-21): Cancel captions in this report are normalized to the plugin's current Czech **Zrušit**. This does not change the dated test results or assert a new live GUI test. The host's original Czech wording differs.
+
 Aktuální ověření připraveného balíčku 0.3.0, čisté instalace a aktualizace z 0.2.1 v češtině i angličtině: [samostatný záznam z 2026-10-19](directory-sync-plugin-distribution-030.md). Níže zůstávají historické výsledky starších verzí.
 
 ## 2026-10-17 — 0.1.4: nativní oddíly stavového řádku
@@ -230,7 +232,7 @@ První platný start použil `-language czech`; oba další starty již byly **b
 | Přepnutí zpět ON | Pole cesty i jeho výběr se aktivovaly; OK a běžné ukončení. |
 | Druhý skutečný restart | Český příkaz z uložené nabídky načetl české hlavní okno. Nastavení z hlavního okna potvrdilo ON, stejnou cestu, popisky a vlastní barvu. |
 | České Porovnat | Malá vlastní NTFS sada: `left/žluťoučký.txt` má 5 B, right je prázdný. Přesně 1 řádek, 1 viditelný, 0 blokovaných; „Kopírovat doprava“, „Pouze vlevo“, „Protějšek chybí“, stav „Porovnání dokončeno“. Žádná zápisová operace se nespouštěla. |
-| Storno nastavení a F1 | Výsledek porovnání zachován, F1 otevřelo českou nápovědu. Plugin i hostitel normálně zavřeny. |
+| Zrušit nastavení a F1 | Výsledek porovnání zachován, F1 otevřelo českou nápovědu. Plugin i hostitel normálně zavřeny. |
 
 Nezávislá kontrola tří uložených konfigurací (OFF, ON před druhým restartem, finální) potvrdila KeepOriginals=0/1/1, ActionLabels=1, Language=czech.slg, přesnou cestu dekódovanou z UTF-16 REG_BINARY i první DWORD DarkColorsV1 = `0x00ffff80`. Testovací soubor stále obsahuje přesně PILOT, pravý i obnovovací adresář jsou prázdné. Původní uživatelské procesy 3820 a 17148 zůstaly spuštěné; žádný testovací hostitel nezůstal běžet.
 

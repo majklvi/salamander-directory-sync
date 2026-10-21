@@ -13,6 +13,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### 0.4.0 development — interactive operation errors
 
+- Standardize Czech **Cancel** captions and descriptions as **Zrušit** throughout the plugin and its documentation; retain the existing cancellation behavior and dialog geometry. Historical report captions are normalized without changing their recorded results. See the [verification](docs/directory-sync-plugin-cancel-terminology-040.md).
 - Display confirmation/result explanations and operation-error descriptions as ordinary wrapping native captions. Remove Notes/Poznámky labels, edit borders, scrollbars and extra Tab stops; measure the complete result explanation when sizing the dialog. Keep selectable paths, table copying and full-summary copying. See the [presentation checks and release checklist](docs/directory-sync-plugin-release-readiness-040.md).
 - Adapt operation-error questions to the host's compact basic file-error layout, with right-aligned labels and centered Retry / Skip / Skip all / Cancel buttons. Keep the existing cancellable modeless question channel and complete Unicode paths; allow enough button width for Czech. Verify EN/CS light/dark captions and pending-question host shutdown/forced unload, including actual module removal and same-process reloading. See the [native-dialog GUI report](docs/directory-sync-plugin-native-errors-gui-040.md).
 - Add a shared operation/phase/error model, recoverable/fatal classification and batch-local Skip all matching. The separate **Copy visible new items…**, **Save visible originals…** **Overwrite visible files…** and **Delete visible items…** commands offer **Retry / Skip / Skip all / Cancel** for supported unpublished failures.
@@ -34,7 +35,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 ## [0.3.0] — 2026-10-19
 
 - Complete local x64 0.3.0 package installation checks in an isolated Samandarin 0.16 developer build: clean configuration, English/Czech loading, registration after restart, a new Unicode profile, and an in-place update from the published 0.2.1 package. All 13 saved plugin values, including both old profiles and their selection, remain identical after Czech and English restarts. See the [distribution report](docs/directory-sync-plugin-distribution-030.md).
-- Translate the remaining Cancel buttons in the Czech profile manager and profile-name dialog to Storno.
+- Translate the remaining Cancel buttons in the Czech profile manager and profile-name dialog into Czech (current caption: **Zrušit**).
 
 ### Added
 
@@ -44,7 +45,7 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 - Open the synchronization preview as an independent modeless window. Keep the host panels available while the plugin is open, comparing or transferring files; reopening the command activates the existing preview. Local confirmations/settings are owned by the plugin window. Keep captured paths fixed, retain safe Close/Stop and join workers before forced unload. Route dialog keyboard navigation on the host UI thread without requiring an SDK extension.
 
 - A compact native transfer-progress window for synchronization, copies, overwrites, saved originals and deletions. Shows source/target, current phase, file transfer/verification progress, completed steps including recovery saves, transferred/read bytes and elapsed time. Stop, Escape or closing this window requests safe cancellation and waits for the worker.
-- Match the host copying dialog's compact 355 × 110 layout and use its actual SDK progress controls with centered percentages and host colors. Consolidate transfer details into one status line with a complete tooltip; use the native Cancel/Storno caption.
+- Match the host copying dialog's compact 355 × 110 layout and use its actual SDK progress controls with centered percentages and host colors. Consolidate transfer details into one status line with a complete tooltip; use a localized Cancel caption (currently **Zrušit** in Czech).
 - Use the host's native split button for **Pause/Resume**, beside **Minimize** and **Cancel**. Its menu provides Pause/Resume and a per-batch speed limit for copied main data, named streams and recovery copies; verification reads remain unthrottled. Cooperative pause and cancellation retain the existing safe completion/journal boundaries. Minimize gives the progress window its own taskbar entry; the preview remains locked and the plugin does not join the host's queue.
 - Show copied data, speed and estimated remaining time with the host's transfer-size formatting and local decimal separator. Weight total progress by copying and verification work, with a 4 KiB minimum per step. Named streams are not scanned in advance, so totals are approximate and remain below 100% until the batch finishes; detailed counts, verification reads and elapsed time remain in the tooltip.
 - Stored-originals item menus explicitly distinguish copying paths to the clipboard from opening directories in Windows Explorer.
