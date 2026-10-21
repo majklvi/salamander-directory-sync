@@ -1,5 +1,7 @@
 # Combined synchronization after Skip — 0.4.0
 
+Follow-up: [live Computer Use verification of mixed decisions and Stop/Close with recovery ON/OFF](directory-sync-plugin-combined-errors-gui-040.md). The checkpoint below retains its original automated-test scope.
+
 Implemented and verified on 2026-10-21 against approved [R1–R5](directory-sync-plugin-error-handling.md). Source baseline: `794ee35859b9a0115ec370270aa0258f96e10149`, following the [asymmetric-deletion checkpoint](directory-sync-plugin-delete-errors-040.md).
 
 ## Delivered behavior

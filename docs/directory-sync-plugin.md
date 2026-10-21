@@ -28,6 +28,8 @@ Chyby ověření, neplatný či změněný plán, chyby po publikaci, nezajišt�
 
 Souhrny rozlišují přeskočené, závislostí blokované, chybové/zrušené a nezahájené položky. Přeskočení není úplná synchronizace. CSV/text uvádějí `attempts`, `last_error` a `automatic_skip` pro kopie, uchování, přepisy a asymetrické mazání; u ostatních nesledovaných operací zůstává počet pokusů nulový. Schéma obnovy 1 doplňuje tato pole a stavy `skipped` / `dependency_blocked`; výsledky čtěte verzí 0.4.0. Starší přehled může varovat před neznámými záznamy, uložené soubory tím nemění. Dokončený souhrnný export označí nezahájené operace jako `not_started`; přeskočené a blokované položky odliší od chyb i nezahájené práce. [Implementace a ověření](directory-sync-plugin-combined-errors-040.md).
 
+Souhrnný příkaz 0.4.0 prošel také šesti izolovanými místními NTFS scénáři přes Computer Use: Opakovat/Přeskočit/Přeskočit vše a Stop/Close při otevřených chybových dotazech s obnovou ON/OFF, s nezávislou kontrolou disku a protokolů. Přesný rozsah uvádí [protokol GUI ověření](directory-sync-plugin-combined-errors-gui-040.md); nejde o ověření každé chyby či okamžiku přerušení ani SMB.
+
 ## Nemodální okno (0.3.0)
 
 Hlavní okno synchronizace je samostatné a nemodální. Dokud je otevřené, lze přepnout do Samandarinu a pracovat v jeho panelech, a to i během porovnání a přenosů. Opětovné spuštění pluginu aktivuje stávající okno. Cesty a výběr panelů se zachytí při otevření; pozdější navigace hostitele nepřesměruje rozpracované porovnání ani operaci. Nastavení a potvrzení mají za vlastníka okno pluginu, nikoli hlavní okno hostitele. Změny souborů v hostiteli mohou zneplatnit porovnání: před další operací porovnejte znovu.

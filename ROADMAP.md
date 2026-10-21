@@ -26,7 +26,9 @@ Implementation requirements:
 - Dependencies after Skip: skipping a child must protect its parent from deletion, and later phases must not assume an unsuccessful prerequisite completed.
 - Truthful summaries and exports distinguishing completed, skipped, failed and unstarted operations. Completed changes remain; there is no automatic rollback.
 
-Verify ordinary local failures, both recovery modes, dependency handling and Stop/Close. The design replaces first-error-only behavior incrementally. Later stages and release publication require separate requests.
+**Live combined-command verification completed:** six isolated local NTFS GUI cases cover Retry/Skip/Skip all, independent phase continuation and protected parents, plus Stop/Close while awaiting item decisions with recovery ON/OFF. Actual disk state, ADS, timestamps, saved originals and journals agree with the results; no code fix was needed. See the [live GUI report](docs/directory-sync-plugin-combined-errors-gui-040.md) for the precise boundaries. Active-I/O/Verify and further deletion-decision cancellation timings retain automated coverage; they were not additional live cases in this campaign.
+
+The design replaces first-error-only behavior incrementally. Broader failure scenarios and release publication require separate requests.
 
 ## 2. Restore an individual stored original
 
