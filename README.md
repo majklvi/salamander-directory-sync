@@ -4,25 +4,26 @@
 > **ALPHA SOFTWARE — RISK OF DATA LOSS. NOT FOR PRODUCTION USE.**
 > Use entirely at your own risk. The authors and contributors provide **NO WARRANTY** and accept **NO RESPONSIBILITY OR LIABILITY FOR ANY LOSS OR CORRUPTION OF DATA**. Test only on disposable copies and keep a separate, verified backup. Keep originals does not provide automatic rollback or eliminate the risk of data loss.
 
-**[Download the ready-to-use 0.3.0 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/dirsync-0.3.0-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/package-sha256.txt)
+**[Download the ready-to-use 0.4.0 ALPHA x64 plugin](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.4.0/dirsync-0.4.0-x64.zip)** · [SHA-256 checksums](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.4.0/package-sha256.txt)
 
 The ZIP contains the compiled plugin and both language modules. **No compilation, Visual Studio, or SDK is needed to install it.**
 
 A native directory comparison and synchronization plugin for **Samandarin**, with English and Czech interfaces. Compare two directory trees side by side, review the proposed actions, then copy, overwrite, or remove right-only items in asymmetric mode. Optional recovery copies preserve originals before synchronization overwrites and deletions.
 
-**Version 0.3.0 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
+**Version 0.4.0 ALPHA · local NTFS pilot · x64** · [Česky](README.cs.md)
 
 **Since version 0.2.0, the plugin supports named profiles.** Save directory pairs, masks, comparison options and result filters, then switch tasks from the star button beside the directory inputs. The last selected profile opens next time; loading a profile never starts comparison or synchronization. Recovery and appearance remain shared across profiles. [Using profiles](docs/directory-sync-plugin.en.md#profiles-020).
 
-**New in 0.3.0 ALPHA:** an independent modeless window that keeps the host panels usable, a read-only [stored-originals browser](docs/directory-sync-plugin.en.md#stored-originals-030), [CSV/text export](docs/directory-sync-plugin.en.md#export-comparison-and-operation-results-030) of comparison rows and recorded operation results, and a native [transfer-progress window](docs/directory-sync-plugin.en.md#transfer-progress-030) with Pause/Resume, speed limiting and Cancel. Clean installation and updating from 0.2.1 were verified with English/Czech interfaces and preserved settings/profiles.
+**New in 0.4.0 ALPHA:** interactive error handling, compact synchronization confirmation with direction/overwrite/deletion choices and Details, a shared directory history, remembered speed limits, and confirmation before cancelling file operations. [Release notes](docs/releases/0.4.0.md).
 
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
-**0.4.0 in development:** interactive Retry / Skip / Skip all / Cancel for new-item copying, saving originals, overwrites, asymmetric deletion and the combined synchronization command, with a remembered stop-at-first-error option. Skipping a failed original prevents its destructive operation; retained children protect every parent. Independent operations and later phases may continue. Fatal errors or Stop/Close still end the remaining batch. [Details and verification](docs/directory-sync-plugin-combined-errors-040.md). The download above remains the published 0.3.0 alpha.
+Supported errors offer **Retry / Skip / Skip all / Cancel**. A remembered **Stop at first error** option restores immediate stopping. Skipped originals block their destructive operations, and retained children protect their parents; independent operations may continue. Fatal errors and Stop still end the remaining batch. Completed changes are not rolled back. [Error policy](docs/directory-sync-plugin.en.md#interactive-operation-errors-040).
 
 ## Highlights
 
 - Named synchronization profiles with remembered last selection.
+- Read-only stored-originals browser and CSV/text exports.
 - Optional relative file sizes and timestamps.
 - Custom colors that follow the host's light or dark scheme.
 - Symmetric columns, directory groups, sorting, and combined filters.
@@ -52,20 +53,20 @@ The lowest tested Samandarin versions are **0.15.1** in user testing and **0.16*
 
 ## Install the alpha build
 
-1. Download the [ready-to-use x64 ZIP from release 0.3.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/dirsync-0.3.0-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
+1. Download the [ready-to-use x64 ZIP from release 0.4.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.4.0/dirsync-0.4.0-x64.zip). It includes the compiled `dirsync.spl` and English/Czech language modules; no build step is required. The package is unsigned and includes English `README.md`/`PILOT.md` and Czech `README.cs.md`/`PILOT.cs.md`. Detailed development records stay online.
 2. Close any host instance using an older copy. Put the entire `dirsync` directory inside the host's `plugins` directory, beside `salamand.exe`. Keep `dirsync.spl`, `lang/english.slg`, and `lang/czech.slg` in their original layout.
 3. In **Plugins → Plugins Manager → Add…**, select `plugins/dirsync/dirsync.spl` unless already registered. Launch **Plugins → Directory Synchronization → Directory synchronization…**. The host selects the interface language.
 
 Start with copies of local NTFS data. Before overwrites or deletions with Keep originals enabled, select a recovery directory outside both compared trees that is not an ancestor of either. Allow room for recovery copies and staging. Old recovery runs are not cleaned up automatically.
 
-**Updating from 0.2.1:** back up the host configuration (and optionally export profiles), close every instance using the plugin, then replace the existing `plugins/dirsync` contents with the complete new package. Keep the host configuration and recovery directories. Do not remove/re-add an existing registration. Settings, profiles and the last selected profile are preserved. [Installation and upgrade checks](docs/directory-sync-plugin-distribution-030.md).
+**Updating from 0.3.0:** back up the host configuration and optionally export profiles, close all instances using the plugin, then replace the complete `plugins/dirsync` payload. Keep configuration and recovery data; do not remove/re-add the existing registration. Settings, profiles and selection are preserved. Supported errors now ask by default; enable **Settings → Stop at first error** for the previous immediate-stop policy. [Installation and update verification](docs/directory-sync-plugin-distribution-040.md).
 
 ## Typical workflow
 
 1. Check the left and right paths or use their **…** browse buttons. Set the mask (`*.*` includes all names), Subfolders, and other comparison options. **Compare** builds a preview without writing files.
 2. Review groups, symbols, and reasons. Combine filters to show relevant results. Right-click highlighted rows, or press **Shift+F10**, to mark them for a direction or **Skip**. Marking a proposal does not start copying.
-3. **Synchronize…** offers separately confirmed batches of new copies, overwrites, and asymmetric deletions. **These commands act on all visible eligible proposals, not only highlighted rows.** Hidden and skipped rows are excluded. Check counts, direction, and recovery mode in the confirmation.
-4. Read the result summary, then compare again before another batch. A new Compare discards manual proposals. Comparison checkboxes affect the next Compare; changing a path or mask invalidates the current plan.
+3. The main **Synchronize…** button opens compact combined confirmation. Its arrow retains separately confirmed new-copy, overwrite and deletion commands. **All act on visible eligible proposals, not only highlighted rows.** Check directions, overwriting, asymmetric deletion and recovery; **Details…** shows the full explanation.
+4. Read the result summary, then compare again before another batch. A new Compare asks before discarding manual proposals. Comparison checkboxes affect the next Compare; changing a path or mask invalidates the current plan.
 5. The small **×** beside Compare or Synchronize stops the corresponding work. Closing waits for the worker. Completed operations remain in place; Stop is not undo.
 
 **Asymmetric mode uses the left tree as its source.** Right-only entries become deletion candidates. Directory entries require Empty folders. Directories are removed after their included children and only when actually empty; skipped, filtered-out, or retained children protect their parent.
@@ -87,8 +88,8 @@ For manual recovery, find the run and `manifest.jsonl` named in the summary. Mat
 - Runtime testing covers **local NTFS x64**. SMB is untested. Win32/ARM64 builds are compile checks, not runtime validation.
 - Hidden/System items are included when matching the mask and scope, even when the host panels hide them. Their attributes appear in the row tooltip. By content compares the main data stream, not alternate data streams (ADS).
 - No synchronization history, automatic restore, or backup cleanup. Only physically empty directories can be copied as standalone directory items; new files create their required parent directories. Reparse points, EFS, and unsupported cloud/offline items are blocked. Read-only destinations are not forcibly overwritten or removed.
-- The published 0.3.0 stops the remaining batch at its first error; the 0.4.0 development policy is described above. Completed changes are not rolled back. This is not transactional backup or a complete NTFS clone. Avoid modifying either tree through another program during a run.
-- Transfers use the plugin's own worker, without the host's background transfer window, speed limit, or shared queue. Live cross-monitor DPI remains unverified. Inspecting thousands of rows through UI Automation has caused delays in earlier pilot sessions.
+- Supported item errors ask by default; fatal errors, Stop or the remembered stop-first policy end remaining work. Completed changes are not rolled back. This is not transactional backup or a complete NTFS clone. Avoid modifying either tree through another program during a run.
+- Transfers use the plugin's own progress window, Pause/Resume and remembered speed limit; they do not join the host's background transfers or shared queue. Live cross-monitor DPI remains unverified. Inspecting thousands of rows through UI Automation has caused delays in earlier pilot sessions.
 
 Report bugs in [Issues](https://github.com/majklvi/salamander-directory-sync/issues). Include package version/hash, host and Windows versions, language/theme/DPI, masks/options/filters, recovery mode, exact steps, and expected versus actual results. Copy a result dialog with **Ctrl+Shift+C**. Include errors and relevant journal excerpts with private paths removed; a small synthetic reproducer is best. After unexpected data changes, stop further writes and preserve the summary and recovery run.
 

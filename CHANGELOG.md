@@ -11,7 +11,13 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ## [Unreleased]
 
-### 0.4.0 development — interactive operation errors
+No unreleased changes.
+
+## [0.4.0] — 2026-10-22
+
+### Interactive operation errors and synchronization controls
+
+[Release notes and ready-to-install x64 package](docs/releases/0.4.0.md).
 
 - Prepare the final x64 distribution candidate and verify clean installation plus in-place update from the published 0.3.0 package in English/Czech. Preserve all 13 old settings and both profiles, verify all 17 new settings across restarts, and complete 86 independent checks. Refresh packaged guides, including recovery/error-policy migration defaults and current synchronization/empty-directory commands. See the [distribution report](docs/directory-sync-plugin-distribution-040.md).
 
@@ -225,7 +231,8 @@ The versions below were development milestones, not separate published GitHub re
 
 - Document the comparison/synchronization design, SDK constraints, recovery approach and verification plan before implementation in the original fork. Plugin development later moved to this standalone repository; the [migration records and commit map](docs/migration/repository-migration.md) preserve that provenance.
 
-[Unreleased]: https://github.com/majklvi/salamander-directory-sync/compare/v0.3.0...main
+[Unreleased]: https://github.com/majklvi/salamander-directory-sync/compare/v0.4.0...main
+[0.4.0]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.4.0
 [0.3.0]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.3.0
 [0.2.1]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.1
 [0.2.0]: https://github.com/majklvi/salamander-directory-sync/releases/tag/v0.2.0

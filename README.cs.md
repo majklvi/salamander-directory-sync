@@ -4,17 +4,17 @@
 > **ALFA VERZE — NEBEZPEČÍ ZTRÁTY DAT. NENÍ URČENO PRO PRODUKČNÍ POUŽITÍ.**
 > Použití výhradně na vlastní nebezpečí. Autoři a přispěvatelé neposkytují **ŽÁDNOU ZÁRUKU A NENESOU ODPOVĚDNOST ZA JAKOUKOLI ZTRÁTU NEBO POŠKOZENÍ DAT**. Testujte pouze na postradatelných kopiích a mějte nezávislou ověřenou zálohu. Uchování originálů nezajišťuje automatické vrácení změn ani neodstraňuje riziko ztráty dat.
 
-**[Stáhnout hotový plugin 0.3.0 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/dirsync-0.3.0-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/package-sha256.txt)
+**[Stáhnout hotový plugin 0.4.0 ALFA pro x64](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.4.0/dirsync-0.4.0-x64.zip)** · [Kontrolní součty SHA-256](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.4.0/package-sha256.txt)
 
 ZIP obsahuje zkompilovaný plugin a oba jazykové moduly. **Pro instalaci není potřeba nic kompilovat, instalovat Visual Studio ani SDK.**
 
 [English](README.md)
 
-**Verze 0.3.0 ALFA · místní NTFS pilot · x64.**
+**Verze 0.4.0 ALFA · místní NTFS pilot · x64.**
 
 **Od verze 0.2.0 plugin podporuje pojmenované profily.** Uložte dvojici adresářů, masky, volby porovnání a filtry výsledků a přepínejte úlohy tlačítkem s hvězdou vedle adresářů. Při příštím otevření se načte naposledy vybraný profil; načtení nikdy samo nespustí porovnání ani synchronizaci. Obnova a vzhled zůstávají společné pro všechny profily. [Používání profilů](docs/directory-sync-plugin.md#profily-020).
 
-**Novinky v 0.3.0 ALFA:** samostatné nemodální okno, při kterém lze pracovat v panelech hostitele, [přehled uložených originálů](docs/directory-sync-plugin.md#uložené-originály-030) pouze pro čtení, [export do CSV/textu](docs/directory-sync-plugin.md#export-porovnání-a-výsledků-operací-030) s řádky porovnání a zaznamenanými výsledky operací a nativní [okno průběhu přenosu](docs/directory-sync-plugin.md#průběh-přenosu-030) s pozastavením, pokračováním, omezením rychlosti a přerušením. Čistá instalace i aktualizace z 0.2.1 byly ověřeny v češtině a angličtině se zachováním nastavení a profilů.
+**Novinky v 0.4.0 ALFA:** interaktivní řešení chyb, kompaktní potvrzení synchronizace s volbou směrů/přepisů/mazání a Podrobnostmi, společná historie adresářů, zapamatovaný rychlostní limit a potvrzení zrušení souborových operací. [Poznámky k vydání](docs/releases/0.4.0.md).
 
 Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava návrhů, kopírování, přepisy a asymetrické odstranění s volitelným uchováním originálů. Český a anglický modul, vzhled podle hostitele. SDK se nerozšiřuje.
 
@@ -24,7 +24,7 @@ Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava ná
 
 Samostatný vývoj a hlášení chyb probíhají v [majklvi/salamander-directory-sync](https://github.com/majklvi/salamander-directory-sync). Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
 
-**Ve vývoji 0.4.0:** Opakovat / Přeskočit / Přeskočit vše / Zrušit při kopírování nových položek, uchování originálů, přepisech, asymetrickém mazání i souhrnné synchronizaci se zapamatovanou volbou zastavení při první chybě. Přeskočený originál blokuje své smazání či přepis; ponechaný potomek chrání všechny rodiče. Nezávislé operace a další etapy mohou pokračovat. Závažná chyba nebo Stop/Close nadále ukončí zbývající dávku. [Podrobnosti a ověření](docs/directory-sync-plugin-combined-errors-040.md). Výše se nadále stahuje vydaná alfa 0.3.0.
+Podporované chyby nabídnou **Opakovat / Přeskočit / Přeskočit vše / Zrušit**. Zapamatovaná volba **Zastavit při první chybě** obnoví okamžité zastavení. Přeskočený originál blokuje svůj přepis či smazání, ponechaný potomek chrání rodiče; nezávislé operace mohou pokračovat. Závažná chyba a Stop ukončí zbytek dávky. Hotové změny se automaticky nevracejí. [Pravidla chyb](docs/directory-sync-plugin.md#interaktivní-chyby-operací-040).
 
 ## Sestavení ze zdrojů a testy (pro vývojáře)
 
@@ -45,7 +45,7 @@ Nejnižší testované verze Samandarinu jsou **0.15.1** při uživatelském tes
 
 ## Instalace a použití
 
-**Aktualizace z 0.2.1:** zálohujte konfiguraci hostitele (případně exportujte profily), zavřete všechny instance používající plugin a nahraďte obsah stávajícího `plugins/dirsync` celým novým balíčkem. Konfiguraci hostitele a adresáře obnovy zachovejte. Stávající registraci neodebírejte a znovu nepřidávejte. Nastavení, profily i poslední výběr zůstávají zachované. [Ověření instalace a aktualizace](docs/directory-sync-plugin-distribution-030.md).
+**Aktualizace z 0.3.0:** zálohujte konfiguraci hostitele a případně exportujte profily, zavřete všechny instance používající plugin a nahraďte celý obsah `plugins/dirsync`. Zachovejte konfiguraci a data obnovy; registraci neodebírejte ani znovu nepřidávejte. Nastavení, profily a jejich výběr zůstanou zachované. Podporované chyby se nově řeší dotazem; předchozí okamžité zastavení obnovíte přes **Nastavení → Zastavit při první chybě**. [Ověření instalace a aktualizace](docs/directory-sync-plugin-distribution-040.md).
 
 Rozbalit `dirsync/` do adresáře `plugins/` hostitele a registrovat `dirsync.spl` přes Plugins Manager > Add. Zvolit český či anglický modul. Nejprve testovat na kopii místních dat. [Aktuální návod](docs/directory-sync-plugin.md), [pilotní pokyny](docs/directory-sync-plugin-pilot-guide.md) a [ruční obnova](docs/directory-sync-plugin-recovery.md) popisují postup, známá omezení a hlášení chyb. SMB nebylo ověřeno; neslibuje se crash replay ani automatický rollback. Hotové operace po Stop zůstávají provedené.
 
@@ -82,14 +82,14 @@ Otevřete **Settings… / Nastavení…** v náhledu nebo **Plugins Manager → 
 
 ## Stažení a instalace alfa verze
 
-Stáhněte [hotový x64 ZIP z release 0.3.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.3.0/dirsync-0.3.0-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
+Stáhněte [hotový x64 ZIP z release 0.4.0](https://github.com/majklvi/salamander-directory-sync/releases/download/v0.4.0/dirsync-0.4.0-x64.zip). Obsahuje zkompilovaný `dirsync.spl` i český a anglický jazykový modul; žádná kompilace není potřeba. Balíček je nepodepsaný. Celý adresář `dirsync` rozbalte do `plugins` vedle `salamand.exe`, zachovejte podadresář `lang` a přes Správce pluginů přidejte `dirsync.spl`, pokud již není registrovaný. Podrobnosti uvádí úplný návod.
 
 ## Běžný postup a rozsah operací
 
 1. Zkontrolujte levý a pravý adresář, masku a volby skenu. **Compare / Porovnat** pouze čte a připraví náhled.
 2. Prohlédněte výsledky a kombinujte filtry. Pravé tlačítko nebo Shift+F10 mění návrhy zvýrazněných řádků; označení ke kopírování ještě nic nekopíruje. **Skip / Přeskočit** položku vynechá.
-3. **Synchronize…** nabízí zvlášť nové kopie, přepisy a asymetrické mazání. **Provádějí se všechny viditelné způsobilé návrhy, nikoli pouze zvýrazněné řádky.** Skryté a vynechané řádky se neprovedou. Před potvrzením ověřte počty, směr a režim obnovy.
-4. Po dávce přečtěte souhrn a znovu porovnejte. Nové porovnání zahodí ruční návrhy. Změna checkboxů se použije při příštím Porovnat; změna cesty nebo masky zneplatní plán.
+3. Hlavní tlačítko **Synchronizovat…** otevře kompaktní souhrnné potvrzení. Jeho šipka zachovává samostatně potvrzované nové kopie, přepisy a mazání. **Provádějí se viditelné způsobilé návrhy, nikoli pouze zvýrazněné řádky.** Zkontrolujte směry, přepisy, asymetrické mazání a obnovu; **Podrobnosti…** zobrazí úplné vysvětlení.
+4. Po dávce přečtěte souhrn a znovu porovnejte. Nové porovnání se před zahozením ručních návrhů zeptá. Změna checkboxů se použije při příštím Porovnat; změna cesty nebo masky zneplatní plán.
 5. Malý křížek vedle Porovnat či Synchronizovat zastaví příslušnou práci. Zavření počká na worker; již dokončené změny se automaticky nevracejí.
 
 V asymetrii je levý adresář zdroj. Položky pouze vpravo jsou kandidáty k odstranění. Pro adresářové řádky zapněte Prázdné adresáře; adresář se odstraní jen skutečně prázdný po zařazených potomcích. Vynechaný či skrytý potomek chrání rodiče.
@@ -100,10 +100,10 @@ Samostatné **Remove selected… / Odstranit vybrané…** v kontextovém menu p
 
 Uchovat originály je v nové konfiguraci vypnuté, dokud si uživatel nezvolí cestu obnovy a volbu nezapne. Zapnutou volbu nelze potvrdit v Nastavení bez platné absolutní cesty; uložené nastavení se pamatuje. Zvolte adresář obnovy mimo oba stromy, který není ani jejich předkem; počítejte s místem pro zálohy a staging. Při ON se před přepisem či mazáním originály uloží a ověří. Při OFF nevzniká nová záloha ani trvalý protokol a synchronizační příkazy nepoužívají Koš. Staré zálohy se automaticky neuklízejí.
 
-Ruční obnova: podle souhrnu najděte běh a manifest.jsonl, u úspěšně uložené položky spárujte original a saved. Kopii nejprve přeneste do odděleného kontrolního adresáře; až po kontrole ji vraťte na původní místo. Strukturu vytvořte podle adresářových záznamů, nekopírujte celý pomocný strom běhu. Původní ACL ani všechny NTFS vlastnosti se automaticky neobnovují.
+Ruční obnova: podle souhrnu najděte relaci a manifest.jsonl, u úspěšně uložené položky spárujte original a saved. Kopii nejprve přeneste do odděleného kontrolního adresáře; až po kontrole ji vraťte na původní místo. Strukturu vytvořte podle adresářových záznamů, nekopírujte celý pomocný strom relace. Původní ACL ani všechny NTFS vlastnosti se automaticky neobnovují.
 
-Ověřený pilot je místní NTFS a x64; SMB zůstává neotestované. Skryté a systémové položky zahrnuje maska a rozsah i při jejich skrytí v panelech; atributy ukazuje tooltip. Porovnání obsahu nezahrnuje ADS. Historie synchronizace, automatická obnova a úklid záloh nejsou implementované. Samostatně se kopírují pouze fyzicky prázdné adresáře; nové soubory vytvářejí potřebné rodiče. Reparse body, EFS a nepodporované cloud/offline položky se blokují; read-only cíle se násilně nepřepisují ani nemažou. Vydaná 0.3.0 končí při první chybě; chování vývojové 0.4.0 je uvedené výše. Hotové změny se automaticky nevracejí. Plugin má vlastní nemodální okno, průběh, pozastavení a rychlostní limit; zatím nepoužívá společnou frontu ani přenosové okno hostitele. Přechod mezi monitory s různým DPI zůstává neověřený.
+Ověřený pilot je místní NTFS a x64; SMB zůstává neotestované. Skryté a systémové položky zahrnuje maska a rozsah i při jejich skrytí v panelech; atributy ukazuje tooltip. Porovnání obsahu nezahrnuje ADS. Historie synchronizace, automatická obnova a úklid záloh nejsou implementované. Samostatně se kopírují pouze fyzicky prázdné adresáře; nové soubory vytvářejí potřebné rodiče. Reparse body, EFS a nepodporované cloud/offline položky se blokují; read-only cíle se násilně nepřepisují ani nemažou. Podporované chyby se ve výchozím stavu řeší dotazem; závažná chyba, Stop nebo zapnuté zastavení při první chybě ukončí zbytek práce. Hotové změny se automaticky nevracejí. Plugin má vlastní nemodální okno, průběh, pozastavení a rychlostní limit; zatím nepoužívá společnou frontu ani přenosové okno hostitele. Přechod mezi monitory s různým DPI zůstává neověřený.
 
-Chyby hlaste přes [Issues](https://github.com/majklvi/salamander-directory-sync/issues): verze a hash balíčku, prostředí/jazyk/schéma/DPI, masky/volby/filtry, obnova ON/OFF, přesný postup a očekávaný/skutečný výsledek. Souhrn lze kopírovat Ctrl+Shift+C, relativní cesty vybraných řádků Ctrl+C. Z přiložených kopií protokolů odstraňte soukromé údaje; ideální je malá syntetická reprodukce. Při neočekávané změně dat zastavte další zápisy a ponechte souhrn i obnovovací běh.
+Chyby hlaste přes [Issues](https://github.com/majklvi/salamander-directory-sync/issues): verze a hash balíčku, prostředí/jazyk/schéma/DPI, masky/volby/filtry, obnova ON/OFF, přesný postup a očekávaný/skutečný výsledek. Souhrn lze kopírovat Ctrl+Shift+C, relativní cesty vybraných řádků Ctrl+C. Z přiložených kopií protokolů odstraňte soukromé údaje; ideální je malá syntetická reprodukce. Při neočekávané změně dat zastavte další zápisy a ponechte souhrn i relaci obnovy.
 
 [Historie změn (anglicky)](CHANGELOG.md) · [Plán vývoje (anglicky)](ROADMAP.md) · [English README](README.md) · [Licence GPL-2.0-or-later](LICENSE) · [Atribuce závislostí](docs/third_party.md)
