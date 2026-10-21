@@ -1176,6 +1176,31 @@ void TransferControls()
         f.progress.CompleteDisplay();Check(f.progress.completed==2 && f.progress.completedWork==23040,"completion cannot double-count a finished display");
         Check(Read(f.right+L"\\a:note")==std::string(1024,'s') && Read(f.right+L"\\b")==std::string(2560,'b'),"rate limiting leaves verified data unchanged");
     }
+    {
+        Fixture f;Put(f.left+L"\\slow-漢字",std::string(8192,'m'));Put(f.left+L"\\slow-漢字:ž-note",std::string(257,'s'));
+        f.progress.ResetControls();f.progress.bytesPerSecond=4096;
+        uint64_t previous=0,maximum=0;unsigned samples=0;
+        SetCopyHook([&](CopyPhase phase,const std::wstring&){if(phase==CopyPhase::Copying){
+            auto current=f.progress.copied.load();if(current>previous){maximum=std::max(maximum,current-previous);previous=current;++samples;}}});
+        const auto start=GetTickCount64();auto report=f.Run(f.Scan());const auto elapsed=GetTickCount64()-start;SetCopyHook({});
+        Check(report.items.size()==1 && report.items[0].status==CopyStatus::Copied && elapsed>=1800 && elapsed<15000,
+            "4 KiB/s transfer is paced over the whole copied byte count");
+        Check(maximum<=409 && samples>=21 && f.progress.copied==8449 && f.progress.verified==16898,
+            "low speed uses small actual writes with frequent progress, including Unicode named stream");
+        Check(Read(f.right+L"\\slow-漢字")==std::string(8192,'m') && Read(f.right+L"\\slow-漢字:ž-note")==std::string(257,'s'),
+            "paced buffered streams retain complete data and ADS");f.NoStaging(f.right);
+    }
+    {
+        Fixture f;Put(f.left+L"\\changing",std::string(1024*1024+4096,'d'));
+        f.progress.ResetControls();uint64_t previous=0,maximum=0;bool changed=false;
+        SetCopyHook([&](CopyPhase phase,const std::wstring&){if(phase==CopyPhase::Copying){
+            auto current=f.progress.copied.load();if(current>previous){
+                if(!changed){changed=true;f.progress.bytesPerSecond=4096;}else maximum=std::max(maximum,current-previous);
+                previous=current;}}});
+        const auto start=GetTickCount64();auto report=f.Run(f.Scan());SetCopyHook({});
+        Check(changed && report.items[0].status==CopyStatus::Copied && maximum<=409 && GetTickCount64()-start<10000,
+            "enabling a low limit mid-file shrinks subsequent writes without repaying a previous large block for minutes");
+    }
     for(bool stop:{false,true}) {
         Fixture f;f.progress.ResetControls();f.progress.bytesPerSecond=1;std::atomic<bool> entered{false},done{false};bool allowed=false;
         ControlWorker worker(f);worker.thread=std::thread([&]{entered=true;allowed=f.progress.Throttle(f.cancel,65536);done=true;});

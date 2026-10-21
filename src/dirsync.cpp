@@ -45,6 +45,7 @@ constexpr std::array<int,10> ColumnOrder{0,1,2,3,5,4,9,6,7,8};
 HBRUSH backgroundBrush = nullptr;
 bool dark = false;
 using Palette = std::array<COLORREF,7>;
+constexpr uint64_t MaxTransferSpeed=uint64_t(1)<<40;
 Palette DefaultPalette(bool night)
 {
     return night?Palette{RGB(109,220,144),RGB(244,209,105),RGB(109,220,144),RGB(112,190,255),RGB(185,185,185),RGB(255,148,133),RGB(255,148,133)}:
@@ -57,6 +58,7 @@ struct Settings {
     bool sortDescending=false;
     bool keepOriginals=true;
     bool stopOnFirstError=false;
+    uint64_t transferSpeed=0,lastTransferSpeed=1024*1024;
     bool actionLabels=false;
     bool colorRows=false;
     bool relativeSizes=false;
@@ -75,6 +77,13 @@ void LoadSettings(HKEY key,CSalamanderRegistryAbstract* registry)
     enabled=0;
     if(registry->GetValue(key,"StopOnFirstErrorV1",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
         settings.stopOnFirstError=enabled!=0;
+    for(auto value:{std::pair{"TransferSpeedV1",&settings.transferSpeed},
+                    std::pair{"LastTransferSpeedV1",&settings.lastTransferSpeed}}) {
+        uint64_t speed=0;DWORD size=0;
+        if(registry->GetSize(key,value.first,REG_BINARY,size) && size==sizeof(speed) &&
+            registry->GetValue(key,value.first,REG_BINARY,&speed,sizeof(speed)) && speed<=MaxTransferSpeed &&
+            (speed || value.second==&settings.transferSpeed)) *value.second=speed;
+    }
     enabled=0;
     if(registry->GetValue(key,"ActionLabels",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
         settings.actionLabels=enabled!=0;
@@ -127,6 +136,9 @@ bool StoreSettings(HKEY key,CSalamanderRegistryAbstract* registry)
     bool mode=registry->SetValue(key,"KeepOriginals",REG_DWORD,&enabled,sizeof(enabled))!=FALSE;
     DWORD stop=settings.stopOnFirstError?1:0;
     mode=(registry->SetValue(key,"StopOnFirstErrorV1",REG_DWORD,&stop,sizeof(stop))!=FALSE) && mode;
+    for(auto value:{std::pair{"TransferSpeedV1",settings.transferSpeed},
+                    std::pair{"LastTransferSpeedV1",settings.lastTransferSpeed}})
+        mode=(registry->SetValue(key,value.first,REG_BINARY,&value.second,sizeof(value.second))!=FALSE) && mode;
     bool path=registry->SetValue(key,"RecoveryRootUtf16",REG_BINARY,settings.recoveryRoot.c_str(),
         DWORD((settings.recoveryRoot.size()+1)*sizeof(wchar_t)))!=FALSE;
     DWORD labels=settings.actionLabels?1:0;
@@ -487,6 +499,7 @@ struct Preview
     dirsync::ReportBatch operationReport;
     bool reportReady=false;
     HWND transferWindow=nullptr,transferSpeedWindow=nullptr;
+    bool transferCancelQuestion=false;
     CGUIProgressBarAbstract* transferFileBar=nullptr;
     CGUIProgressBarAbstract* transferTotalBar=nullptr;
     std::wstring transferDetails,transferCaption;

@@ -56,17 +56,22 @@ bool CopyProgress::Throttle(const std::atomic<bool>& cancel,uint64_t cumulativeC
     if(!throttleTick || cumulativeCopied<throttleCopied) {
         throttleTick=tick;throttleCopied=0;throttleRate=bytesPerSecond.load(std::memory_order_relaxed);throttleDebt=0;
     }
+    bool changed=false;
     auto account=[&](uint64_t now) {
         if(throttleRate) throttleDebt-=double(now-throttleTick)*double(throttleRate)/1000.0;
-        throttleTick=now;throttleRate=bytesPerSecond.load(std::memory_order_relaxed);
+        throttleTick=now;const auto next=bytesPerSecond.load(std::memory_order_relaxed);
+        changed=next!=throttleRate;if(changed)throttleDebt=0;throttleRate=next;
         if(!throttleRate) throttleDebt=0;
-        // Carry timer oversleep forward so small CopyFileEx blocks do not turn
+        // Carry timer oversleep forward so small copy blocks do not turn
         // e.g. a 50 MiB/s setting into one block per system timer tick. Bound
         // idle credit to 50 ms; verification/other work cannot buy a large burst.
         else throttleDebt=std::max(-double(throttleRate)/20.0,throttleDebt);
     };
     account(tick);
-    if(throttleRate) throttleDebt+=double(cumulativeCopied-throttleCopied);
+    // A limit reduced during a write cannot undo bytes already written. Like
+    // the core limiter, cap this transition's braking to one second; the next
+    // read uses the new, smaller block size instead of accumulating minutes.
+    if(throttleRate) throttleDebt+=double(changed?std::min(cumulativeCopied-throttleCopied,throttleRate):cumulativeCopied-throttleCopied);
     throttleCopied=cumulativeCopied;
     while(throttleRate && throttleDebt>0) {
         const auto delay=DWORD(std::min(25.0,std::max(1.0,throttleDebt*1000.0/double(throttleRate))));
@@ -229,17 +234,50 @@ void Phase(CopyProgress& p, CopyPhase phase, const std::wstring& path) {
     (void)path;
 #endif
 }
-struct Callback { std::atomic<bool>& cancel; CopyProgress& progress; uint64_t base; const std::wstring& stage; };
-DWORD CALLBACK CopyCallback(LARGE_INTEGER total, LARGE_INTEGER transferred, LARGE_INTEGER, LARGE_INTEGER,
-                           DWORD, DWORD, HANDLE, HANDLE, LPVOID context)
+// The host's private worker cannot be called through the SDK. Use the same
+// principle here: choose a small buffer BEFORE reading/writing, then pace it.
+// Copy every data stream into the already owned stage; publication, metadata,
+// destination permissions and full verification remain in CopyOne below.
+void CopyStreams(const std::wstring& source,const std::wstring& stage,File& sourceFile,
+                 std::atomic<bool>& cancel,CopyProgress& progress,const Entry& owned)
 {
-    auto& c=*static_cast<Callback*>(context);
-    c.progress.copied=c.base+uint64_t(transferred.QuadPart);
-    c.progress.CopyDisplay(uint64_t(total.QuadPart),uint64_t(transferred.QuadPart));
+    const auto streams=StreamsOf(source);uint64_t total=0,transferred=0;
+    for(const auto& stream:streams){if(stream.second>UINT64_MAX-total)throw Failure{ERROR_FILE_TOO_LARGE};total+=stream.second;}
+    FILETIME created{},accessed{},modified{};Need(GetFileTime(sourceFile.h,&created,&accessed,&modified));
+    const auto base=progress.copied.load();std::vector<BYTE> buffer(1024*1024);
+    for(const auto& stream:streams) {
+        Control(cancel,progress);const auto suffix=stream.first==L"::$DATA"?L"":stream.first;
+        progress.errorSite=ErrorSite::Source;
+        File in(Open(source+suffix,GENERIC_READ));Need(in.h!=INVALID_HANDLE_VALUE);
+        progress.errorSite=ErrorSite::Target;
+        File out(Open(stage+suffix,GENERIC_WRITE,shares,suffix.empty()?OPEN_EXISTING:CREATE_NEW));
+        Need(out.h!=INVALID_HANDLE_VALUE);if(!SameId(owned,Info(out.h)))throw Failure{ERROR_FILE_INVALID};
+        if(suffix.empty())Need(SetEndOfFile(out.h));
+        uint64_t copied=0;
+        for(;;) {
+            Control(cancel,progress);DWORD read=0;progress.errorSite=ErrorSite::Source;
+            Need(ReadFile(in.h,buffer.data(),progress.CopyBlockSize(),&read,nullptr));if(!read)break;
+            progress.errorSite=ErrorSite::Target;
+            DWORD offset=0;
+            while(offset<read){Control(cancel,progress);DWORD written=0;
+                const BOOL success=WriteFile(out.h,buffer.data()+offset,read-offset,&written,nullptr);
+                const auto error=success?DWORD(ERROR_SUCCESS):GetLastError();
+                if(written>read-offset)throw Failure{ERROR_INVALID_DATA};offset+=written;
+                copied+=written;transferred+=written;progress.copied=base+transferred;
+                progress.CopyDisplay(total,transferred);
+                if(!success)throw Failure{error};if(!written)throw Failure{ERROR_WRITE_FAULT};
 #if defined(DIRSYNC_ENGINE_TEST) || defined(DIRSYNC_COPY_TEST_HOOKS)
-    try { if (hook) hook(CopyPhase::Copying,c.stage); } catch (...) { c.cancel=true; }
+                if(hook)hook(CopyPhase::Copying,stage);
 #endif
-    return c.progress.Throttle(c.cancel,c.progress.copied.load(std::memory_order_relaxed)) ? PROGRESS_CONTINUE : PROGRESS_CANCEL;
+                if(!progress.Throttle(cancel,base+transferred))throw Failure{ERROR_CANCELLED};
+            }
+        }
+        if(copied!=stream.second)throw Failure{ERROR_FILE_INVALID};
+    }
+    progress.errorSite=ErrorSite::Target;
+    File out(Open(stage,FILE_WRITE_ATTRIBUTES));Need(out.h!=INVALID_HANDLE_VALUE);
+    if(!SameId(owned,Info(out.h)))throw Failure{ERROR_FILE_INVALID};
+    Need(SetFileTime(out.h,&created,&accessed,&modified));
 }
 void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, const Row& row,
              CopyOutcome& outcome, std::atomic<bool>& cancel, CopyProgress& progress,
@@ -284,11 +322,10 @@ void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, con
         if (!owned.identified) throw Failure{ERROR_FILE_EXISTS};
         Security inherited(stage);
         const Security& desired=targetSecurity?*targetSecurity:inherited;
-        Callback callback{cancel,progress,progress.copied.load(),stage};
         Phase(progress,CopyPhase::Copying,stage); Control(cancel,progress);
         // Destination is our CREATE_NEW reservation, never the user's target.
         progress.errorSite=ErrorSite::Data;
-        Need(CopyFileExW(ApiPath(source).c_str(),ApiPath(stage).c_str(),CopyCallback,&callback,nullptr,0));
+        CopyStreams(source,stage,in,cancel,progress,owned);
         Control(cancel,progress);progress.errorSite=ErrorSite::Target;
         File staging(Open(stage,GENERIC_READ|FILE_WRITE_ATTRIBUTES)); Need(staging.h!=INVALID_HANDLE_VALUE);
         if (!SameId(owned,Info(staging.h))) throw Failure{ERROR_FILE_INVALID};

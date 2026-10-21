@@ -2,7 +2,6 @@
 // Adapted from Samandarin's IDD_SETSPEEDLIM and CSetSpeedLimDialog (GPL-2.0-or-later).
 // The transfer itself
 // remains owned by this plugin; no private host worker or dialog API is used.
-constexpr uint64_t MaxTransferSpeed=uint64_t(1)<<40;
 bool ParseTransferSpeed(const std::wstring& text,int unit,uint64_t& bytesPerSecond) {
     if(text.empty() || unit<0 || unit>3)return false;
     const uint64_t factor=uint64_t(1)<<(unit*10),limit=MaxTransferSpeed/factor;
@@ -32,7 +31,7 @@ INT_PTR CALLBACK TransferSpeedDialog(HWND window,UINT message,WPARAM w,LPARAM l)
             choice=reinterpret_cast<TransferSpeedChoice*>(l);
             SetWindowLongPtrW(window,DWLP_USER,reinterpret_cast<LONG_PTR>(choice));
             if(choice->activeWindow)*choice->activeWindow=window;
-            uint64_t number=choice->original?choice->original:uint64_t(4)*1024*1024*1024;
+            uint64_t number=choice->original?choice->original:settings.lastTransferSpeed;
             int unit=0;while(unit<3 && number%1024==0){number/=1024;++unit;}
             SetDlgItemTextW(window,IDC_TRANSFER_SPEED_VALUE,std::to_wstring(number).c_str());
             SendDlgItemMessageW(window,IDC_TRANSFER_SPEED_VALUE,EM_LIMITTEXT,19,0);

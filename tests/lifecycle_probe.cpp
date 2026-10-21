@@ -11,6 +11,17 @@ std::unique_ptr<Preview> probe;
 std::atomic<bool> finished{false};
 std::atomic<bool> copyBoundary{false};
 INT_PTR CALLBACK EmptyDialog(HWND,UINT,WPARAM,LPARAM) { return FALSE; }
+struct CancelAnswer {Preview* preview=nullptr;int answer=IDYES;bool seen=false,paused=false;bool close=false;};
+thread_local CancelAnswer* cancelAnswer=nullptr;
+void CALLBACK AnswerTransferCancel(HWND,UINT,UINT_PTR,DWORD) {
+    EnumThreadWindows(GetCurrentThreadId(),[](HWND window,LPARAM)->BOOL {
+        if(!GetDlgItem(window,IDYES) || !GetDlgItem(window,IDNO))return TRUE;
+        if(cancelAnswer){cancelAnswer->seen=true;
+            cancelAnswer->paused=cancelAnswer->preview->copyProgress.pauseRequested && !cancelAnswer->preview->cancel;
+            if(cancelAnswer->close){cancelAnswer->preview->running=false;cancelAnswer->preview->CloseTransfer();return FALSE;}}
+        SendMessageW(window,WM_COMMAND,cancelAnswer?cancelAnswer->answer:IDYES,0);return FALSE;
+    },0);
+}
 bool StaticCaptionFits(HWND window,int id)
 {
     HWND caption=GetDlgItem(window,id);wchar_t type[32]{};
@@ -72,6 +83,7 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
         owner.dialog.style=WS_POPUP;owner.dialog.cx=355;owner.dialog.cy=154;
         HWND parent=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&owner.dialog,nullptr,EmptyDialog,0);
         if(!parent){FreeLibrary(resources);return FALSE;}
+        SetTimer(parent,63,15,AnswerTransferCancel);
         {
             HDC dc=GetDC(parent);auto old=SelectObject(dc,GetStockObject(DEFAULT_GUI_FONT));
             for(const auto& path:{std::wstring(L"C:\\short\\A & B-ž.txt"),L"C:\\"+std::wstring(300,L'漢')+L"\\žluťoučký.txt",
@@ -224,8 +236,8 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
                 if(state->scenario==0) {
                     state->ok &= IsDlgButtonChecked(dialog,IDC_TRANSFER_SPEED_UNLIMITED)==BST_CHECKED &&
                         !IsWindowEnabled(GetDlgItem(dialog,IDC_TRANSFER_SPEED_VALUE)) &&
-                        ControlText(dialog,IDC_TRANSFER_SPEED_VALUE)==L"4" &&
-                        SendDlgItemMessageW(dialog,IDC_TRANSFER_SPEED_UNITS,CB_GETCURSEL,0,0)==3;
+                        ControlText(dialog,IDC_TRANSFER_SPEED_VALUE)==L"1" &&
+                        SendDlgItemMessageW(dialog,IDC_TRANSFER_SPEED_UNITS,CB_GETCURSEL,0,0)==2;
                     SendDlgItemMessageW(dialog,IDC_TRANSFER_SPEED_ENABLE,BM_CLICK,0,0);
                     state->ok &= IsWindowEnabled(GetDlgItem(dialog,IDC_TRANSFER_SPEED_VALUE)) &&
                         IsDlgButtonChecked(dialog,IDC_TRANSFER_SPEED_UNLIMITED)==BST_UNCHECKED;
@@ -295,6 +307,12 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= !p.copyProgress.pauseRequested;
             SendMessageW(progress,WM_COMMAND,IDC_TRANSFER_MINIMIZE,0);ok &= IsIconic(progress)!=FALSE;
             ShowWindow(progress,SW_RESTORE);ok &= !IsIconic(progress);
+            for(bool alreadyPaused:{false,true}) {
+                p.copyProgress.pauseRequested=alreadyPaused;
+                CancelAnswer answer{&p,IDNO};cancelAnswer=&answer;
+                SendMessageW(progress,WM_COMMAND,IDCANCEL,0);cancelAnswer=nullptr;
+                ok &= answer.seen && answer.paused && !p.cancel && p.copyProgress.pauseRequested==alreadyPaused && IsWindow(progress);
+            }
             SendMessageW(progress,WM_CLOSE,0,0);
             ok &= p.cancel && IsWindow(progress) && !IsWindowEnabled(GetDlgItem(progress,IDCANCEL));
             p.running=false;SendMessageW(progress,WM_TIMER,1,0);
@@ -302,6 +320,10 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             p.cancel=false;p.running=true;ShowTransfer(p);progress=p.transferWindow;
             SendMessageW(GetDlgItem(progress,IDCANCEL),WM_KEYDOWN,VK_ESCAPE,0);
             ok &= p.cancel && IsWindow(progress);p.CloseTransfer();
+            p.cancel=false;p.running=true;ShowTransfer(p);progress=p.transferWindow;
+            CancelAnswer closed{&p,IDNO,false,false,true};cancelAnswer=&closed;
+            SendMessageW(progress,WM_COMMAND,IDCANCEL,0);cancelAnswer=nullptr;
+            ok &= closed.seen && closed.paused && !p.transferWindow && !p.transferCancelQuestion;
             p.cancel=false;p.running=true;ShowTransfer(p);progress=p.transferWindow;
             SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&p));
             SetTimer(parent,57,20,[](HWND owner,UINT,UINT_PTR, DWORD) {
@@ -1035,6 +1057,16 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeSettingsTest()
         check(!settings.relativeSizes && !settings.relativeTimes);
         check(!settings.colorRows);
         check(!settings.stopOnFirstError);
+        check(!settings.transferSpeed && settings.lastTransferSpeed==1024*1024);
+        for(uint64_t speed:{uint64_t(4096),MaxTransferSpeed,uint64_t(0)}) {
+            settings.transferSpeed=speed;if(speed)settings.lastTransferSpeed=speed;
+            plugin.SaveConfiguration(nullptr,key,&registry);settings={};plugin.LoadConfiguration(nullptr,key,&registry);
+            check(settings.transferSpeed==speed && settings.lastTransferSpeed==(speed?speed:MaxTransferSpeed));
+            Preview next;BeginReport(next,L"new_copy",false,L"");check(next.copyProgress.bytesPerSecond==speed);
+        }
+        registry.values["TransferSpeedV1"].bytes={1,2,3};registry.values["LastTransferSpeedV1"].bytes=std::vector<BYTE>(8,255);
+        plugin.LoadConfiguration(nullptr,key,&registry);check(!settings.transferSpeed && settings.lastTransferSpeed==1024*1024);
+        registry.values.erase("TransferSpeedV1");registry.values.erase("LastTransferSpeedV1");
         for(bool enabled:{true,false}) {
             settings.stopOnFirstError=enabled;plugin.SaveConfiguration(nullptr,key,&registry);
             settings={};plugin.LoadConfiguration(nullptr,key,&registry);check(settings.stopOnFirstError==enabled);

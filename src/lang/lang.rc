@@ -578,7 +578,8 @@ BEGIN
     IDS_TRANSFER_SPEED_MB "MB/s"
     IDS_TRANSFER_SPEED_B "B/s"
     IDS_TRANSFER_SPEED_GB "GB/s"
-    IDS_TRANSFER_SPEED_HELP "Choose no limit or enter a positive whole number and a unit (1024 B = 1 KB). The maximum is 1 TB/s. The limit applies to copied data, including named streams and recovery copies, for this batch only. Verification reads are not limited. Cancel keeps the previous setting."
+    IDS_TRANSFER_SPEED_HELP "Choose no limit or enter a positive whole number and a unit (1024 B = 1 KB). The maximum is 1 TB/s. The limit applies to copied data, including named streams and recovery copies. The plugin remembers this setting for future operations and after restart. Verification reads are not limited. Cancel keeps the previous setting."
+    IDS_TRANSFER_CANCEL_CONFIRM "Do you want to cancel this operation?"
 END
 
 STRINGTABLE

@@ -330,7 +330,8 @@ BEGIN
     IDS_TRANSFER_SPEED_MB "MB/s"
     IDS_TRANSFER_SPEED_B "B/s"
     IDS_TRANSFER_SPEED_GB "GB/s"
-    IDS_TRANSFER_SPEED_HELP "Zvolte přenos bez omezení nebo zadejte kladné celé číslo a jednotku (1024 B = 1 KB). Maximum je 1 TB/s. Limit platí pro kopírovaná data včetně pojmenovaných proudů a kopií pro obnovu, pouze pro tuto dávku. Čtení při ověřování se neomezuje. Zrušit ponechá předchozí nastavení."
+    IDS_TRANSFER_SPEED_HELP "Zvolte přenos bez omezení nebo zadejte kladné celé číslo a jednotku (1024 B = 1 KB). Maximum je 1 TB/s. Limit platí pro kopírovaná data včetně pojmenovaných proudů a kopií pro obnovu. Plugin si nastavení pamatuje pro další operace i po restartu. Čtení při ověřování se neomezuje. Zrušit ponechá předchozí nastavení."
+    IDS_TRANSFER_CANCEL_CONFIRM "Chcete zrušit tuto operaci?"
 END
 
 STRINGTABLE

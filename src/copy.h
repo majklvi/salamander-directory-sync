@@ -32,6 +32,12 @@ struct CopyProgress {
     bool Checkpoint(const std::atomic<bool>& cancel) noexcept;
     // cumulativeCopied includes named streams and preceding recovery copies.
     bool Throttle(const std::atomic<bool>& cancel,uint64_t cumulativeCopied) noexcept;
+    // As in the host worker, shrink actual I/O blocks for a low limit.
+    // Use roughly 100 ms of data so both copying and its display stay responsive.
+    DWORD CopyBlockSize() const noexcept {
+        const auto limit=bytesPerSecond.load(std::memory_order_relaxed);
+        return DWORD(limit?std::min(uint64_t(1024*1024),std::max(uint64_t(1),limit/10)):1024*1024);
+    }
     void BeginDisplay(const std::wstring& source,const std::wstring& target,TransferKind kind,bool directory,uint64_t total=0) {
         std::lock_guard<std::mutex> lock(displayMutex);display={source,target,kind,directory,false,total,0,0,0,completedWork.load(),completedCopyBytes.load()};phase=CopyPhase::Checking;
     }

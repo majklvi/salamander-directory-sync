@@ -113,7 +113,8 @@ void UpdateTransfer(Preview& p) {
     else if(p.cancel)line=Text(IDS_UI_STOPPING);
     else if(p.transferBytesTotal){
         line=copiedBytes<=p.transferBytesTotal?InsertTextValues(Text(IDS_TRANSFER_COPIED),{{L"{copied}",copied},{L"{total}",TransferSize(p.transferBytesTotal)}}):copied;
-        if(p.transferRate){const auto limit=p.copyProgress.bytesPerSecond.load();
+        const auto limit=p.copyProgress.bytesPerSecond.load();
+        if(p.transferRate || limit){
             line+=InsertTextValues(Text(limit?IDS_TRANSFER_RATE_LIMIT:IDS_TRANSFER_RATE),{{L"{rate}",TransferSize(p.transferRate)},{L"{limit}",TransferSize(limit)}});}
         // A copy limit does not throttle verification. Extrapolating weighted
         // copy throughput over both phases can overstate the ETA by minutes.
@@ -127,15 +128,15 @@ void UpdateTransfer(Preview& p) {
     auto caption=L"("+Number(uint64_t(totalPosition/10))+L" %) "+p.transferCaption+(paused?L" "+Text(IDS_TRANSFER_PAUSED):L"");
     TransferText(p.transferWindow,0,caption);
     TransferText(p.transferWindow,IDC_TRANSFER_PAUSE,Text(paused?IDS_TRANSFER_RESUME:IDS_TRANSFER_PAUSE));
-    EnableWindow(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE),!p.cancel && !waiting);
+    EnableWindow(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE),!p.cancel && !waiting && !p.transferCancelQuestion);
     EnableWindow(GetDlgItem(p.transferWindow,IDCANCEL),!p.cancel);
 }
 void TransferPause(Preview& p) {
-    if(p.cancel || p.copyProgress.awaitingDecision)return;
+    if(p.cancel || p.copyProgress.awaitingDecision || p.transferCancelQuestion)return;
     p.copyProgress.pauseRequested=!p.copyProgress.pauseRequested.load();UpdateTransfer(p);
 }
 void TransferMenu(Preview& p,bool keyboard) {
-    if(!gui || p.cancel || p.copyProgress.awaitingDecision)return;
+    if(!gui || p.cancel || p.copyProgress.awaitingDecision || p.transferCancelQuestion)return;
     const bool wasPaused=p.copyProgress.pauseRequested.load();p.copyProgress.pauseRequested=true;
     MENU_TEMPLATE_ITEM items[]={{MNTT_PB,0,0,0,-1,0,nullptr},
         {MNTT_IT,wasPaused?IDS_TRANSFER_RESUME:IDS_TRANSFER_PAUSE,MNTS_B|MNTS_I|MNTS_A,1,-1,0,nullptr},
@@ -150,8 +151,41 @@ void TransferMenu(Preview& p,bool keyboard) {
     if(command==2){auto speed=p.copyProgress.bytesPerSecond.load();
         const bool accepted=ChooseTransferSpeed(p.transferWindow,speed,&p.transferSpeedWindow);
         if(!p.running || !p.transferWindow || p.cancel)return;
-        if(accepted)p.copyProgress.bytesPerSecond=speed;}
+        if(accepted){p.copyProgress.bytesPerSecond=speed;settings.transferSpeed=speed;
+            if(speed)settings.lastTransferSpeed=speed;
+            p.transferSampleTick=0;p.transferRate=p.transferWorkRate=0;
+            PersistSettings(p.transferWindow);}}
     p.copyProgress.pauseRequested=command==1?!wasPaused:wasPaused;UpdateTransfer(p);
+}
+void ConfirmTransferCancel(Preview& p) {
+    if(!p.running || p.cancel || p.transferCancelQuestion)return;
+    PreviewCallback callback;
+    const bool wasPaused=p.copyProgress.pauseRequested.load();
+    p.transferCancelQuestion=true;p.copyProgress.pauseRequested=true;UpdateTransfer(p);
+    struct Question {Preview& p;~Question(){p.transferCancelQuestion=false;}} questionState{p};
+    // Match the core's Yes/No question: repeated Escape cannot dismiss it.
+    const auto question=Text(IDS_TRANSFER_CANCEL_CONFIRM),caption=Text(IDS_NAME);
+    const UINT flags=MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2;
+    int answer=IDNO;
+    if(general) {
+        // The host's message-box service decodes UTF-8 (also on the tested
+        // 0.15.1 base), supplies its own localized buttons and ignores Escape
+        // unless MSGBOXEX_ESCAPEENABLED is explicitly requested.
+        auto utf8=[](const std::wstring& value) {
+            const int n=WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,value.c_str(),-1,nullptr,0,nullptr,nullptr);
+            if(n<=0)throw std::runtime_error("message-box encoding");
+            std::string text(size_t(n),'\0');
+            if(!WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,value.c_str(),-1,text.data(),n,nullptr,nullptr))
+                throw std::runtime_error("message-box encoding");
+            return text;
+        };
+        const auto message=utf8(question),title=utf8(caption);
+        answer=general->SalMessageBox(p.transferWindow,message.c_str(),title.c_str(),flags);
+    } else answer=MessageBoxW(p.transferWindow,question.c_str(),caption.c_str(),flags);
+    p.transferCancelQuestion=false;
+    if(answer==IDYES)p.Stop();
+    else if(!p.cancel)p.copyProgress.pauseRequested=wasPaused;
+    UpdateTransfer(p);
 }
 LRESULT CALLBACK TransferButton(HWND button,UINT message,WPARAM w,LPARAM l,UINT_PTR id,DWORD_PTR) {
     if(message==WM_GETDLGCODE)return DefSubclassProc(button,message,w,l)|DLGC_WANTALLKEYS|DLGC_WANTTAB;
@@ -211,8 +245,8 @@ INT_PTR CALLBACK TransferDialog(HWND window,UINT message,WPARAM w,LPARAM l) {
             if(LOWORD(w)==IDC_TRANSFER_MINIMIZE){ShowWindow(window,SW_MINIMIZE);return TRUE;}
             if(LOWORD(w)==IDC_TRANSFER_PAUSE){TransferPause(*p);return TRUE;}
             if(LOWORD(w)!=IDCANCEL)break;[[fallthrough]];
-        case WM_CLOSE:p->Stop();UpdateTransfer(*p);return TRUE;
-        case WM_KEYDOWN:if(w==VK_ESCAPE){p->Stop();UpdateTransfer(*p);return TRUE;}break;
+        case WM_CLOSE:ConfirmTransferCancel(*p);return TRUE;
+        case WM_KEYDOWN:if(w==VK_ESCAPE){ConfirmTransferCancel(*p);return TRUE;}break;
         case WM_NOTIFY:if(reinterpret_cast<NMHDR*>(l)->code==TTN_GETDISPINFOW){auto* tip=reinterpret_cast<NMTTDISPINFOW*>(l);
             auto display=p->copyProgress.Display();p->transferTip=tip->hdr.idFrom==UINT_PTR(GetDlgItem(window,IDC_TRANSFER_SOURCE))?display.source:
                 tip->hdr.idFrom==UINT_PTR(GetDlgItem(window,IDC_TRANSFER_TARGET))?display.target:p->transferDetails;
