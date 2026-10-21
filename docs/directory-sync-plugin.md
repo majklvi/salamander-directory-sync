@@ -30,6 +30,13 @@ Souhrny rozlišují přeskočené, závislostí blokované, chybové/zrušené a
 
 Souhrnný příkaz 0.4.0 prošel také šesti izolovanými místními NTFS scénáři přes Computer Use: Opakovat/Přeskočit/Přeskočit vše a Stop/Close při otevřených chybových dotazech s obnovou ON/OFF, s nezávislou kontrolou disku a protokolů. Přesný rozsah uvádí [protokol GUI ověření](directory-sync-plugin-combined-errors-gui-040.md); nejde o ověření každé chyby či okamžiku přerušení ani SMB.
 
+
+## Kompaktní potvrzení synchronizace (vývoj 0.4.0)
+
+Hlavní **Synchronizovat…** otevře přímo kompaktní potvrzení souhrnné dávky. Nezávisle zvolte **Zleva doprava** a **Zprava doleva**; u asymetrického plánu je zvlášť **Mazání vpravo**. Nenulové skupiny se předvyberou, nulový směr je zakázaný. Vypnutí skupiny pouze vyřadí příslušné návrhy z této dávky: neobrátí šipky, nezmění filtry, profily ani ruční návrhy. Počty a objem hlavních dat zobrazují dostupné návrhy daného směru; **Podrobnosti…** ukazují přesně aktuálně vybranou podmnožinu. Jejich zavření nic nespustí. Bez vybrané operace je OK neaktivní; Zrušit zachová porovnání. Další potvrzení opět předvybere dostupné skupiny.
+
+Potvrzení vždy uvádí uchování originálů; při vypnutí a vybraném přepisu/mazání je viditelné upozornění na chybějící obnovu a nepoužití Koše. Samostatné příkazy a export zůstávají v kontextové nabídce **Viditelný plán**. Pořadí etap, ověřování a R1–R5 se nemění. Výsledky uvádějí počet položek vyloučených při potvrzení. CSV/text zachovají skutečnou viditelnost a doplní `execution_selected`, `confirmation_excluded` a tři volby dávky; vyloučení potvrzením není Přeskočit během provádění. [Návrh](directory-sync-plugin-sync-confirmation-design.md) a [implementace a ověření](directory-sync-plugin-sync-confirmation-040.md). Níže popsaná nabídka tlačítka ve vydané 0.3.0 je ve vývojové verzi nahrazena tímto přímým potvrzením.
+
 ## Nemodální okno (0.3.0)
 
 Hlavní okno synchronizace je samostatné a nemodální. Dokud je otevřené, lze přepnout do Samandarinu a pracovat v jeho panelech, a to i během porovnání a přenosů. Opětovné spuštění pluginu aktivuje stávající okno. Cesty a výběr panelů se zachytí při otevření; pozdější navigace hostitele nepřesměruje rozpracované porovnání ani operaci. Nastavení a potvrzení mají za vlastníka okno pluginu, nikoli hlavní okno hostitele. Změny souborů v hostiteli mohou zneplatnit porovnání: před další operací porovnejte znovu.

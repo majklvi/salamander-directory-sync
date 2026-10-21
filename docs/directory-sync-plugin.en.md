@@ -26,6 +26,13 @@ Summaries distinguish execution-skipped, dependency-blocked, failed/cancelled an
 
 The 0.4.0 combined command has also passed six isolated local NTFS Computer Use scenarios for Retry/Skip/Skip all and Stop/Close during outstanding item questions, with recovery ON/OFF and independent disk/record checks. See the [live GUI report](directory-sync-plugin-combined-errors-gui-040.md) for exact coverage; this does not claim every error/cancellation timing or SMB support.
 
+
+## Compact synchronization confirmation (0.4.0 development)
+
+The main **Synchronize…** button directly opens a compact combined confirmation. Select **Left to right** and **Right to left** independently, with a separate **Delete on the right** choice for asymmetric plans. Nonempty categories are selected initially; a zero-count direction is disabled. Disabling a category only excludes its proposals from this batch; it does not reverse arrows or edit filters, profiles or manual proposals. Counts and main-data bytes describe available proposals in that direction; **Details…** describes exactly the selected subset. Closing Details starts nothing. OK is disabled without any selected operation; Cancel preserves the comparison. Each new confirmation initializes its available categories again.
+
+Recovery status stays visible; selected overwrites/deletions with Keep originals OFF show a warning that originals are not saved and the Recycle Bin is not used. Separate commands and export remain under the **Visible plan** context menu. Phase order, verification and R1–R5 are unchanged. Results count proposals excluded in confirmation. CSV/text preserve actual visibility and add `execution_selected`, `confirmation_excluded` and three batch choices; confirmation exclusion is not an execution Skip. See the [design](directory-sync-plugin-sync-confirmation-design.md) and [implementation/verification](directory-sync-plugin-sync-confirmation-040.md). The released 0.3.0 button menu described below is replaced by this direct confirmation in the development version.
+
 ## Modeless window (0.3.0)
 
 The main synchronization window is independent and modeless. You can switch back to Samandarin and work with its panels while this window remains open, including during comparison and transfers. Opening the plugin again activates the existing window. Paths and panel selections are captured when opening it; navigating the host panels does not redirect an existing comparison or operation. Settings and confirmations belong to the plugin window, not to the host main window. Changing files through the host can invalidate a comparison: compare again before proceeding.

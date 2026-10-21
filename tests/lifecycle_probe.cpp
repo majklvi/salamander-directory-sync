@@ -84,6 +84,54 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
         HWND parent=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&owner.dialog,nullptr,EmptyDialog,0);
         if(!parent){FreeLibrary(resources);return FALSE;}
         SetTimer(parent,63,15,AnswerTransferCancel);
+        // Production compact confirmation, actual nested Details loop, both
+        // resource languages. No filesystem operations are started here.
+        {
+            Preview p;p.window=parent;p.left=L"C:\\"+std::wstring(300,L'漢')+L"\\left-ž";p.right=L"C:\\right";
+            p.result.rows.resize(2);p.visible={0,1};
+            for(int side=0;side<2;++side){auto& row=p.result.rows[side];row.path=L"file"+Number(side);
+                row.action=side?dirsync::Action::CopyLeft:dirsync::Action::CopyRight;
+                row.hasLeft=side==0;row.hasRight=side==1;row.state=side?dirsync::State::RightOnly:dirsync::State::LeftOnly;
+                auto& entry=side?row.right:row.left;entry.identified=true;entry.size=987654321;}
+            SyncConfirmation choice{p,false,L""};
+            HWND dialog=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_SYNC_CONFIRMATION),parent,SyncConfirmationDialog,LPARAM(&choice));
+            ok &= dialog && choice.plan.Count()==2 && IsWindowEnabled(GetDlgItem(dialog,IDOK)) &&
+                StaticCaptionFits(dialog,IDC_SYNC_RIGHT_COUNTS) && StaticCaptionFits(dialog,IDC_SYNC_LEFT_COUNTS) &&
+                StaticCaptionFits(dialog,IDC_SYNC_NOTICE) && !IsWindowVisible(GetDlgItem(dialog,IDC_SYNC_DELETE));
+            CheckDlgButton(dialog,IDC_SYNC_LEFT,BST_UNCHECKED);SendMessageW(dialog,WM_COMMAND,IDC_SYNC_LEFT,0);
+            ok &= choice.plan.Count()==1 && choice.plan.excluded.size()==1 && p.visible.size()==2 &&
+                p.result.rows[1].action==dirsync::Action::CopyLeft;
+            std::pair<Preview*,bool> detailState{&p,false};SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&detailState));
+            SetTimer(parent,74,20,[](HWND owner,UINT,UINT_PTR,DWORD){
+                auto* state=reinterpret_cast<std::pair<Preview*,bool>*>(GetWindowLongPtrW(owner,GWLP_USERDATA));
+                HWND info=state->first->syncDetailsWindow;if(!info)return;
+                auto* data=reinterpret_cast<Information*>(GetWindowLongPtrW(info,DWLP_USER));
+                if(!data || !GetDlgItem(info,IDC_INFO_TABLE))return;KillTimer(owner,74);
+                state->second=!data->confirm &&
+                    std::find(data->rows.begin(),data->rows.end(),std::make_pair(Text(IDS_SYNC_EXCLUDED),L"1"))!=data->rows.end();
+                SendMessageW(info,WM_COMMAND,IDOK,0);
+            });
+            SendMessageW(dialog,WM_COMMAND,IDC_SYNC_DETAILS,0);
+            ok &= detailState.second && IsWindow(dialog) && choice.plan.Count()==1 && !p.running;
+            KillTimer(parent,74);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
+            CheckDlgButton(dialog,IDC_SYNC_RIGHT,BST_UNCHECKED);SendMessageW(dialog,WM_COMMAND,IDC_SYNC_RIGHT,0);
+            ok &= !choice.plan.Count() && !IsWindowEnabled(GetDlgItem(dialog,IDOK));
+            DestroyWindow(dialog);p.syncConfirmationWindow=nullptr;
+            p.visible={0};SyncConfirmation single{p,false,L""};
+            dialog=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_SYNC_CONFIRMATION),parent,SyncConfirmationDialog,LPARAM(&single));
+            ok &= IsWindowEnabled(GetDlgItem(dialog,IDC_SYNC_RIGHT)) && !IsWindowEnabled(GetDlgItem(dialog,IDC_SYNC_LEFT)) && !Checked(dialog,IDC_SYNC_LEFT);
+            DestroyWindow(dialog);p.syncConfirmationWindow=nullptr;
+            // Real modal cancellation via the same owner-close/unload cleanup.
+            SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&p));
+            SetTimer(parent,75,20,[](HWND owner,UINT,UINT_PTR,DWORD){
+                auto* preview=reinterpret_cast<Preview*>(GetWindowLongPtrW(owner,GWLP_USERDATA));
+                if(preview->syncDetailsWindow){KillTimer(owner,75);preview->CloseTransfer();}
+                else if(preview->syncConfirmationWindow)SendMessageW(preview->syncConfirmationWindow,WM_COMMAND,IDC_SYNC_DETAILS,0);
+            });
+            ok &= !ChooseSynchronization(single) && !p.syncConfirmationWindow && !p.syncDetailsWindow && IsWindow(parent);
+            KillTimer(parent,75);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
+        }
+
         {
             HDC dc=GetDC(parent);auto old=SelectObject(dc,GetStockObject(DEFAULT_GUI_FONT));
             for(const auto& path:{std::wstring(L"C:\\short\\A & B-ž.txt"),L"C:\\"+std::wstring(300,L'漢')+L"\\žluťoučký.txt",

@@ -20,6 +20,8 @@ In 0.3.0, confirmed file operations also show a separate **Synchronization progr
 
 ## Interactive errors (0.4.0 development)
 
+In this development version, **Synchronize…** directly opens a compact confirmation with independent copy directions, separate asymmetric deletion, visible recovery status and read-only **Details…**. Deselecting a group excludes its proposals from this batch without reversing arrows or hiding rows. No selection disables OK. Individual commands and export remain under the **Visible plan** context menu. Results/CSV/text distinguish confirmation exclusions from execution skips. See the [implementation and verified scope](directory-sync-plugin-sync-confirmation-040.md).
+
 The same error policy now covers separate operations and **Execute visible plan…**. Review the confirmation, recovery mode and final skipped/blocked counts. Skip all matches operation/phase/site/Windows code for one command; matching saving decisions can carry from overwrites into deletion preservation. Stop/Close prevent later phases, completed changes remain, and another comparison is required before another execution. See the [current guide](directory-sync-plugin.en.md#interactive-operation-errors-040-development) and [verified scenarios](directory-sync-plugin-combined-errors-040.md).
 
 ## Profiles (0.2.0)

@@ -1,0 +1,46 @@
+# Compact synchronization confirmation — 0.4.0 development
+
+Implemented and verified on 2026-10-21 after approval of the [design and reference observations](directory-sync-plugin-sync-confirmation-design.md). Public release 0.3.0 is unchanged; no release publication is included.
+
+## Behavior
+
+The main Synchronize button now validates the comparison and directly opens a compact, native 300 DLU confirmation, without the previous command menu. Separate copy, overwrite, deletion and export commands remain in the existing Visible plan context menu. The adjoining Stop control is unchanged.
+
+Left-to-right and right-to-left are independent choices. Available new-file, empty-directory and overwrite counts and formatted main-data bytes stay visible when unchecked. Nonempty directions start checked; zero-count directions are disabled and cleared. An available asymmetric deletion set has its own checkbox and file/directory counts. Each confirmation starts from its available categories, without remembering a previous batch restriction. Choices restrict existing proposals; they never reverse arrows, change filters, include hidden/Skip rows or edit profiles.
+
+Both compared roots use native path ellipsis, with complete Unicode path tooltips. Recovery ON/OFF is always visible; an applicable recovery path is shown when ON. Selected overwrites/deletions with recovery OFF show an explicit no-recovery/no-Recycle-Bin warning. Other cases show a short scope explanation. Wrapping captions are measured at the dialog's current font/DPI; inapplicable deletion/recovery rows are removed from the layout.
+
+Details opens the existing table-style summary read-only for the current selection. Closing it, including Escape, returns to the same compact confirmation without starting work. Only the compact dialog's OK authorizes execution. OK is disabled without selected eligible operations. Cancel preserves files, proposals, filters and preferences. The main button is also disabled without a current eligible visible plan, including after a write or when filters hide the last operation.
+
+## Shared plan, results and lifetime
+
+`SyncSelection` is an internal plugin value with three independent booleans. `BuildSyncPlan`, `Synchronize` and `PrepareReport` use the same selection over the complete immutable comparison snapshot and original row identities. `SyncPlan::excluded` records eligible visible proposals declined in confirmation, separately from other omitted proposals. New-item, overwrite, recovery and deletion adapters are retained. All R1–R5 validation, phase order, error decisions, Stop/Close and retained-child protection remain in force.
+
+Progress budgets are derived from the selected report operations, including only recovery copies required for selected destructive operations. Result denominators use the selected plan and the result table counts confirmation exclusions. The full comparison remains available for inspection/export.
+
+CSV adds `execution_selected` and `confirmation_excluded` columns at the end; text uses the same fields. Combined-batch metadata records `selected_left_to_right`, `selected_right_to_left`, `selected_delete_right` and `confirmation_excluded_rows`. Actual `visible` / `execution_visible` meanings are preserved. Declining a direction is not an execution Skip, failed operation, hidden row or successful synchronization of that row. Other operation types retain their existing semantics. These are additive fields in report schema 1, not a recovery-manifest change.
+
+The compact confirmation and its nested Details window are tracked as owned dialogs. Owner close/forced-unload cleanup ends the nested dialog first, then the confirmation. Callback guards preserve the existing modeless plugin lifetime rule while modal frames unwind. Revalidation in the executor still refuses external changes during confirmation; selecting a direction does not accept newer external source/target identities.
+
+## Automated verification
+
+- All eight direction/deletion combinations, with Keep originals OFF and ON, execute real isolated NTFS fixtures. Each fixture includes new files, empty directories and overwrites in both directions, asymmetric deletion, a hidden proposal, Skip and a protected ancestor. Tests check that only selected targets change, originals are handled according to recovery mode, proposals remain unchanged, and report operations/selected/excluded CSV rows agree with the actual plan. Text metadata is checked too.
+- Real production dialog callbacks are exercised with both shipping language resources. Tests check independent toggles, zero-count disabling, all-unchecked OK disabling, measured caption fit, preservation of visible rows/proposals, the actual nested read-only Details loop and cancellation through the owner-cleanup path while Details is open. An initial test timer tried to find the nested window through activation and timed out; using its explicit production-owned handle fixed the harness. This was not a worker or product hang.
+- All five x64 suites pass in Debug and Release: **2,216 engine**, **8,671 copy/recovery/overwrite/delete**, **2,451 lifecycle**, **5,864 English resource/layout**, and **6,003 Czech resource/layout** checks. The existing lifecycle suite also retains active-I/O/verification Stop/Close, host-close and forced-unload coverage; this campaign does not claim a new live timed cancellation test for every selection.
+- Debug Win32/x64/ARM64 and Release x64 plugin plus both language-module builds pass. ARM64 is compilation only. Compiled-resource font/layout checks cover 96, 120, 144, 192 and 240 DPI; these are not live monitor-DPI changes.
+
+## Live GUI verification
+
+Computer Use operated only private custom Samandarin 0.16 x64 configurations beneath `C:\Samandarin\builds\dirsync-compact-confirm-20261021`. Separate `en-light` and `cs-dark` cases have isolated configuration files, Unicode left/right/recovery paths and synthetic data with ADS. Installed user host/plugin windows were retained. The test hosts were closed afterwards.
+
+**English/light, recovery ON:** Compare produced one new file, one empty directory and one overwrite per direction. Main Synchronize opened the compact dialog directly. Both directions began checked. Turning both off disabled OK; Space reenabled the focused direction. With only rightward work selected, Details showed one new file/directory, one overwrite, no leftward work and no deletions. Closing Details returned without writing. OK completed only the rightward two new items and one overwrite. Independent disk checks confirmed the leftward missing targets/original were unchanged and exactly the required right original was saved. A new Compare left the rightward choice disabled and selected only leftward work; its confirmation completed the two new items and one overwrite to the left. The next Compare showed six equal entries.
+
+This initial English candidate exposed an old navigation assumption: the main button was visually enabled for an equal-only plan because it previously opened a menu that also contained export. The implementation now disables that direct-execution button when no eligible visible plan exists. Root labels in Details were also refined from picker titles to Left/Right directory. These follow-ups are included in the final build and automated rerun.
+
+**Czech/dark, final build, recovery OFF:** Compare included one new file, one empty directory, one overwrite and one right-only deletion candidate. Rightward work and deletion began checked; the zero-count leftward direction was disabled. Turning off copying left deletion selected independently. Read-only Details showed only one deletion, zero copies/overwrites and 23 original main bytes. Escape returned without changes. Turning deletion off as well disabled OK. Cancel preserved every original data stream, ADS and timestamp and created no recovery session. Reopening restored the available groups. Deletion was then explicitly unchecked before OK: the result completed two new items and one overwrite, zero deletions, with one confirmation exclusion. The deletion candidate and its ADS stayed intact and no recovery copy was created. After Compare, hiding the sole remaining single-sided deletion proposal disabled main Synchronize while leaving the equal rows visible.
+
+No deletion was executed through Computer Use in this campaign. Actual deletion/parent protection for all selection combinations is covered by the automated NTFS tests above. GUI tests did not repeat the historical full-VHD, SMB, host SDK, or every error-dialog timing campaign. CSV/text selection semantics were checked with the independent CSV reader and actual executor fixtures rather than claimed as a new live Save-dialog export campaign.
+
+Local evidence: per-case `before.json`, `en-light/after-right.json`, per-case `verified.json`, and the external preparation/verification scripts. Final locally checked SPL: **775,168 bytes**, SHA-256 `893ee58a13e25a64ca6d78af69c331a792f96ab471121027c967988c822077c0`.
+
+Guides, pilot notes, in-plugin English/Czech help, changelog and roadmap are updated. Published-commit build/test/package and CodeQL are checked separately after push. No SMB tests, SDK changes, release upload or changes to the historical fork are included.

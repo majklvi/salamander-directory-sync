@@ -34,6 +34,12 @@ The design replaces first-error-only behavior incrementally. Broader failure sce
 
 The [0.4.0 release checklist](docs/directory-sync-plugin-release-readiness-040.md) records the remaining report-consumer and distribution checks. Next: inspect mixed outcomes in CSV/text export and Stored originals, then final package installation/update checks. Restoration and large-list optimization remain separate work below.
 
+## Compact synchronization confirmation — 0.4.0 development
+
+Reference GUI research on 2026-10-21 found independent direction choices based on eligible visible proposals, including zero-count disabling and separate asymmetric deletion. Unequal file counts/bytes did not select a dominant direction. See the [observations and proposed compact confirmation](docs/directory-sync-plugin-sync-confirmation-design.md).
+
+Propose a compact native confirmation with left-to-right/right-to-left choices, explicit deletion and recovery status, and **Details…** opening the existing tabular summary read-only. Direction choices restrict existing proposals; they do not reverse them. Confirmation, execution, progress and exports must use the same selected plan. Approved by the user and implemented on 2026-10-21. See the [implementation and verification](docs/directory-sync-plugin-sync-confirmation-040.md). No SMB tests or SDK changes are included.
+
 ## 2. Restore an individual stored original
 
 Extend the existing read-only Stored originals browser with explicit restoration of one selected item. Start with a target preview, validation of the stored copy and an explicit collision decision. Preserve the recovery source and report the actual result.

@@ -326,7 +326,7 @@ int main()
         for(int id=IDS_STORED_DATE;id<=IDS_STORED_ERROR;++id)Check(!text(id).empty(),"stored originals interface localized");
         for(int id=IDS_REPORT_EXPORT;id<=IDS_REPORT_HELP;++id)Check(!text(id).empty(),"report export interface localized");
         for(int id=IDS_PROGRESS_PREPARE;id<=IDS_STORED_OPEN_SAVED_MENU;++id)Check(!text(id).empty(),"transfer progress and explicit recovery menu actions localized");
-        Test(IDD_OPERATION_ERROR);
+        Test(IDD_SYNC_CONFIRMATION);Test(IDD_OPERATION_ERROR);
         for(int id=IDS_ERROR_WAIT;id<=IDS_SYNC_INCOMPLETE;++id)Check(!text(id).empty(),"operation-error strings localized");
         Check(!text(IDS_TRANSFER_CANCEL_CONFIRM).empty(),"transfer cancellation question localized");
         Test(IDD_TRANSFER_PROGRESS);

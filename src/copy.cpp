@@ -1039,24 +1039,29 @@ CopyReport CopyNewFiles(Result snapshot,const std::vector<size_t>& visible,std::
     }
     Phase(progress,CopyPhase::Finished,L""); return report;
 }
-SyncPlan BuildSyncPlan(const Result& snapshot,const std::vector<size_t>& visible)
+SyncPlan BuildSyncPlan(const Result& snapshot,const std::vector<size_t>& visible,SyncSelection selection)
 {
-    SyncPlan plan;plan.deletions=DeletionRows(snapshot,visible);
-    std::set<size_t> unique,deletions(plan.deletions.begin(),plan.deletions.end());
+    SyncPlan plan;const auto eligibleDeletes=DeletionRows(snapshot,visible);
+    std::set<size_t> unique,deletions(eligibleDeletes.begin(),eligibleDeletes.end());
+    if(selection.deleteRight)plan.deletions=eligibleDeletes;
     for(size_t i:visible) if(i<snapshot.rows.size() && unique.insert(i).second) {
-        if(IsNewCopy(snapshot.rows[i])) plan.copies.push_back(i);
-        else if(IsFileOverwrite(snapshot.rows[i])) plan.overwrites.push_back(i);
-        else if(!deletions.count(i)) ++plan.omitted;
+        const auto& row=snapshot.rows[i];
+        const bool copy=IsNewCopy(row),overwrite=IsFileOverwrite(row),remove=deletions.count(i)!=0;
+        const bool allowed=remove?selection.deleteRight:row.action==Action::CopyRight?selection.toRight:selection.toLeft;
+        if((copy || overwrite || remove) && !allowed)plan.excluded.push_back(i);
+        else if(copy)plan.copies.push_back(i);
+        else if(overwrite)plan.overwrites.push_back(i);
+        else if(!remove)++plan.omitted;
     }
     return plan;
 }
 SyncReport Synchronize(Result snapshot,const std::vector<size_t>& visible,bool keepOriginals,
-    const std::wstring& recoveryRoot,std::atomic<bool>& cancel,Progress& checking,CopyProgress& progress,std::atomic<SyncStage>& stage)
+    const std::wstring& recoveryRoot,std::atomic<bool>& cancel,Progress& checking,CopyProgress& progress,std::atomic<SyncStage>& stage,SyncSelection selection)
 {
     // One user command spans every phase. Retain matching Skip all decisions
     // across its adapters, but never inherit them from a previous command.
     progress.errors.skipped.clear();
-    SyncReport report;report.plan=BuildSyncPlan(snapshot,visible);report.keepOriginals=keepOriginals;stage=SyncStage::Checking;
+    SyncReport report;report.plan=BuildSyncPlan(snapshot,visible,selection);report.keepOriginals=keepOriginals;stage=SyncStage::Checking;
     auto finish=[&]() {
         report.cancelled=report.cancelled || cancel.load();
         if(report.cancelled){report.complete=false;if(!report.error)report.error=ERROR_CANCELLED;}

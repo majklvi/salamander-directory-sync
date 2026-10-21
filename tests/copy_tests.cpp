@@ -1022,6 +1022,46 @@ std::vector<std::map<std::wstring,std::wstring>> CsvRecords(const std::wstring& 
     for(size_t i=1;i<rows.size();++i){Check(rows[i].size()==rows[0].size(),"consistent CSV field count");std::map<std::wstring,std::wstring> row;
         for(size_t n=0;n<rows[0].size();++n)row[rows[0][n]]=rows[i][n];result.push_back(std::move(row));}return result;
 }
+void SyncDirectionSelection() {
+    for(unsigned mask=0;mask<8;++mask)for(bool keep:{false,true}) {
+        Fixture f;f.Dir(f.root+L"\\recovery");
+        Put(f.left+L"\\new-right","RIGHT");Put(f.right+L"\\new-left","LEFT");
+        f.Dir(f.left+L"\\empty-right");f.Dir(f.right+L"\\empty-left");
+        for(auto name:{L"overwrite-right",L"overwrite-left"}){Put(f.left+L"\\"+name,"LEFT SOURCE");Put(f.right+L"\\"+name,"RIGHT SOURCE");}
+        Put(f.right+L"\\delete","DELETE");Put(f.left+L"\\skip","SKIP");Put(f.left+L"\\hidden","HIDDEN");
+        f.Dir(f.right+L"\\protected");Put(f.right+L"\\protected\\skip-child","RETAIN");
+        Options options;options.asymmetric=true;options.emptyDirectories=true;
+        auto snapshot=Compare(f.left,f.right,options,f.cancel,f.checking);std::vector<size_t> visible;std::map<std::wstring,Action> actions;
+        for(size_t i=0;i<snapshot.rows.size();++i){auto& row=snapshot.rows[i];
+            if(row.path==L"new-left" || row.path==L"empty-left" || row.path==L"overwrite-left")row.action=Action::CopyLeft;
+            if(row.path==L"overwrite-right")row.action=Action::CopyRight;
+            if(row.path==L"skip" || row.path==L"protected\\skip-child")row.action=Action::None;
+            if(row.path!=L"hidden")visible.push_back(i);actions[row.path]=row.action;
+        }
+        const SyncSelection selection{(mask&1)!=0,(mask&2)!=0,(mask&4)!=0};
+        auto plan=BuildSyncPlan(snapshot,visible,selection);
+        Check(plan.copies.size()==2*((mask&1)!=0)+2*((mask&2)!=0) && plan.overwrites.size()==((mask&1)!=0)+((mask&2)!=0) && plan.deletions.size()==((mask&4)!=0),"direction/deletion choices independently restrict all operation categories");
+        Check(plan.Count()+plan.excluded.size()==7,"excluded eligible rows remain distinct from omitted/hidden/Skip rows");
+        ReportContext context;context.left=f.left;context.right=f.right;context.visible=visible;
+        auto batch=PrepareReport(snapshot,context,L"combined",keep,f.root+L"\\recovery",{},0,selection);
+        Check(batch.visible==visible && batch.confirmationExcluded==plan.excluded && batch.items.size()==plan.Count()+(keep?plan.overwrites.size()+plan.deletions.size():0),"report retains UI visibility but authorizes only selected operations and dependent saves");
+        std::atomic<SyncStage> stage{SyncStage::Checking};auto report=Synchronize(snapshot,visible,keep,f.root+L"\\recovery",f.cancel,f.checking,f.progress,stage,selection);CompleteReport(batch,report);
+        Check(report.complete && !report.error && report.plan.Count()==plan.Count(),"execution agrees with confirmed direction subset");
+        Check(Exists(f.right+L"\\new-right")==selection.toRight && Exists(f.left+L"\\new-left")==selection.toLeft && Exists(f.right+L"\\empty-right")==selection.toRight && Exists(f.left+L"\\empty-left")==selection.toLeft,"only selected new files and empty directories are created");
+        Check(Read(f.right+L"\\overwrite-right")== (selection.toRight?"LEFT SOURCE":"RIGHT SOURCE") && Read(f.left+L"\\overwrite-left")== (selection.toLeft?"RIGHT SOURCE":"LEFT SOURCE") && Exists(f.right+L"\\delete")!=selection.deleteRight,"only selected overwrites and deletions are applied");
+        Check(Exists(f.right+L"\\protected\\skip-child") && Exists(f.right+L"\\protected") && !Exists(f.right+L"\\skip") && !Exists(f.right+L"\\hidden"),"Skip, hidden rows and retained descendants still protect their scope");
+        for(const auto& row:snapshot.rows)Check(row.action==actions[row.path],"confirmation does not mutate proposals");
+        auto records=CsvRecords(RenderReport(snapshot,context,&batch,true));size_t executed=0,excluded=0;
+        for(const auto& record:records) {
+            if(record.at(L"record")==L"comparison") {
+                if(record.at(L"execution_selected")==L"true")++executed;
+                if(record.at(L"confirmation_excluded")==L"true"){++excluded;Check(record.at(L"execution_visible")==L"true" && record.at(L"execution_selected")==L"false","declined directions remain visible and are not execution-selected");}
+            }
+        }
+        Check(executed==plan.Count() && excluded==plan.excluded.size(),"CSV selected/excluded rows agree with actual executor scope");
+        Check(RenderReport(snapshot,context,&batch,false).find(L"selected_left_to_right")!=std::wstring::npos,"text records confirmation choices too");
+    }
+}
 void Reports() {
     Fixture f;f.Dir(f.root+L"\\recovery");Put(f.left+L"\\new,漢字.txt","NEW");Put(f.left+L"\\overwrite.txt","REPLACEMENT");Put(f.right+L"\\overwrite.txt","ORIGINAL");
     Put(f.right+L"\\delete.txt","DELETE");Put(f.left+L"\\skip.txt","SKIP");Put(f.left+L"\\hidden.txt","HIDDEN");
@@ -1738,7 +1778,7 @@ void InteractiveCombined() {
 int main() {
     try { Success(); Scope(); ModifyOnlyDestination(); Boundaries(); Paths(); AfterPublication(); DiskSpace();
         RecoverySuccess(); RecoveryFailures(); RecoveryPaths(); OverwriteSuccess(); OverwriteFailures(); OverwritePaths();
-        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();InteractiveErrors();InteractiveOriginalsAndOverwrites();InteractiveDeletion();InteractiveCombined();
+        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();SyncDirectionSelection();Reports();TransferControls();InteractiveErrors();InteractiveOriginalsAndOverwrites();InteractiveDeletion();InteractiveCombined();
         std::cout<<checks<<" copy/recovery/overwrite/delete assertions passed\n"; return 0; }
     catch(const std::exception& e) { std::cerr<<"FAILED: "<<e.what()<<"\n"; return 1; }
 }

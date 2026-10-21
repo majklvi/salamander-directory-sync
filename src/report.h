@@ -16,6 +16,8 @@ struct ReportBatch {
     std::wstring kind,started,finished,recoveryRoot;
     std::array<bool,5> filters{};
     std::vector<size_t> visible;
+    SyncSelection selection;
+    std::vector<size_t> confirmationExcluded;
     std::vector<ReportOperation> items;
     bool keepOriginals=false,complete=false,cancelled=false,stale=false,exception=false;
     uint64_t error=0,journalError=0,omitted=0;
@@ -30,7 +32,7 @@ struct ReportContext {
 };
 std::wstring ReportTime();
 ReportBatch PrepareReport(const Result& result,const ReportContext& context,const std::wstring& kind,
-    bool keep,const std::wstring& recoveryRoot,const std::vector<size_t>& selected={},int side=0);
+    bool keep,const std::wstring& recoveryRoot,const std::vector<size_t>& selected={},int side=0,SyncSelection selection={});
 void CompleteReport(ReportBatch& batch,const CopyReport& result);
 void CompleteReport(ReportBatch& batch,const RecoveryReport& result);
 void CompleteReport(ReportBatch& batch,const OverwriteReport& result);

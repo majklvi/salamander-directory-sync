@@ -279,6 +279,7 @@ struct Information
     bool confirm;
     SIZE initial{}, minimum{};
     std::vector<std::pair<HWND, RECT>> controls;
+    HWND* activeWindow=nullptr;
 };
 std::wstring EditLines(const std::wstring& text)
 {
@@ -374,6 +375,7 @@ INT_PTR CALLBACK InformationDialog(HWND window,UINT message,WPARAM w,LPARAM l)
     try {
         if(message==WM_INITDIALOG) {
             info=reinterpret_cast<Information*>(l);
+            if(info->activeWindow)*info->activeWindow=window;
             SetWindowLongPtrW(window,DWLP_USER,reinterpret_cast<LONG_PTR>(info));
             SetWindowTextW(window,Text(info->title).c_str());
             HWND list=GetDlgItem(window,IDC_INFO_TABLE);
@@ -447,11 +449,13 @@ INT_PTR CALLBACK InformationDialog(HWND window,UINT message,WPARAM w,LPARAM l)
     } catch(...) {EndDialog(window,IDCANCEL);return TRUE;}
     return FALSE;
 }
-bool InformationBox(HWND parent,int title,InfoRows rows,const std::wstring& notes,bool confirm=false,bool planScope=true)
+bool InformationBox(HWND parent,int title,InfoRows rows,const std::wstring& notes,bool confirm=false,bool planScope=true,HWND* activeWindow=nullptr)
 {
     if(confirm && planScope) rows.insert(rows.begin(),{Text(IDS_UI_SCOPE_LABEL),Text(IDS_UI_SCOPE_VALUE)});
     Information info{title,std::move(rows),confirm && planScope?Text(IDS_UI_SCOPE_NOTE)+L"\n\n"+Text(IDS_UI_ADS_NOTE)+L"\n\n"+notes:notes,confirm,{}, {}, {}};
+    info.activeWindow=activeWindow;
     INT_PTR result=DialogBoxParamW(language,MAKEINTRESOURCEW(IDD_INFORMATION),parent,InformationDialog,LPARAM(&info));
+    if(activeWindow)*activeWindow=nullptr;
     if(result==-1) Message(parent,IDS_FAILED);
     return result==IDOK;
 }
@@ -499,6 +503,7 @@ struct Preview
     dirsync::ReportBatch operationReport;
     bool reportReady=false;
     HWND transferWindow=nullptr,transferSpeedWindow=nullptr;
+    HWND syncConfirmationWindow=nullptr,syncDetailsWindow=nullptr;
     bool transferCancelQuestion=false;
     CGUIProgressBarAbstract* transferFileBar=nullptr;
     CGUIProgressBarAbstract* transferTotalBar=nullptr;
@@ -516,6 +521,7 @@ struct Preview
     bool running = false, closing = false, failed = false, validating = false, updatingList = false;
     bool modeless=false;
     void CloseTransfer() {
+        for(HWND* child:{&syncDetailsWindow,&syncConfirmationWindow})if(*child){EndDialog(*child,IDCANCEL);*child=nullptr;}
         errorQuestion.Cancel();
         if(errorWindow){HWND window=errorWindow;errorWindow=nullptr;DestroyWindow(window);}
         if(transferSpeedWindow){EndDialog(transferSpeedWindow,IDCANCEL);transferSpeedWindow=nullptr;}
@@ -1025,8 +1031,13 @@ bool PendingOptions(const Preview& p)
         Checked(p.window,IDC_ASYMMETRIC)!=p.options.asymmetric || Checked(p.window,IDC_EMPTY)!=p.options.emptyDirectories ||
         Checked(p.window,IDC_SELECTED)!=p.options.onlySelected);
 }
+bool SyncAvailable(const Preview& p) {
+    return !p.running && p.result.snapshot && !p.result.stale && !p.result.cancelled && !p.failed &&
+        dirsync::BuildSyncPlan(p.result,p.visible).Count()!=0;
+}
 void Status(Preview& p)
 {
+    EnableWindow(GetDlgItem(p.window,IDC_SYNCHRONIZE),SyncAvailable(p));
     std::wstring state;std::vector<std::wstring> metrics;
     auto metric=[&](int id,uint64_t value) {wchar_t text[128]{};swprintf_s(text,Text(id).c_str(),value);metrics.emplace_back(text);};
     if(p.running) {
@@ -1775,7 +1786,7 @@ bool PlanEnabled(const Preview& p,int command)
     if(command==PlanExport)return !p.running && p.reportReady;
     if(p.running || !p.result.snapshot || p.result.stale || p.result.cancelled || p.failed) return false;
     if(command==PlanSummary) return true;
-    if(command==PlanSync) return dirsync::BuildSyncPlan(p.result,p.visible).Count()!=0;
+    if(command==PlanSync) return SyncAvailable(p);
     if(command==PlanSave && !settings.keepOriginals) return false;
     if(command==PlanDelete) return !dirsync::DeletionRows(p.result,p.visible).empty();
     for(size_t index:p.visible) if(index<p.result.rows.size()) {
@@ -1791,25 +1802,7 @@ void EnablePlanMenu(CGUIMenuPopupAbstract* menu,const Preview& p)
 }
 void SynchronizeMenu(Preview& p)
 {
-    if(!gui || p.running) return;
-    MENU_TEMPLATE_ITEM items[]={{MNTT_PB,0,0,0,-1,0,nullptr},
-        {MNTT_IT,IDS_SYNC_COMMAND,MNTS_B|MNTS_I|MNTS_A,PlanSync+1,-1,0,nullptr},
-        {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
-        {MNTT_IT,IDS_MENU_COPY_NEW,MNTS_B|MNTS_I|MNTS_A,PlanCopy+1,-1,0,nullptr},
-        {MNTT_IT,IDS_MENU_OVERWRITE,MNTS_B|MNTS_I|MNTS_A,PlanOverwrite+1,-1,0,nullptr},
-        {MNTT_IT,IDS_MENU_DELETE_FILES,MNTS_B|MNTS_I|MNTS_A,PlanDelete+1,-1,0,nullptr},
-        {MNTT_SP,-1,MNTS_B|MNTS_I|MNTS_A,0,-1,0,nullptr},
-        {MNTT_IT,IDS_REPORT_EXPORT,MNTS_B|MNTS_I|MNTS_A,PlanExport+1,-1,0,nullptr},
-        {MNTT_PE,0,0,0,-1,0,nullptr}};
-    auto* menu=gui->CreateMenuPopup();if(!menu) return;DWORD command=0;
-    if(menu->LoadFromTemplate(language,items,nullptr,nullptr,nullptr)) {
-        EnablePlanMenu(menu,p);RECT r{};GetWindowRect(GetDlgItem(p.window,IDC_SYNCHRONIZE),&r);
-        command=TrackWithStatus(p,menu,MENU_TRACK_RETURNCMD|MENU_TRACK_NONOTIFY,r.left,r.bottom);
-    }
-    gui->DestroyMenuPopup(menu);
-    if(command && PlanEnabled(p,int(command)-1)) {
-        if(int(command)-1==PlanExport)ExportResults(p);else ValidatePreview(p,PlanIntent(int(command)-1));
-    }
+    if(PlanEnabled(p,PlanSync))ValidatePreview(p,Preview::Intent::Sync);
 }
 void PreviewCommand(Preview& p,const std::vector<size_t>& rows,int command)
 {
@@ -2043,6 +2036,7 @@ void SyncSummary(Preview& p)
     Field(fields,IDS_UI_ERRORS,failed+(report.error && !failed?1:0));Field(fields,IDS_UI_PENDING,uint64_t(report.plan.Count())-copied-replaced-deleted-failed-skipped-blocked);
     Field(fields,IDS_UI_SKIPPED,skipped);Field(fields,IDS_STORED_DEPENDENCY_BLOCKED,blocked);
     Field(fields,IDS_UI_OMITTED,uint64_t(report.plan.omitted));Field(fields,IDS_UI_RECOVERY,Text(report.keepOriginals?IDS_UI_ON:IDS_UI_OFF));
+    Field(fields,IDS_SYNC_EXCLUDED,uint64_t(report.plan.excluded.size()));
     for(const auto* recovery:{&report.overwrites.recovery,&report.deletions.recovery}) {
         if(!recovery->journal.empty()) Field(fields,IDS_UI_MANIFEST,recovery->journal);
         for(const auto& item:recovery->items) {
@@ -2058,32 +2052,18 @@ void SyncSummary(Preview& p)
     if(!report.complete)notes+=L"\n"+Text(IDS_SYNC_INCOMPLETE);
     InformationBox(p.window,IDS_SYNC_RESULT,std::move(fields),notes);
 }
+#include "sync_confirmation.inc"
 void SyncAll(Preview& p)
 {
-    const auto plan=dirsync::BuildSyncPlan(p.result,p.visible);
-    if(!plan.Count()) {Message(p.window,IDS_COPY_EMPTY);return;}
     const bool keep=settings.keepOriginals;const auto root=settings.recoveryRoot;
+    SyncConfirmation choice{p,keep,root};
+    if(!ChooseSynchronization(choice))return;
+    if(!p.window || !IsWindow(p.window))return;
+    const auto selection=choice.selection;
+    const auto plan=dirsync::BuildSyncPlan(p.result,p.visible,selection);
+    if(!plan.Count())return;
     if(keep && (!plan.overwrites.empty() || !plan.deletions.empty()) && root.empty()) {Message(p.window,IDS_SAVE_ROOT);return;}
-    uint64_t left=0,right=0,leftBytes=0,rightBytes=0,copyDirs=0,deleteDirs=0,originalBytes=0;
-    for(const auto* selected:{&plan.copies,&plan.overwrites}) for(size_t index:*selected) {
-        const auto& row=p.result.rows[index];const bool toRight=row.action==dirsync::Action::CopyRight;
-        const auto& entry=toRight?row.left:row.right;
-        if(toRight) {++right;if(!entry.directory) rightBytes+=entry.size;}
-        else {++left;if(!entry.directory) leftBytes+=entry.size;}
-        if(entry.directory) ++copyDirs;
-    }
-    for(size_t index:plan.deletions) if(p.result.rows[index].right.directory) ++deleteDirs;
-    for(size_t index:plan.overwrites) {const auto& row=p.result.rows[index];originalBytes+=(row.action==dirsync::Action::CopyRight?row.right:row.left).size;}
-    for(size_t index:plan.deletions) if(!p.result.rows[index].right.directory) originalBytes+=p.result.rows[index].right.size;
-    InfoRows fields;Field(fields,IDS_SYNC_NEW_COUNTS,Number(plan.copies.size()-copyDirs)+L" / "+Number(copyDirs));
-    Field(fields,IDS_SYNC_OVERWRITE,uint64_t(plan.overwrites.size()));
-    Field(fields,IDS_SYNC_DELETE_COUNTS,Number(plan.deletions.size()-deleteDirs)+L" / "+Number(deleteDirs));
-    Field(fields,IDS_UI_TO_RIGHT,Number(right)+L" / "+Number(rightBytes));Field(fields,IDS_UI_TO_LEFT,Number(left)+L" / "+Number(leftBytes));
-    Field(fields,IDS_UI_ORIGINAL_BYTES,originalBytes);
-    Field(fields,IDS_UI_OMITTED,uint64_t(plan.omitted));Field(fields,IDS_UI_HIDDEN,uint64_t(p.result.rows.size()-p.visible.size()));
-    Field(fields,IDS_UI_RECOVERY,Text(keep?IDS_UI_ON:IDS_UI_OFF));if(keep) Field(fields,IDS_UI_RECOVERY_FOLDER,root);
-    if(!InformationBox(p.window,IDS_SYNC_CONFIRM,std::move(fields),Text(IDS_SYNC_POLICY),true)) return;
-    BeginReport(p,L"combined",keep,root);ConfigureErrorPolicy(p);
+    BeginReport(p,L"combined",keep,root,{},0,selection);ConfigureErrorPolicy(p);
     p.cancel=false;p.failed=false;p.running=true;p.synchronizing=true;p.syncReport={};p.syncStage=dirsync::SyncStage::Checking;
     p.hasSyncReport=p.hasCopyReport=p.hasRecoveryReport=p.hasOverwriteReport=p.hasDeleteReport=false;
     p.copyProgress.copied=0;p.copyProgress.verified=0;p.copyProgress.completed=0;p.copyProgress.item=0;p.copyProgress.phase=dirsync::CopyPhase::Checking;
@@ -2091,8 +2071,8 @@ void SyncAll(Preview& p)
     Busy(p,true);SendMessageW(p.window,WM_NEXTDLGCTL,WPARAM(GetDlgItem(p.window,StopControl(p))),TRUE);
     try {
         const auto rows=p.visible;
-        p.worker=std::thread([&p,rows,keep,root] {
-            try {p.syncReport=dirsync::Synchronize(p.result,rows,keep,root,p.cancel,p.progress,p.copyProgress,p.syncStage);}
+        p.worker=std::thread([&p,rows,keep,root,selection] {
+            try {p.syncReport=dirsync::Synchronize(p.result,rows,keep,root,p.cancel,p.progress,p.copyProgress,p.syncStage,selection);}
             catch(...) {p.failed=true;}
             PostMessageW(p.window,Done,0,0);
         });SetTimer(p.window,1,150,nullptr);

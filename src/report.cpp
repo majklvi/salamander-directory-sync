@@ -65,7 +65,7 @@ const std::vector<std::wstring> Columns{L"record",L"key",L"value",L"row",L"relat
     L"state",L"reason",L"error",L"left_path",L"left_type",L"left_size_bytes",L"left_modified_utc",L"left_modified_ticks",L"left_attributes",L"left_error",
     L"right_path",L"right_type",L"right_size_bytes",L"right_modified_utc",L"right_modified_ticks",L"right_attributes",L"right_error",
     L"operation",L"source",L"target",L"saved_path",L"remaining_stage",L"status",L"filesystem_changed",L"completed",L"logged",L"execution_visible",
-    L"attempts",L"last_error",L"automatic_skip",L"blocked_by"};
+    L"attempts",L"last_error",L"automatic_skip",L"blocked_by",L"execution_selected",L"confirmation_excluded"};
 std::wstring Cell(std::wstring value,bool csv){
     if(csv){auto first=value.find_first_not_of(L" \t\r\n");
         if(first!=std::wstring::npos && (value[first]==L'=' || value[first]==L'+' || value[first]==L'-' || value[first]==L'@'))value.insert(0,1,L'\'');
@@ -89,7 +89,7 @@ void Filters(Document& doc,const std::array<bool,5>& filters,const std::wstring&
 }
 std::wstring ReportTime(){FILETIME now{};GetSystemTimeAsFileTime(&now);return Stamp((uint64_t(now.dwHighDateTime)<<32)|now.dwLowDateTime);}
 ReportBatch PrepareReport(const Result& result,const ReportContext& context,const std::wstring& kind,bool keep,
-    const std::wstring& recoveryRoot,const std::vector<size_t>& selected,int side) {
+    const std::wstring& recoveryRoot,const std::vector<size_t>& selected,int side,SyncSelection selection) {
     ReportBatch batch;batch.kind=kind;batch.started=ReportTime();batch.keepOriginals=keep;batch.recoveryRoot=recoveryRoot;
     batch.filters=context.filters;batch.visible=context.visible;
     auto add=[&](size_t index,const std::wstring& operation,bool right){const auto& row=result.rows.at(index);ReportOperation out;
@@ -102,8 +102,13 @@ ReportBatch PrepareReport(const Result& result,const ReportContext& context,cons
         return batch;
     }
     std::set<size_t> deletions;for(auto i:DeletionRows(result,context.visible))deletions.insert(i);
+    std::set<size_t> excluded;
+    if(kind==L"combined") {batch.selection=selection;
+        batch.confirmationExcluded=BuildSyncPlan(result,context.visible,selection).excluded;
+        excluded.insert(batch.confirmationExcluded.begin(),batch.confirmationExcluded.end());}
     std::set<size_t> seen;
     for(auto i:context.visible)if(i<result.rows.size() && seen.insert(i).second){const auto& row=result.rows[i];bool added=false;
+        if(excluded.count(i))continue;
         if((kind==L"combined" || kind==L"new_copy") && IsNewCopy(row)){add(i,L"new_copy",row.action==Action::CopyRight);added=true;}
         if((kind==L"combined" || kind==L"overwrite") && IsFileOverwrite(row)){
             if(keep)add(i,L"save_original",row.action==Action::CopyRight);add(i,L"overwrite",row.action==Action::CopyRight);added=true;}
@@ -127,8 +132,12 @@ void CompleteReport(ReportBatch& b,const ImmediateReport& r){for(const auto& i:r
     b.error=ULONG(r.error);b.cancelled=r.cancelled;b.stale=r.stale;
     b.complete=SUCCEEDED(r.error) && !r.cancelled && !r.stale && std::all_of(b.items.begin(),b.items.end(),[](const auto& i){return i.completed;});}
 std::wstring RenderReport(const Result& result,const ReportContext& c,const ReportBatch* batch,bool csv) {
-    Document doc(csv);std::set<size_t> executionVisible;
+    Document doc(csv);std::set<size_t> executionVisible,executionSelected,confirmationExcluded;
     if(batch)executionVisible.insert(batch->visible.begin(),batch->visible.end());
+    if(batch && batch->kind==L"combined") {
+        for(const auto& item:batch->items)executionSelected.insert(item.row);
+        confirmationExcluded.insert(batch->confirmationExcluded.begin(),batch->confirmationExcluded.end());
+    }
     doc.Meta(L"schema",L"1");doc.Meta(L"plugin_version",N(VERSINFO_MAJOR)+L"."+N(VERSINFO_MINORA)+L"."+N(VERSINFO_MINORB));doc.Meta(L"generated_utc",c.generated);
     doc.Meta(L"left_root",c.left);doc.Meta(L"right_root",c.right);doc.Meta(L"current_profile",c.profile);
     doc.Meta(L"scan_mask",c.options.mask);doc.Meta(L"scan_recursive",B(c.options.recursive));doc.Meta(L"scan_by_content",B(c.options.content));
@@ -151,6 +160,10 @@ std::wstring RenderReport(const Result& result,const ReportContext& c,const Repo
                 fields.push_back({prefix+L"modified_utc",Stamp(e.time)});fields.push_back({prefix+L"modified_ticks",N(e.time)});}
             fields.push_back({prefix+L"attributes",N(e.attributes)});fields.push_back({prefix+L"error",N(e.error)});}
         if(batch)fields.push_back({L"execution_visible",B(executionVisible.count(index)!=0)});
+        if(batch && batch->kind==L"combined") {
+            fields.push_back({L"execution_selected",B(executionSelected.count(index)!=0)});
+            fields.push_back({L"confirmation_excluded",B(confirmationExcluded.count(index)!=0)});
+        }
         doc.Add(L"comparison",fields);
     }
     if(batch){const auto& b=*batch;const std::wstring kind=L"batch";
@@ -160,6 +173,12 @@ std::wstring RenderReport(const Result& result,const ReportContext& c,const Repo
         doc.Meta(L"worker_exception",B(b.exception),kind);doc.Meta(L"error",N(b.error),kind);doc.Meta(L"journal_error",N(b.journalError),kind);
         doc.Meta(L"omitted_visible_rows",N(b.omitted),kind);Filters(doc,b.filters,L"execution_filter_",kind);
         doc.Meta(L"execution_visible_rows",N(executionVisible.size()),kind);
+        if(b.kind==L"combined") {
+            doc.Meta(L"selected_left_to_right",B(b.selection.toRight),kind);
+            doc.Meta(L"selected_right_to_left",B(b.selection.toLeft),kind);
+            doc.Meta(L"selected_delete_right",B(b.selection.deleteRight),kind);
+            doc.Meta(L"confirmation_excluded_rows",N(confirmationExcluded.size()),kind);
+        }
         for(const auto& item:b.items)doc.Add(L"operation",{{L"row",N(item.row+1)},{L"execution_visible",B(executionVisible.count(item.row)!=0)},
             {L"operation",item.kind},{L"source",item.source},{L"target",item.target},{L"saved_path",item.saved},{L"remaining_stage",item.stage},
             {L"status",item.status},{L"error",N(item.error)},{L"filesystem_changed",item.status==L"not_reported"?L"":B(item.changed)},

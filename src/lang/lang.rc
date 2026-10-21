@@ -42,6 +42,26 @@ BEGIN
     CONTROL "", IDC_LIST, "SysListView32", LVS_REPORT | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP, 0, 70, 610, 404
     CONTROL "", IDC_STATUS, "msctls_statusbar32", SBARS_SIZEGRIP | SBARS_TOOLTIPS, 0, 474, 610, 16
 END
+IDD_SYNC_CONFIRMATION DIALOGEX 0, 0, 300, 205
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Synchronize"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "", IDC_SYNC_LEFT_ROOT, 7, 7, 286, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
+    LTEXT "", IDC_SYNC_RIGHT_ROOT, 7, 20, 286, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
+    CONTROL "Left to &right", IDC_SYNC_RIGHT, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 36, 286, 12
+    LTEXT "", IDC_SYNC_RIGHT_COUNTS, 18, 50, 275, 18, SS_NOPREFIX
+    CONTROL "Right to &left", IDC_SYNC_LEFT, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 71, 286, 12
+    LTEXT "", IDC_SYNC_LEFT_COUNTS, 18, 85, 275, 18, SS_NOPREFIX
+    CONTROL "&Delete on the right", IDC_SYNC_DELETE, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 106, 286, 12
+    LTEXT "", IDC_SYNC_DELETE_COUNTS, 18, 120, 275, 12, SS_NOPREFIX
+    LTEXT "", IDC_SYNC_RECOVERY, 7, 138, 286, 10, SS_NOPREFIX
+    LTEXT "", IDC_SYNC_RECOVERY_ROOT, 7, 151, 286, 10, SS_PATHELLIPSIS | SS_NOPREFIX | SS_NOTIFY
+    LTEXT "", IDC_SYNC_NOTICE, 7, 165, 286, 16, SS_NOPREFIX
+    PUSHBUTTON "De&tails...", IDC_SYNC_DETAILS, 7, 184, 78, 14
+    DEFPUSHBUTTON "OK", IDOK, 163, 184, 62, 14
+    PUSHBUTTON "Cancel", IDCANCEL, 231, 184, 62, 14
+END
 IDD_INFORMATION DIALOGEX 0, 0, 300, 188
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX
 CAPTION "Directory Synchronization"
@@ -151,7 +171,7 @@ BEGIN
     IDS_TIP_MASK "File masks, for example *.txt; separate masks with spaces or semicolons. Use | before exclusions."
     IDS_TIP_KEEP "Save verified originals before overwrites and deletions. Uses additional disk space. When off, no new recovery copies are created; existing backups are kept."
     IDS_TIP_DELETE "All visible eligible right-only files and directories in asymmetric mode. Highlighting does not limit the operation. Filtered out and Skip rows are excluded. Directories require all descendants in the visible deletion plan."
-    IDS_TIP_SCOPE "All visible eligible proposals, regardless of highlighted rows. Filtered out and Skip rows are excluded. Each operation requires confirmation."
+    IDS_TIP_SCOPE "Confirm visible proposals with independent copy directions and separate deletion. Details shows the selected subset. Highlighted rows do not limit the scope; hidden and Skip rows are excluded."
     IDS_TIP_SELECTION "On the next Compare, scan the selection originally captured from the file panels, not highlighted preview rows. Current results remain unchanged."
     IDS_TIP_EMPTY "Include empty folders on the next Compare. Current results remain unchanged. In asymmetric mode also include right-only directories for deletion."
     IDS_COLOR_FIRST "Equal"
@@ -264,7 +284,7 @@ BEGIN
     IDS_COPY_STOPPED "Stopped. Completed new items remain in place."
     IDS_COPY_FAILED "The copy worker failed. Completed files may remain. Compare again and inspect the destination before retrying."
     IDS_SELECT_ROW "Select one or more rows first. Blocked and conflicting rows cannot receive actions."
-    IDS_HELP "Results are grouped by relative folder, with the root shown as \\. Headers are separators, not proposals; file rows show names and copied paths remain complete.\n\nChoose the two Windows folders and Compare. Scan checkboxes apply on the next Compare; toggling them preserves the current results and proposals. Scan panel selection uses the union of the original panel selections and locks the original roots. Subfolders adds deeper levels; selected folders include direct children.\n\nMasks are separated by spaces or semicolons; quote names containing spaces. Use | before exclusions, a leading backslash to anchor to the root, and ** for any depth. Examples: *.txt | selB\\ or selA\\**\\*.txt. Regex and saved searches are not supported.\n\nHighlight rows and use the right-click / Shift+F10 menu to change proposals, then review Visible plan > Plan summary. Ctrl+D restores the default proposal, Ctrl+M skips, Ctrl+L/R sets the copy direction, Ctrl+W reverses it. Copy paths and Ctrl+C copy displayed Unicode paths; missing sides are omitted. These commands never execute file operations. Icon filters show equal, different, single-sided and directional results; tooltips explain them. Synchronize opens separate Copy, Overwrite and Delete commands. Visible plan in the context menu also offers Plan summary and Save originals. Highlighting does not restrict these plan commands: each command uses all visible eligible proposals. Filtered out and Skip rows are excluded. Use the combined visible-plan command or run each operation separately. Only visible actions enter that summary; blocked/conflicting rows always stay visible. Copy new items executes visible file and physically empty-directory copies with missing targets after a separate confirmation. Existing targets and deletions are omitted.\n\nKeep originals is enabled by default and can be switched off. This setting and the recovery folder are remembered for this plugin. Disabling it creates no recovery copies and leaves existing backups in place. Delete items separately confirms visible Delete on right proposals from asymmetric comparison. Supported files and directories absent on the left are eligible. Directories are removed only when empty after planned child deletions. The confirmation states recovery ON/OFF; when ON all originals must first be saved and verified. When OFF deleted data and ADS have no recovery copy. The Recycle Bin is not used. Read-only files are refused.\n\nOverwrite files separately confirms replacement of visible existing-file targets. The confirmation states whether recovery is ON or OFF. When ON, all original targets must first be saved and verified outside both trees. When OFF, overwritten data and old ADS have no recovery copy from this run. Replacements keep original target permissions. Read-only targets are refused. Stop leaves completed replacements in place.\n\nSave originals separately saves original target files for visible copy proposals with an existing file on both sides. Set an existing recovery folder outside both compared trees in the plugin preferences. This creates independent verified copies and a manifest; originals remain unchanged and no proposal is executed. Permissions inherit from the recovery folder.\n\nStop beside Compare cancels scanning, comparison and read-only validation; Stop beside Synchronize cancels the chosen file operation including its validation. Only the appropriate Stop is enabled. Data and metadata are verified; Stop preserves completed files. Compare again after a run. Compare rebuilds proposals; reapply manual Skip if needed."
+    IDS_HELP "Results are grouped by relative folder, with the root shown as \\. Headers are separators, not proposals; file rows show names and copied paths remain complete.\n\nChoose the two Windows folders and Compare. Scan checkboxes apply on the next Compare; toggling them preserves the current results and proposals. Scan panel selection uses the union of the original panel selections and locks the original roots. Subfolders adds deeper levels; selected folders include direct children.\n\nMasks are separated by spaces or semicolons; quote names containing spaces. Use | before exclusions, a leading backslash to anchor to the root, and ** for any depth. Examples: *.txt | selB\\ or selA\\**\\*.txt. Regex and saved searches are not supported.\n\nHighlight rows and use the right-click / Shift+F10 menu to change proposals, then review Visible plan > Plan summary. Ctrl+D restores the default proposal, Ctrl+M skips, Ctrl+L/R sets the copy direction, Ctrl+W reverses it. Copy paths and Ctrl+C copy displayed Unicode paths; missing sides are omitted. These commands never execute file operations. Icon filters show equal, different, single-sided and directional results; tooltips explain them. Synchronize opens a compact combined confirmation. Choose left-to-right and/or right-to-left copies and separate right-side deletion. These choices only restrict existing visible proposals; they never reverse them. Details shows the selected subset without starting work. Separate Copy, Overwrite and Delete commands remain under Visible plan. Visible plan in the context menu also offers Plan summary and Save originals. Highlighting does not restrict these plan commands: each command uses all visible eligible proposals. Filtered out and Skip rows are excluded. Use the combined visible-plan command or run each operation separately. Only visible actions enter that summary; blocked/conflicting rows always stay visible. Copy new items executes visible file and physically empty-directory copies with missing targets after a separate confirmation. Existing targets and deletions are omitted.\n\nKeep originals is enabled by default and can be switched off. This setting and the recovery folder are remembered for this plugin. Disabling it creates no recovery copies and leaves existing backups in place. Delete items separately confirms visible Delete on right proposals from asymmetric comparison. Supported files and directories absent on the left are eligible. Directories are removed only when empty after planned child deletions. The confirmation states recovery ON/OFF; when ON all originals must first be saved and verified. When OFF deleted data and ADS have no recovery copy. The Recycle Bin is not used. Read-only files are refused.\n\nOverwrite files separately confirms replacement of visible existing-file targets. The confirmation states whether recovery is ON or OFF. When ON, all original targets must first be saved and verified outside both trees. When OFF, overwritten data and old ADS have no recovery copy from this run. Replacements keep original target permissions. Read-only targets are refused. Stop leaves completed replacements in place.\n\nSave originals separately saves original target files for visible copy proposals with an existing file on both sides. Set an existing recovery folder outside both compared trees in the plugin preferences. This creates independent verified copies and a manifest; originals remain unchanged and no proposal is executed. Permissions inherit from the recovery folder.\n\nStop beside Compare cancels scanning, comparison and read-only validation; Stop beside Synchronize cancels the chosen file operation including its validation. Only the appropriate Stop is enabled. Data and metadata are verified; Stop preserves completed files. Compare again after a run. Compare rebuilds proposals; reapply manual Skip if needed."
     220 "Left name"
     221 "Left size"
     222 "Left modified"
@@ -651,4 +671,21 @@ END
 STRINGTABLE
 BEGIN
     IDS_SYNC_INCOMPLETE "The synchronization is incomplete. Completed changes remain; Compare again before another operation."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_SYNC_COUNTS "New files: {files}, directories: {dirs}, overwrites: {overwrites}; {bytes}"
+    IDS_SYNC_DELETE_SHORT "Files: {files}, directories: {dirs}"
+    IDS_SYNC_SCOPE_SHORT "Only visible eligible proposals. Highlighting does not limit the scope."
+    IDS_SYNC_WARNING_SHORT "Originals will not be saved. Overwrites and deletions do not use the Recycle Bin."
+    IDS_SYNC_EXCLUDED "Excluded in confirmation"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_SYNC_KEEP_ON "Keep originals: ON"
+    IDS_SYNC_KEEP_OFF "Keep originals: OFF"
+    IDS_SYNC_ROOT_LEFT "Left directory"
+    IDS_SYNC_ROOT_RIGHT "Right directory"
 END

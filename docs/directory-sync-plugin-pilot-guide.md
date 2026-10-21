@@ -22,6 +22,8 @@ V 0.3.0 se při potvrzených souborových operacích otevře také samostatné o
 
 ## Interaktivní chyby (vývoj 0.4.0)
 
+V této vývojové verzi otevře **Synchronizovat…** přímo kompaktní potvrzení s nezávislými směry kopírování, samostatným asymetrickým mazáním, viditelným stavem obnovy a **Podrobnostmi…** pouze k prohlížení. Vypnutí skupiny vyřadí její návrhy z dávky; neobrátí šipky ani neskryje řádky. Bez vybrané operace je OK neaktivní. Samostatné příkazy a export zůstávají pod **Viditelným plánem** v kontextové nabídce. Výsledky a CSV/text rozlišují vyloučení při potvrzení od Přeskočit během provádění. Viz [implementace a rozsah ověření](directory-sync-plugin-sync-confirmation-040.md).
+
 Stejná chybová pravidla platí pro samostatné operace i **Provést viditelný plán…**. Zkontrolujte potvrzení, režim uchování a konečné počty přeskočených/blokovaných položek. Přeskočit vše platí jen pro stejnou operaci, fázi, stranu a kód Windows v tomto příkazu; odpovídající rozhodnutí při uchování platí před přepisy i před mazáním. Stop/Close zabrání dalším etapám, hotové změny zůstanou a před další operací je třeba nové porovnání. Viz [aktuální návod](directory-sync-plugin.md#interaktivní-chyby-operací-vývoj-040) a [ověřené scénáře](directory-sync-plugin-combined-errors-040.md).
 
 ## Profily (0.2.0)
