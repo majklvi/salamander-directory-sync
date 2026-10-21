@@ -62,7 +62,10 @@ INT_PTR CALLBACK OperationErrorDialog(HWND window,UINT message,WPARAM w,LPARAM l
             }
             const int base=error.kind==dirsync::TransferKind::Delete?IDS_ERROR_DELETE_SOURCE:error.kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
                 error.kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE;
-            SetDlgItemTextW(window,IDC_ERROR_CONTEXT,Text(base+(error.site==dirsync::ErrorSite::Source?0:
+            // Buffered writes identify the target as the failing site. They
+            // still transfer data; preparation/publication has not started.
+            const bool writing=error.site==dirsync::ErrorSite::Target && error.phase==dirsync::CopyPhase::Copying;
+            SetDlgItemTextW(window,IDC_ERROR_CONTEXT,Text(base+(writing?2:error.site==dirsync::ErrorSite::Source?0:
                 error.site==dirsync::ErrorSite::Target?1:2)).c_str());
             LPWSTR system=nullptr;
             FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS,

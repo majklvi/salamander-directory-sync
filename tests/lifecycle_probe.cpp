@@ -284,6 +284,11 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             p.saving=!combined && kind==dirsync::TransferKind::Save;p.overwriting=!combined && kind==dirsync::TransferKind::Overwrite;p.deleting=!combined && kind==dirsync::TransferKind::Delete;
             std::atomic<bool> posted{false},done{false};dirsync::ErrorDecision result=dirsync::ErrorDecision::Cancel;
             dirsync::OperationError error;error.code=ERROR_SHARING_VIOLATION;error.kind=kind;error.site=kind==dirsync::TransferKind::Delete?dirsync::ErrorSite::Target:dirsync::ErrorSite::Source;
+            if(kind!=dirsync::TransferKind::Delete && scenario<2) {
+                error.site=dirsync::ErrorSite::Target;
+                error.phase=scenario==0?dirsync::CopyPhase::Copying:dirsync::CopyPhase::Preparing;
+                error.code=ERROR_DISK_FULL;
+            }
             error.source=L"C:\\"+std::wstring(280,L'漢')+L"\\žluťoučký.txt";error.target=L"D:\\kopie.txt";
             p.copyProgress.awaitingDecision=true;
             p.worker=std::thread([&]{result=p.errorQuestion.Ask(error,p.cancel,[&]{posted=true;return true;});done=true;});
@@ -292,8 +297,10 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= IsWindow(question) && IsWindowVisible(question) && IsWindowEnabled(parent) &&
                 GetWindow(question,GW_OWNER)==p.transferWindow && ControlText(question,IDC_ERROR_SOURCE)==error.source &&
                 !IsWindowEnabled(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE));
-            ok &= ControlText(question,IDC_ERROR_CONTEXT)==Text(kind==dirsync::TransferKind::Delete?IDS_ERROR_DELETE_TARGET:kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
-                kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE);
+            const int contextBase=kind==dirsync::TransferKind::Delete?IDS_ERROR_DELETE_SOURCE:kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
+                kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE;
+            const int contextOffset=kind==dirsync::TransferKind::Delete?1:scenario==0?2:scenario==1?1:0;
+            ok &= ControlText(question,IDC_ERROR_CONTEXT)==Text(contextBase+contextOffset);
             ok &= StaticCaptionFits(question,IDC_ERROR_DETAILS);
             for(int id:{IDC_ERROR_SOURCE,IDC_ERROR_TARGET}) {
                 HWND path=GetDlgItem(question,id);const auto& value=id==IDC_ERROR_SOURCE?error.source:error.target;
