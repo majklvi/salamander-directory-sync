@@ -16,7 +16,7 @@ Selected for research and discussion on 2026-10-21. Direct reference-GUI tests, 
 - **R4:** allow per-item decisions for recoverable saving failures, skipping the dependent overwrite/deletion as well; shared recovery-manifest or operation-journal write failures stop the entire batch.
 - **R5:** space shortage before changing the target can offer item decisions; verification mismatch, invalidated plan, post-publication failure, uncertain removal and shared-protocol write failures stop the batch. No automatic rollback or repeating already completed operations.
 
-**Stages 1–2 implemented:** common decisions/outcomes, remembered global policy, and cancellable EN/CS questions for the separate new-item copy command. [Implementation and tests](docs/directory-sync-plugin-errors-040.md). Recovery, overwrite, delete and combined commands retain stop-first behavior; stable recovery mapping, dependent-item protection and continuing later phases remain future stages.
+**Stages 1–2 implemented:** common decisions/outcomes, remembered global policy, and cancellable EN/CS questions for the separate new-item copy command. [Implementation and tests](docs/directory-sync-plugin-errors-040.md). **Recovery/overwrite part of stage 3 is implemented:** row/side mapping, per-item original preservation, dependency-blocked overwrites and fatal shared-protocol handling. [Follow-up and tests](docs/directory-sync-plugin-original-errors-040.md). Interactive deletion, retained-child/ancestor protection and combined later-phase continuation remain future stages.
 
 Implementation requirements:
 

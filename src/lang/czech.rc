@@ -349,7 +349,7 @@ END
 
 IDD_OPERATION_ERROR DIALOGEX 0, 0, 330, 139
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Chyba kopírování"
+CAPTION "Chyba operace se souborem"
 FONT 8, "MS Shell Dlg"
 BEGIN
     LTEXT "", IDC_ERROR_CONTEXT, 7, 7, 316, 10
@@ -370,6 +370,17 @@ BEGIN
     IDS_ERROR_SOURCE "Kopírování nové položky — čtení zdroje"
     IDS_ERROR_TARGET "Kopírování nové položky — příprava nebo publikace cíle"
     IDS_ERROR_DATA "Kopírování nové položky — přenos dat"
-    IDS_ERROR_POLICY "Zapnutím ukončíte kopírování nových položek při první chybě. Jinak se u opravitelných chyb zobrazí dotaz. Ostatní operační příkazy zatím zastavují při první chybě vždy."
+    IDS_ERROR_POLICY "Zastavit kopírování nových položek, uchování originálů a přepisy při první chybě. Jinak se opravitelné chyby dotazují. Mazání a souhrnná synchronizace zatím vždy zastaví při první chybě."
     IDS_ERROR_SKIPPED_NOTE "Dokončeno s přeskočenými položkami; nebyly provedeny všechny plánované operace."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_ERROR_SAVE_SOURCE "Uchování originálu — čtení originálu"
+    IDS_ERROR_SAVE_TARGET "Uchování originálu — příprava kopie"
+    IDS_ERROR_SAVE_DATA "Uchování originálu — přenos dat"
+    IDS_ERROR_OVERWRITE_SOURCE "Přepis — čtení zdroje"
+    IDS_ERROR_OVERWRITE_TARGET "Přepis — příprava nebo publikace cíle"
+    IDS_ERROR_OVERWRITE_DATA "Přepis — přenos dat"
+    IDS_UI_DEPENDENCY_BLOCKED "Nepřepsáno: originál neuchován"
 END

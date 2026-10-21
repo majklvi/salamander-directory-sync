@@ -8,6 +8,7 @@ struct RecoveryItem {
     bool right=false, logged=false;
     std::wstring original, saved;
     CopyOutcome copy;
+    Entry savedEntry; // verified published identity, retained for dependent writes
 };
 struct RecoveryReport {
     std::vector<RecoveryItem> items;
@@ -15,6 +16,7 @@ struct RecoveryReport {
     DWORD error=0, journalError=0;
     size_t omitted=0;
     bool stale=false, cancelled=false, complete=false;
+    bool processed=false; // healthy phase end, including explicitly skipped items
 };
 bool IsOriginalToSave(const Row& row);
 #if defined(DIRSYNC_ENGINE_TEST) || defined(DIRSYNC_COPY_TEST_HOOKS)
@@ -22,7 +24,7 @@ bool IsOriginalToSave(const Row& row);
 void SetRecoveryLogHook(std::function<DWORD(const std::wstring&)> hook);
 #endif
 // Creates independent recovery copies only. Never replaces or deletes originals.
-// Copied alone is not a completed D4 record: require logged and a complete report.
+// A dependent write requires this row's verified identity and logged success.
 RecoveryReport SaveOriginals(Result snapshot,const std::vector<size_t>& visible,const std::wstring& recoveryRoot,
     std::atomic<bool>& cancel,Progress& checking,CopyProgress& progress);
 }

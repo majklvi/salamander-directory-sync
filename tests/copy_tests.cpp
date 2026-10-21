@@ -1329,10 +1329,162 @@ void InteractiveErrors() {
         Check(ended && answer==ErrorDecision::Cancel,"Stop or Close unblocks pending decision before join");
     }
 }
+// Exclusive handles model ordinary sharing failures; no fixture permissions or
+// handles may leak if a regression fails an assertion.
+struct HeldFile {
+    HANDLE value=INVALID_HANDLE_VALUE;
+    explicit HeldFile(const std::wstring& path) {value=CreateFileW(ApiPath(path).c_str(),GENERIC_READ,0,nullptr,OPEN_EXISTING,0,nullptr);Check(value!=INVALID_HANDLE_VALUE,"interactive file lock");}
+    void Unlock(){if(value!=INVALID_HANDLE_VALUE){CloseHandle(value);value=INVALID_HANDLE_VALUE;}}
+    ~HeldFile(){Unlock();}
+};
+void InteractiveOriginalsAndOverwrites() {
+    for(bool keep:{false,true})for(bool toLeft:{false,true}) {
+        Fixture f;const auto source=toLeft?f.right:f.left,target=toLeft?f.left:f.right;
+        const auto root=f.root+L"\\recovery-漢字";f.Dir(root);
+        for(auto name:{L"a",L"b",L"c"}){Put(source+L"\\"+name,"NEW MAIN");Put(source+L"\\"+name+L":new","NEW ADS");Put(target+L"\\"+name,"OLD");Put(target+L"\\"+name+L":old","OLD ADS");}
+        Acl(target+L"\\b",L"D:P(A;;FA;;;OW)(A;;FR;;;BU)");const auto expectedDacl=Dacl(target+L"\\b");
+        auto plan=OverwritePlan(f);if(toLeft)for(auto& row:plan.rows)row.action=Action::CopyLeft;
+        std::unique_ptr<HeldFile> lock;unsigned prompts=0;
+        SetCopyHook([&](CopyPhase phase,const std::wstring& path){if(phase==CopyPhase::Published && path==target+L"\\a")lock=std::make_unique<HeldFile>(source+L"\\b");});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;
+            Check(error.kind==TransferKind::Overwrite && error.site==ErrorSite::Source && error.code==ERROR_SHARING_VIOLATION,"overwrite retry context");lock->Unlock();return ErrorDecision::Retry;};
+        auto report=Replace(f,plan,keep,root);SetCopyHook({});
+        Check(report.complete && !report.error && prompts==1,"unlock and retry overwrite in both directions and recovery modes");
+        Check(report.items[0].attempts==1 && report.items[1].attempts==2 && report.items[1].lastError==ERROR_SHARING_VIOLATION && report.items[1].error==0,"retry counts current overwrite only");
+        Check(Read(target+L"\\b")=="NEW MAIN" && Read(target+L"\\b:new")=="NEW ADS" && Dacl(target+L"\\b")==expectedDacl,"overwrite retry verifies data ADS and keeps target DACL");
+        if(keep)Check(report.recovery.processed && report.recovery.complete && Read(report.recovery.items[1].saved)=="OLD" && Read(report.recovery.items[1].saved+L":old")=="OLD ADS","verified original retained across overwrite retry");
+        else Check(report.recovery.items.empty() && report.journal.empty(),"OFF does not create recovery");
+        f.NoStaging(target);
+    }
+    {
+        Fixture f;const auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b",L"c",L"d"}){Put(f.left+L"\\"+name,"LEFT");Put(f.right+L"\\"+name,"RIGHT DATA");}
+        Put(f.left+L"\\b:old","LEFT ADS");Put(f.right+L"\\c:old","RIGHT ADS");
+        auto plan=OverwritePlan(f);plan.rows[1].action=plan.rows[3].action=Action::CopyLeft;
+        HeldFile b(f.left+L"\\b"),d(f.left+L"\\d");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.kind==TransferKind::Save,"saving failure has recovery kind");return ErrorDecision::SkipAll;};
+        const std::vector<size_t> selected{2,0,3,1};auto report=Replace(f,plan,true,root,selected);
+        Check(!report.complete && !report.error && !report.cancelled && report.recovery.processed && !report.recovery.complete && prompts==1,"recovery skips settle phase without falsely completing it");
+        Check(report.items[0].row==2 && report.items[0].status==CopyStatus::Copied && report.items[1].row==0 && report.items[1].status==CopyStatus::Copied &&
+            report.items[2].row==3 && report.items[2].status==CopyStatus::DependencyBlocked && report.items[3].row==1 && report.items[3].status==CopyStatus::DependencyBlocked,"row and side mapping survives reordered noncontiguous subset");
+        Check(report.items[2].attempts==0 && !report.items[2].published && report.items[3].automaticSkip,"blocked overwrite is never attempted");
+        b.Unlock();d.Unlock();Check(Read(f.left+L"\\b")=="LEFT" && Read(f.left+L"\\b:old")=="LEFT ADS" && Read(f.left+L"\\d")=="LEFT","unsaved originals remain untouched");
+        Check(Read(f.right+L"\\a")=="LEFT" && Read(f.right+L"\\c")=="LEFT" && Read(report.recovery.items[0].saved)=="RIGHT DATA" && Read(report.recovery.items[0].saved+L":old")=="RIGHT ADS","independent replacements use their own original copies");
+        auto restored=f.root+L"\\restored";Check(CopyFileW(ApiPath(report.recovery.items[0].saved).c_str(),ApiPath(restored).c_str(),TRUE) && Read(restored)=="RIGHT DATA" && Read(restored+L":old")=="RIGHT ADS","manual restoration of successful original copy remains possible");
+        auto catalog=ReadRecoveryCatalog(root,f.cancel);Check(!catalog.error && catalog.runs.size()==1 && !catalog.runs[0].error && !catalog.runs[0].complete &&
+            catalog.runs[0].items[0].operation==StoredOperation::Replaced && catalog.runs[0].items[2].copy==StoredCopy::Skipped && catalog.runs[0].items[2].operation==StoredOperation::DependencyBlocked,"catalog reads skipped and dependency-blocked records without malformed-protocol errors");
+        ReportContext context;context.left=f.left;context.right=f.right;context.visible=selected;
+        auto batch=PrepareReport(plan,context,L"overwrite",true,root);CompleteReport(batch,report);
+        auto text=RenderReport(plan,context,&batch,false),csv=RenderReport(plan,context,&batch,true);
+        Check(!batch.complete && text.find(L"status: dependency_blocked")!=std::wstring::npos && text.find(L"status: skipped")!=std::wstring::npos && csv.find(L"automatic_skip")!=std::wstring::npos,"exports distinguish recovery skip from blocked overwrite");
+        f.NoStaging(f.left);f.NoStaging(f.right);
+    }
+    for(bool keep:{false,true}) {
+        Fixture f;auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b",L"c"}){Put(f.left+L"\\"+name,"NEW");Put(f.right+L"\\"+name,"OLD DATA");}
+        auto plan=OverwritePlan(f);HeldFile a(f.left+L"\\a"),b(f.left+L"\\b");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.kind==TransferKind::Overwrite,"source failure is not a saving failure");return ErrorDecision::SkipAll;};
+        auto report=Replace(f,plan,keep,root);a.Unlock();b.Unlock();
+        Check(prompts==1 && report.items[0].status==CopyStatus::Skipped && report.items[1].status==CopyStatus::Skipped && report.items[1].automaticSkip && report.items[2].status==CopyStatus::Copied && !report.complete && !report.error,"matching overwrite Skip all continues independent work");
+        Check(Read(f.right+L"\\a")=="OLD DATA" && Read(f.right+L"\\b")=="OLD DATA" && Read(f.right+L"\\c")=="NEW","skipped overwrite originals preserved ON and OFF");
+        if(keep){auto catalog=ReadRecoveryCatalog(root,f.cancel);Check(!catalog.error && !catalog.runs[0].error && catalog.runs[0].items[0].copy==StoredCopy::Recorded && catalog.runs[0].items[0].operation==StoredOperation::Skipped,"saved original remains recorded when overwrite is skipped");}
+    }
+    {
+        Fixture f;auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b",L"c"}){Put(f.left+L"\\"+name,"NEW");Put(f.right+L"\\"+name,"OLD DATA");}
+        auto plan=OverwritePlan(f);HeldFile original(f.right+L"\\a"),source(f.left+L"\\b");unsigned saves=0,writes=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){if(error.kind==TransferKind::Save){++saves;return ErrorDecision::SkipAll;}++writes;return ErrorDecision::Skip;};
+        auto report=Replace(f,plan,true,root);original.Unlock();source.Unlock();
+        Check(saves==1 && writes==1 && report.items[0].status==CopyStatus::DependencyBlocked && report.items[1].status==CopyStatus::Skipped && report.items[2].status==CopyStatus::Copied,"Save Skip all cannot suppress an Overwrite error of the same code and side");
+    }
+    for(bool skip:{false,true}) {
+        Fixture f;auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b",L"c"}){Put(f.left+L"\\"+name,"NEW");Put(f.right+L"\\"+name,std::string(1024*1024+1,'O'));}
+        auto plan=OverwritePlan(f);unsigned prompts=0;dirsync_test::SetSpaceFault(dirsync_test::SpaceFault::MainData,ERROR_DISK_FULL,2);
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.kind==TransferKind::Save && error.code==ERROR_DISK_FULL,"recovery disk full context");return skip?ErrorDecision::Skip:ErrorDecision::Retry;};
+        auto report=Save(f,plan,root);
+        Check(prompts==1 && report.processed && !report.error && report.items[0].copy.attempts==1 && report.items[2].copy.status==CopyStatus::Copied,"recovery disk-full decision does not repeat completed original");
+        Check(skip?!report.complete && report.items[1].copy.status==CopyStatus::Skipped:report.complete && report.items[1].copy.attempts==2,"recovery disk-full Skip or full recopy");
+    }
+    for(int fault=0;fault<5;++fault) {
+        Fixture f;auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b"}){Put(f.left+L"\\"+name,"NEW");Put(f.right+L"\\"+name,"OLD DATA");}
+        auto plan=OverwritePlan(f);bool overwrite=false;unsigned prompts=0;
+        SetRecoveryLogHook([&](const std::wstring& line)->DWORD {
+            if(line.find(L"\"operation\":\"overwrite\"")!=std::wstring::npos)overwrite=true;
+            bool result=line.find(L"\"event\":\"result\"")!=std::wstring::npos,planned=line.find(L"\"event\":\"planned\"")!=std::wstring::npos,end=line.find(L"\"event\":\"end\"")!=std::wstring::npos;
+            return ((fault==0 && !overwrite && result) || (fault==1 && overwrite && result) || (fault==2 && overwrite && end) || (fault==3 && overwrite && planned) || (fault==4 && !overwrite && end))?ERROR_DISK_FULL:0;
+        });
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::SkipAll;};
+        auto report=Replace(f,plan,true,root);SetRecoveryLogHook({});
+        Check(!report.complete && report.error==ERROR_DISK_FULL && prompts==0 && (report.journalError || report.recovery.journalError),"shared manifest/journal write failure is always fatal");
+        Check(Read(f.right+L"\\a")==((fault==1 || fault==2)?"NEW":"OLD DATA") && Read(f.right+L"\\b")==((fault==2)?"NEW":"OLD DATA"),"protocol failure preserves truthful completed changes and prevents later writes");
+    }
+    for(bool keep:{false,true})for(int changed=0;changed<4;++changed) {
+        if(!keep && changed==3)continue;
+        Fixture f;auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b"}){Put(f.left+L"\\"+name,"NEW");Put(f.right+L"\\"+name,"OLD DATA");}
+        auto plan=OverwritePlan(f);HeldFile source(f.left+L"\\a");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.kind==TransferKind::Overwrite,"overwrite mutation question");source.Unlock();
+            if(changed==0)Put(f.left+L"\\a","CHANGED SOURCE",false);
+            if(changed==1)Put(f.right+L"\\a","CHANGED TARGET LONGER",false);
+            if(changed==2)return ErrorDecision::Cancel;
+            if(changed==3){
+                // Recovery names are random, find only this fixture's one saved a.
+                auto catalog=ReadRecoveryCatalog(root,f.cancel);Check(catalog.runs.size()==1,"one fixture recovery session");Put(catalog.runs[0].items[0].saved,"CHANGED RECOVERY LONGER",false);}
+            return ErrorDecision::Retry;
+        };
+        auto report=Replace(f,plan,keep,root);
+        Check(prompts==1 && !report.complete && !report.items[0].published && report.items[1].status==CopyStatus::NotStarted,"changed source target or saved original cannot be overwritten after retry");
+        Check(changed==2?report.cancelled:report.error==ERROR_FILE_INVALID,"Cancel or changed-plan failure terminates remaining overwrites");
+    }
+    for(bool saveOnly:{false,true})for(bool keep:{false,true}) {
+        if(saveOnly && !keep)continue;
+        Fixture f;auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b"}){Put(f.left+L"\\"+name,"NEW DATA");Put(f.right+L"\\"+name,"ORIGINAL");}
+        auto plan=OverwritePlan(f);bool reached=false;unsigned prompts=0;
+        SetCopyHook([&](CopyPhase phase,const std::wstring& path){if(!reached && phase==CopyPhase::Verifying &&
+            (saveOnly || path.rfind(f.right+L"\\",0)==0)){reached=true;Put(path,"CORRUPT!",false);}});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::SkipAll;};
+        if(saveOnly){auto report=Save(f,plan,root);Check(reached && !prompts && report.error==ERROR_CRC && !report.processed && !report.items[0].copy.published,"recovery verification mismatch remains fatal");}
+        else {auto report=Replace(f,plan,keep,root);Check(reached && !prompts && report.error==ERROR_CRC && !report.items[0].published && report.items[1].status==CopyStatus::NotStarted,"overwrite verification mismatch remains fatal ON and OFF");}
+        SetCopyHook({});Check(Read(f.right+L"\\a")=="ORIGINAL" && Read(f.right+L"\\b")=="ORIGINAL","verification mismatch never publishes or continues");
+    }
+    for(bool keep:{false,true}) {
+        Fixture f;auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b"}){Put(f.left+L"\\"+name,"NEW DATA");Put(f.right+L"\\"+name,"ORIGINAL");}
+        auto plan=OverwritePlan(f);unsigned prompts=0;
+        if(keep)SetRecoveryLogHook([](const std::wstring& line)->DWORD{if(line.find(L"\"operation\":\"overwrite\"")!=std::wstring::npos)
+            dirsync_test::SetSpaceFault(dirsync_test::SpaceFault::MainData,ERROR_DISK_FULL,1);return 0;});
+        else dirsync_test::SetSpaceFault(dirsync_test::SpaceFault::MainData,ERROR_DISK_FULL,1);
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.kind==TransferKind::Overwrite && error.code==ERROR_DISK_FULL,"overwrite partial-copy disk-full context");return ErrorDecision::Retry;};
+        auto report=Replace(f,plan,keep,root);SetRecoveryLogHook({});
+        Check(prompts==1 && report.complete && report.items[0].attempts==2 && Read(f.right+L"\\a")=="NEW DATA","overwrite after partial disk-full cleanup fully restarts ON and OFF");f.NoStaging(f.right);
+    }
+    for(bool saveOnly:{false,true})for(bool keep:{false,true})for(bool close:{false,true}) {
+        if(saveOnly && !keep)continue;
+        Fixture f;auto root=f.root+L"\\recovery";f.Dir(root);
+        for(auto name:{L"a",L"b"}){Put(f.left+L"\\"+name,"NEW");Put(f.right+L"\\"+name,"OLD DATA");}
+        auto plan=OverwritePlan(f);HeldFile held((saveOnly?f.right:f.left)+L"\\a");ErrorQuestion question;
+        std::atomic<bool> posted{false},done{false};RecoveryReport saved;OverwriteReport replaced;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){return question.Ask(error,f.cancel,[&]{posted=true;return true;});};
+        ControlWorker worker(f);worker.thread=std::thread([&]{if(saveOnly)saved=Save(f,plan,root);else replaced=Replace(f,plan,keep,root);done=true;});
+        Check(WaitForControl([&]{return posted.load();},done),"actual save/overwrite worker waits for decision");
+        if(close)question.Cancel();else f.cancel=true;
+        const bool ended=WaitForControl([&]{return done.load();},done);question.Cancel();worker.Join();held.Unlock();
+        Check(ended && (saveOnly?saved.cancelled:replaced.cancelled) && Read(f.right+L"\\a")=="OLD DATA" && Read(f.right+L"\\b")=="OLD DATA","Stop/Close joins waiting save/overwrite worker and preserves originals");
+    }
+    {
+        Fixture f;Put(f.left+L"\\a","NEW");Put(f.right+L"\\a","OLD DATA");auto plan=OverwritePlan(f);HeldFile source(f.left+L"\\a");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::Skip;};std::atomic<SyncStage> stage{SyncStage::Checking};
+        auto report=Synchronize(plan,{0},false,L"",f.cancel,f.checking,f.progress,stage);
+        Check(!report.complete && report.error && !prompts && !f.progress.errors.stopOnFirstError,"combined command stays noninteractive and restores caller policy");
+    }
+}
 int main() {
     try { Success(); Scope(); ModifyOnlyDestination(); Boundaries(); Paths(); AfterPublication(); DiskSpace();
         RecoverySuccess(); RecoveryFailures(); RecoveryPaths(); OverwriteSuccess(); OverwriteFailures(); OverwritePaths();
-        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();InteractiveErrors();
+        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();InteractiveErrors();InteractiveOriginalsAndOverwrites();
         std::cout<<checks<<" copy/recovery/overwrite/delete assertions passed\n"; return 0; }
     catch(const std::exception& e) { std::cerr<<"FAILED: "<<e.what()<<"\n"; return 1; }
 }

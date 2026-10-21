@@ -243,7 +243,7 @@ DWORD CALLBACK CopyCallback(LARGE_INTEGER total, LARGE_INTEGER transferred, LARG
 }
 void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, const Row& row,
              CopyOutcome& outcome, std::atomic<bool>& cancel, CopyProgress& progress,
-             const Entry* original=nullptr,const Security* targetSecurity=nullptr,bool recovery=false)
+             const Entry* original=nullptr,const Security* targetSecurity=nullptr,bool recovery=false,Entry* savedEntry=nullptr)
 {
     const Entry& expected=row.action==Action::CopyRight ? row.left : row.right;
     const std::wstring source=Join(sourceRoot,row.path), target=Join(targetRoot,row.path);
@@ -289,7 +289,7 @@ void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, con
         // Destination is our CREATE_NEW reservation, never the user's target.
         progress.errorSite=ErrorSite::Data;
         Need(CopyFileExW(ApiPath(source).c_str(),ApiPath(stage).c_str(),CopyCallback,&callback,nullptr,0));
-        Control(cancel,progress);
+        Control(cancel,progress);progress.errorSite=ErrorSite::Target;
         File staging(Open(stage,GENERIC_READ|FILE_WRITE_ATTRIBUTES)); Need(staging.h!=INVALID_HANDLE_VALUE);
         if (!SameId(owned,Info(staging.h))) throw Failure{ERROR_FILE_INVALID};
         Phase(progress,CopyPhase::Preparing,stage); Control(cancel,progress);
@@ -325,6 +325,7 @@ void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, con
         auto final=Info(published.h);
         if (final.time!=expected.time || (final.attributes & selectedAttrs)!=(expected.attributes & selectedAttrs) || !desired.Matches(target))
             throw Failure{ERROR_INVALID_DATA};
+        if(savedEntry)*savedEntry=final;
         outcome.status=CopyStatus::Copied; progress.CompleteDisplay(); return;
     } catch (...) {
         // Only our unpublished staging can be removed, after checking its identity.
@@ -442,10 +443,43 @@ void RecoveryLine(HANDLE journal,const std::wstring& line)
 std::wstring OutcomeLine(size_t index,const CopyOutcome& c,const wchar_t* completed=L"saved")
 {
     const wchar_t* status=c.status==CopyStatus::Copied?completed:c.status==CopyStatus::Failed?L"failed":
-        c.status==CopyStatus::Cancelled?L"cancelled":L"not_started";
+        c.status==CopyStatus::Cancelled?L"cancelled":c.status==CopyStatus::Skipped?L"skipped":
+        c.status==CopyStatus::DependencyBlocked?L"dependency_blocked":L"not_started";
     return L"{\"event\":\"result\",\"item\":"+std::to_wstring(index+1)+L",\"status\":"+Json(status)+
         L",\"error\":"+std::to_wstring(c.error)+L",\"published\":"+(c.published?L"true":L"false")+
-        L",\"remainingStage\":"+Json(c.remainingStage)+L"}";
+        L",\"remainingStage\":"+Json(c.remainingStage)+L",\"attempts\":"+std::to_wstring(c.attempts)+
+        L",\"lastError\":"+std::to_wstring(c.lastError)+L",\"automaticSkip\":"+(c.automaticSkip?L"true":L"false")+L"}";
+}
+// Shared per-item boundary. Journal writes deliberately remain outside this
+// helper, so their failure can never be answered with Skip or Retry.
+template<class Work,class Pending> void ExecuteCopyItem(CopyOutcome& item,TransferKind kind,const std::wstring& source,
+    const std::wstring& target,Result& snapshot,std::atomic<bool>& cancel,
+    Progress& checking,CopyProgress& progress,bool& cancelled,bool& stale,Work work,Pending pending,bool decisions=true)
+{
+    for(;;) {
+        item.error=0;item.status=CopyStatus::NotStarted;++item.attempts;
+        try {Control(cancel,progress);work();return;}
+        catch(const Failure& failure) {
+            item.error=item.lastError=failure.error;
+            cancelled=cancel.load() || failure.error==ERROR_CANCELLED || failure.error==ERROR_OPERATION_ABORTED || failure.error==ERROR_REQUEST_ABORTED;
+            item.status=cancelled?CopyStatus::Cancelled:CopyStatus::Failed;
+            OperationError error{kind,progress.phase.load(),progress.errorSite,failure.error,source,target,item.published,!item.remainingStage.empty()};
+            if(cancelled || !decisions || progress.errors.stopOnFirstError || !progress.errors.prompt || !Recoverable(error))return;
+            bool automatic=false;ErrorDecision decision=ErrorDecision::Cancel;
+            try {decision=progress.errors.Decide(error,automatic);}
+            catch(...) {item.error=ERROR_NOT_ENOUGH_MEMORY;return;}
+            if(cancel || decision==ErrorDecision::Cancel){cancel=true;cancelled=true;item.status=CopyStatus::Cancelled;return;}
+            if(decision==ErrorDecision::Skip){item.status=CopyStatus::Skipped;item.automaticSkip=automatic;}
+            auto remaining=pending(decision==ErrorDecision::Retry);
+            if(!AdvanceExecutionSnapshot(snapshot,remaining,cancel,checking)) {
+                cancelled=cancel.load();stale=!cancelled;item.automaticSkip=false;
+                item.status=cancelled?CopyStatus::Cancelled:CopyStatus::Failed;
+                item.error=cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;return;
+            }
+            if(decision==ErrorDecision::Skip)return;
+        }
+        catch(...) {item.error=ERROR_NOT_ENOUGH_MEMORY;item.status=CopyStatus::Failed;return;}
+    }
 }
 void DirectoryStreams(const std::wstring& path)
 {
@@ -594,9 +628,9 @@ static RecoveryReport SaveOriginalsImpl(Result snapshot,const std::vector<size_t
             auto& item=report.items[n]; const auto& row=snapshot.rows[item.row];
             const auto& entry=item.right?row.right:row.left;
             item.original=Join(item.right?right:left,row.path);
-            auto side=Join(report.runDirectory,item.right?L"right":L"left"); RecoveryDirectory(side,cancel);
-            auto operation=Join(side,std::to_wstring(n+1)); RecoveryDirectory(operation,cancel);
-            auto data=Join(operation,L"data"); RecoveryDirectory(data,cancel);
+            auto side=Join(report.runDirectory,item.right?L"right":L"left");
+            auto operation=Join(side,std::to_wstring(n+1));auto data=Join(operation,L"data");
+            if(deletion){RecoveryDirectory(side,cancel);RecoveryDirectory(operation,cancel);RecoveryDirectory(data,cancel);}
             item.saved=Join(data,row.path); item.copy.row=item.row; item.copy.target=item.saved;
             append(L"{\"event\":\"planned\",\"item\":"+std::to_wstring(n+1)+L",\"side\":"+
                 Json(item.right?L"right":L"left")+L",\"relative\":"+Json(row.path)+L",\"original\":"+Json(item.original)+
@@ -606,24 +640,34 @@ static RecoveryReport SaveOriginalsImpl(Result snapshot,const std::vector<size_t
         size_t n=0;
         for (;n<report.items.size();++n) {
             auto& item=report.items[n]; const auto& row=snapshot.rows[item.row]; progress.item=n;
-            try {
-                Control(cancel,progress); File currentRun(Open(report.runDirectory,FILE_READ_ATTRIBUTES)); Need(currentRun.h!=INVALID_HANDLE_VALUE);
-                if (!SameId(runId,Info(currentRun.h))) throw Failure{ERROR_FILE_INVALID};
-                Row original; original.path=row.path; original.hasLeft=true; original.left=item.right?row.right:row.left; original.action=Action::CopyRight;
-                auto data=item.saved.substr(0,item.saved.size()-row.path.size()-1);
-                if(original.left.directory) SaveDirectory(item.right?right:left,original.left,item,cancel,progress);
-                else CopyOne(item.right?right:left,data,original,item.copy,cancel,progress,nullptr,nullptr,true);
-            } catch (const Failure& failure) {
-                item.copy.error=failure.error; report.error=failure.error;
-                report.cancelled=cancel.load() || failure.error==ERROR_CANCELLED || failure.error==ERROR_OPERATION_ABORTED || failure.error==ERROR_REQUEST_ABORTED;
-                item.copy.status=report.cancelled?CopyStatus::Cancelled:CopyStatus::Failed;
-            } catch (...) { item.copy.error=report.error=ERROR_NOT_ENOUGH_MEMORY; item.copy.status=CopyStatus::Failed; }
-            append(OutcomeLine(n,item.copy)); item.logged=true;
-            if (item.copy.status!=CopyStatus::Copied) { ++n; break; }
+            ExecuteCopyItem(item.copy,TransferKind::Save,item.original,item.saved,snapshot,cancel,checking,
+                progress,report.cancelled,report.stale,[&] {
+                    progress.BeginDisplay(item.original,item.saved,TransferKind::Save,false);
+                    progress.phase=CopyPhase::Preparing;progress.errorSite=ErrorSite::Target;
+                    File currentRun(Open(report.runDirectory,FILE_READ_ATTRIBUTES));Need(currentRun.h!=INVALID_HANDLE_VALUE);
+                    if(!SameId(runId,Info(currentRun.h)))throw Failure{ERROR_FILE_INVALID};
+                    Row original;original.path=row.path;original.hasLeft=true;
+                    original.left=item.right?row.right:row.left;original.action=Action::CopyRight;
+                    auto data=item.saved.substr(0,item.saved.size()-row.path.size()-1);
+                    if(!deletion) {
+                        auto side=Join(report.runDirectory,item.right?L"right":L"left");
+                        RecoveryDirectory(side,cancel);RecoveryDirectory(Join(side,std::to_wstring(n+1)),cancel);RecoveryDirectory(data,cancel);
+                    }
+                    if(original.left.directory)SaveDirectory(item.right?right:left,original.left,item,cancel,progress);
+                    else CopyOne(item.right?right:left,data,original,item.copy,cancel,progress,nullptr,nullptr,true,&item.savedEntry);
+                },[&](bool retry){std::vector<size_t> pending;
+                    for(size_t i=n+(retry?0:1);i<report.items.size();++i)pending.push_back(report.items[i].row);return pending;},!deletion);
+            append(OutcomeLine(n,item.copy));item.logged=true;
+            if(item.copy.status!=CopyStatus::Copied && item.copy.status!=CopyStatus::Skipped) {
+                report.error=item.copy.error?item.copy.error:ERROR_INVALID_DATA;++n;break;
+            }
         }
-        for (;n<report.items.size();++n) { append(OutcomeLine(n,report.items[n].copy)); report.items[n].logged=true; }
-        append(L"{\"event\":\"end\",\"status\":"+Json(report.error?(report.cancelled?L"cancelled":L"failed"):L"complete")+L"}");
-        report.complete=!report.error;
+        for(;n<report.items.size();++n){append(OutcomeLine(n,report.items[n].copy));report.items[n].logged=true;}
+        const bool processed=!report.error && !report.stale && !report.cancelled;
+        const bool complete=processed && std::all_of(report.items.begin(),report.items.end(),
+            [](const RecoveryItem& item){return item.logged && item.copy.status==CopyStatus::Copied;});
+        append(L"{\"event\":\"end\",\"status\":"+Json(report.error?(report.cancelled?L"cancelled":L"failed"):complete?L"complete":L"incomplete")+L"}");
+        report.processed=processed;report.complete=complete;
     } catch (const Failure& failure) {
         report.error=failure.error;
         report.cancelled=cancel.load() || failure.error==ERROR_CANCELLED || failure.error==ERROR_OPERATION_ABORTED || failure.error==ERROR_REQUEST_ABORTED;
@@ -778,77 +822,113 @@ bool IsFileOverwrite(const Row& row) { return IsOriginalToSave(row); }
 OverwriteReport OverwriteFiles(Result snapshot,const std::vector<size_t>& visible,bool keepOriginals,
     const std::wstring& recoveryRoot,std::atomic<bool>& cancel,Progress& checking,CopyProgress& progress)
 {
-    OverwriteReport report; report.keepOriginals=keepOriginals;
-    std::wstring left,right; File journal;
+    OverwriteReport report;report.keepOriginals=keepOriginals;
+    std::wstring left,right;File journal;
+    using RecoveryKey=std::pair<size_t,bool>;
+    std::map<RecoveryKey,const RecoveryItem*> originals;
     try {
-        std::set<size_t> unique; std::vector<size_t> selected;
+        std::set<size_t> unique;std::vector<size_t> selected;
         for(size_t i:visible) {
-            if(i>=snapshot.rows.size() || !unique.insert(i).second) continue;
+            if(i>=snapshot.rows.size() || !unique.insert(i).second)continue;
             const auto& row=snapshot.rows[i];
-            if(IsFileOverwrite(row)) { report.items.push_back({i}); selected.push_back(i); }
-            else if(row.action!=Action::None) ++report.omitted;
+            if(IsFileOverwrite(row)){report.items.push_back({i});selected.push_back(i);}
+            else if(row.action!=Action::None)++report.omitted;
         }
-        if(report.items.empty()) return report;
+        if(report.items.empty())return report;
         Control(cancel,progress);
         if(!SnapshotRoots(snapshot,left,right) || !Revalidate(snapshot,cancel,checking)) {
-            report.stale=true; report.cancelled=cancel.load(); return report;
+            report.stale=true;report.cancelled=cancel.load();return report;
         }
         for(auto& item:report.items) {
-            const auto& row=snapshot.rows[item.row]; bool toRight=row.action==Action::CopyRight;
+            const auto& row=snapshot.rows[item.row];const bool toRight=row.action==Action::CopyRight;
             item.target=Join(toRight?right:left,row.path);
-            // Do not change attributes on a read-only original or its other aliases.
-            if((toRight?row.right:row.left).attributes & FILE_ATTRIBUTE_READONLY) {
-                item.status=CopyStatus::Failed; item.error=ERROR_ACCESS_DENIED; throw Failure{item.error};
+            // Preserve the existing preflight for noninteractive commands.
+            // Interactive copies can Skip this row without changing its flags.
+            if((progress.errors.stopOnFirstError || !progress.errors.prompt) &&
+                ((toRight?row.right:row.left).attributes & FILE_ATTRIBUTE_READONLY)) {
+                item.status=CopyStatus::Failed;item.error=item.lastError=ERROR_ACCESS_DENIED;throw Failure{item.error};
             }
         }
         if(keepOriginals) {
             report.recovery=SaveOriginals(snapshot,selected,recoveryRoot,cancel,checking,progress);
-            if(!report.recovery.complete || report.recovery.items.size()!=report.items.size() ||
-                !std::all_of(report.recovery.items.begin(),report.recovery.items.end(),
-                    [](const RecoveryItem& item) { return item.logged && item.copy.status==CopyStatus::Copied; })) {
-                report.stale=report.recovery.stale; report.cancelled=report.recovery.cancelled;
-                report.error=report.recovery.error?report.recovery.error:ERROR_INVALID_DATA;
-                return report;
+            for(const auto& saved:report.recovery.items)
+                if(!originals.emplace(RecoveryKey{saved.row,saved.right},&saved).second)throw Failure{ERROR_INVALID_DATA};
+            for(auto& item:report.items) {
+                const bool rightSide=snapshot.rows[item.row].action==Action::CopyRight;
+                const auto found=originals.find({item.row,rightSide});
+                if(found==originals.end() || found->second->copy.row!=item.row)throw Failure{ERROR_INVALID_DATA};
+                const auto& saved=*found->second;
+                if(saved.copy.status==CopyStatus::Skipped && saved.logged) {
+                    item.status=CopyStatus::DependencyBlocked;item.error=item.lastError=saved.copy.error;
+                    item.automaticSkip=saved.copy.automaticSkip;
+                } else if(report.recovery.processed && (!saved.logged || saved.copy.status!=CopyStatus::Copied || !saved.savedEntry.identified))
+                    throw Failure{ERROR_INVALID_DATA};
+            }
+            if(!report.recovery.processed || report.recovery.items.size()!=report.items.size()) {
+                report.stale=report.recovery.stale;report.cancelled=report.recovery.cancelled;
+                report.error=report.recovery.error?report.recovery.error:ERROR_INVALID_DATA;return report;
+            }
+            // Saving originals makes no confirmed target changes. Check every
+            // still-eligible source/target again before any replacement.
+            std::vector<size_t> pending;
+            for(const auto& item:report.items)if(item.status!=CopyStatus::DependencyBlocked)pending.push_back(item.row);
+            if(!AdvanceExecutionSnapshot(snapshot,pending,cancel,checking)) {
+                report.cancelled=cancel.load();report.stale=!report.cancelled;
+                report.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;return report;
             }
             report.journal=Join(report.recovery.runDirectory,L"overwrite.jsonl");
-            journal.h=Open(report.journal,GENERIC_WRITE,FILE_SHARE_READ,CREATE_NEW); Need(journal.h!=INVALID_HANDLE_VALUE);
+            journal.h=Open(report.journal,GENERIC_WRITE,FILE_SHARE_READ,CREATE_NEW);
+            if(journal.h==INVALID_HANDLE_VALUE){report.journalError=GetLastError();throw Failure{report.journalError};}
         }
         auto append=[&](const std::wstring& line) {
-            if(!keepOriginals) return;
-            try { RecoveryLine(journal.h,line); }
-            catch(const Failure& failure) { report.journalError=failure.error; throw; }
+            if(!keepOriginals)return;
+            try {RecoveryLine(journal.h,line);}
+            catch(const Failure& failure){report.journalError=failure.error;throw;}
         };
         append(L"{\"event\":\"run\",\"schema\":1,\"operation\":\"overwrite\",\"keepOriginals\":true,\"left\":"+
             Json(left)+L",\"right\":"+Json(right)+L",\"recoveryManifest\":"+Json(report.recovery.journal)+L"}");
         for(size_t n=0;n<report.items.size();++n) {
-            const auto& item=report.items[n]; const auto& row=snapshot.rows[item.row]; bool toRight=row.action==Action::CopyRight;
+            const auto& item=report.items[n];const auto& row=snapshot.rows[item.row];const bool toRight=row.action==Action::CopyRight;
             append(L"{\"event\":\"planned\",\"item\":"+std::to_wstring(n+1)+L",\"source\":"+Json(Join(toRight?left:right,row.path))+
-                L",\"target\":"+Json(item.target)+L",\"saved\":"+Json(keepOriginals?report.recovery.items[n].saved:L"")+L"}");
+                L",\"target\":"+Json(item.target)+L",\"saved\":"+Json(keepOriginals?originals.at({item.row,toRight})->saved:L"")+L"}");
         }
         size_t n=0;
         for(;n<report.items.size();++n) {
-            auto& item=report.items[n]; const auto& row=snapshot.rows[item.row]; bool toRight=row.action==Action::CopyRight;
+            auto& item=report.items[n];const auto& row=snapshot.rows[item.row];const bool toRight=row.action==Action::CopyRight;
             progress.item=n+(keepOriginals?report.items.size():0);
-            try {
-                Control(cancel,progress); Security originalSecurity(item.target);
-                const Entry& original=toRight?row.right:row.left;
-                CopyOne(toRight?left:right,toRight?right:left,row,item,cancel,progress,&original,&originalSecurity);
-            } catch(const Failure& failure) {
-                item.error=report.error=failure.error;
-                report.cancelled=cancel.load() || failure.error==ERROR_CANCELLED || failure.error==ERROR_OPERATION_ABORTED || failure.error==ERROR_REQUEST_ABORTED;
-                item.status=report.cancelled?CopyStatus::Cancelled:CopyStatus::Failed;
-            } catch(...) { item.error=report.error=ERROR_NOT_ENOUGH_MEMORY; item.status=CopyStatus::Failed; }
+            if(item.status!=CopyStatus::DependencyBlocked) {
+                ExecuteCopyItem(item,TransferKind::Overwrite,Join(toRight?left:right,row.path),item.target,snapshot,
+                    cancel,checking,progress,report.cancelled,report.stale,[&] {
+                        progress.BeginDisplay(Join(toRight?left:right,row.path),item.target,TransferKind::Overwrite,false,(toRight?row.left:row.right).size);
+                        progress.errorSite=ErrorSite::Target;
+                        if(keepOriginals) {
+                            const auto& saved=*originals.at({item.row,toRight});
+                            Parents(report.recovery.runDirectory,saved.saved,false,cancel);
+                            File copy(Open(saved.saved,FILE_READ_ATTRIBUTES));
+                            if(copy.h==INVALID_HANDLE_VALUE || !Unchanged(saved.savedEntry,Info(copy.h)))throw Failure{ERROR_FILE_INVALID};
+                        }
+                        Security originalSecurity(item.target);const Entry& original=toRight?row.right:row.left;
+                        CopyOne(toRight?left:right,toRight?right:left,row,item,cancel,progress,&original,&originalSecurity);
+                    },[&](bool retry){std::vector<size_t> pending;
+                        for(size_t i=n+(retry?0:1);i<report.items.size();++i)
+                            if(report.items[i].status!=CopyStatus::DependencyBlocked)pending.push_back(report.items[i].row);
+                        return pending;});
+            }
             append(OutcomeLine(n,item,L"replaced"));
-            if(item.status!=CopyStatus::Copied) { ++n; break; }
+            if(item.status!=CopyStatus::Copied && item.status!=CopyStatus::Skipped && item.status!=CopyStatus::DependencyBlocked) {
+                report.error=item.error?item.error:ERROR_INVALID_DATA;++n;break;
+            }
         }
-        for(;n<report.items.size();++n) append(OutcomeLine(n,report.items[n],L"replaced"));
-        append(L"{\"event\":\"end\",\"status\":"+Json(report.error?(report.cancelled?L"cancelled":L"failed"):L"complete")+L"}");
-        report.complete=!report.error;
-    } catch(const Failure& failure) {
+        for(;n<report.items.size();++n)append(OutcomeLine(n,report.items[n],L"replaced"));
+        const bool complete=!report.error && !report.cancelled && !report.stale &&
+            std::all_of(report.items.begin(),report.items.end(),[](const CopyOutcome& item){return item.status==CopyStatus::Copied;});
+        append(L"{\"event\":\"end\",\"status\":"+Json(report.error?(report.cancelled?L"cancelled":L"failed"):complete?L"complete":L"incomplete")+L"}");
+        report.complete=complete;
+    }catch(const Failure& failure) {
         report.error=failure.error;
         report.cancelled=cancel.load() || failure.error==ERROR_CANCELLED || failure.error==ERROR_OPERATION_ABORTED || failure.error==ERROR_REQUEST_ABORTED;
-    } catch(...) { report.error=ERROR_NOT_ENOUGH_MEMORY; }
-    Phase(progress,CopyPhase::Finished,L""); return report;
+    }catch(...) {report.error=ERROR_NOT_ENOUGH_MEMORY;}
+    Phase(progress,CopyPhase::Finished,L"");return report;
 }
 CopyReport CopyNewFiles(Result snapshot,const std::vector<size_t>& visible,std::atomic<bool>& cancel,Progress& checking,CopyProgress& progress)
 {
@@ -868,39 +948,12 @@ CopyReport CopyNewFiles(Result snapshot,const std::vector<size_t>& visible,std::
     for (size_t n=0;n<report.items.size();++n) {
         auto& outcome=report.items[n]; const auto& row=snapshot.rows[outcome.row];
         bool toRight=row.action==Action::CopyRight; outcome.target=Join(toRight?right:left,row.path); progress.item=n;
-        for(;;) {
-            outcome.error=0;outcome.status=CopyStatus::NotStarted;++outcome.attempts;
-            try {
-                Control(cancel,progress);
-                if((toRight?row.left:row.right).directory) CopyEmptyDirectory(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
+        ExecuteCopyItem(outcome,TransferKind::Copy,Join(toRight?left:right,row.path),outcome.target,
+            snapshot,cancel,checking,progress,report.cancelled,report.stale,[&] {
+                if((toRight?row.left:row.right).directory)CopyEmptyDirectory(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
                 else CopyOne(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
-                break;
-            }
-            catch (const Failure& e) {
-                outcome.error=outcome.lastError=e.error;
-                report.cancelled=cancel.load() || e.error==ERROR_CANCELLED || e.error==ERROR_REQUEST_ABORTED || e.error==ERROR_OPERATION_ABORTED;
-                outcome.status=report.cancelled?CopyStatus::Cancelled:CopyStatus::Failed;
-                OperationError error{TransferKind::Copy,progress.phase.load(),progress.errorSite,e.error,
-                    Join(toRight?left:right,row.path),outcome.target,outcome.published,!outcome.remainingStage.empty()};
-                if(report.cancelled || progress.errors.stopOnFirstError || !progress.errors.prompt || !Recoverable(error))break;
-                bool automatic=false;ErrorDecision decision=ErrorDecision::Cancel;
-                try {decision=progress.errors.Decide(error,automatic);}
-                catch(...) {outcome.error=ERROR_NOT_ENOUGH_MEMORY;break;}
-                if(cancel || decision==ErrorDecision::Cancel){cancel=true;report.cancelled=true;outcome.status=CopyStatus::Cancelled;break;}
-                if(decision==ErrorDecision::Skip){outcome.status=CopyStatus::Skipped;outcome.automaticSkip=automatic;}
-                // Earlier successful writes are expected; remaining confirmed
-                // sources/targets and root/parent identities must still match.
-                std::vector<size_t> pending;
-                for(size_t i=n+(decision==ErrorDecision::Skip?1:0);i<report.items.size();++i)pending.push_back(report.items[i].row);
-                if(!AdvanceExecutionSnapshot(snapshot,pending,cancel,checking)) {
-                    report.cancelled=cancel.load();report.stale=!report.cancelled;
-                    outcome.status=report.cancelled?CopyStatus::Cancelled:CopyStatus::Failed;
-                    outcome.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;break;
-                }
-                if(decision==ErrorDecision::Skip)break;
-            }
-            catch (...) { outcome.error=ERROR_NOT_ENOUGH_MEMORY; outcome.status=CopyStatus::Failed; break; }
-        }
+            },[&](bool retry){std::vector<size_t> pending;
+                for(size_t i=n+(retry?0:1);i<report.items.size();++i)pending.push_back(report.items[i].row);return pending;});
         if(outcome.status!=CopyStatus::Copied && outcome.status!=CopyStatus::Skipped)break;
     }
     Phase(progress,CopyPhase::Finished,L""); return report;
@@ -919,6 +972,10 @@ SyncPlan BuildSyncPlan(const Result& snapshot,const std::vector<size_t>& visible
 SyncReport Synchronize(Result snapshot,const std::vector<size_t>& visible,bool keepOriginals,
     const std::wstring& recoveryRoot,std::atomic<bool>& cancel,Progress& checking,CopyProgress& progress,std::atomic<SyncStage>& stage)
 {
+    // Combined phase continuation is a later stage. Even an internal caller
+    // supplying a prompt must retain the current stop-first contract here.
+    struct PolicyScope {bool& value;bool previous;~PolicyScope(){value=previous;}} policy{progress.errors.stopOnFirstError,progress.errors.stopOnFirstError};
+    progress.errors.stopOnFirstError=true;
     SyncReport report;report.plan=BuildSyncPlan(snapshot,visible);report.keepOriginals=keepOriginals;stage=SyncStage::Checking;
     auto finish=[&]() {report.cancelled=report.cancelled || cancel.load();stage=SyncStage::Finished;Phase(progress,CopyPhase::Finished,L"");return report;};
     try {

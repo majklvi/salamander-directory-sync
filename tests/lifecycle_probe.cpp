@@ -62,10 +62,11 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
         if(!parent){FreeLibrary(resources);return FALSE;}
         // Real modeless error dialog and channel: a worker can be joined after
         // Stop/Close without dispatching another UI message or answering it.
-        for(int scenario=0;scenario<7;++scenario) {
-            Preview p;p.window=parent;p.running=true;p.copying=true;
+        for(auto kind:{dirsync::TransferKind::Copy,dirsync::TransferKind::Save,dirsync::TransferKind::Overwrite})for(int scenario=0;scenario<7;++scenario) {
+            Preview p;p.window=parent;p.running=true;p.copying=kind==dirsync::TransferKind::Copy;
+            p.saving=kind==dirsync::TransferKind::Save;p.overwriting=kind==dirsync::TransferKind::Overwrite;
             std::atomic<bool> posted{false},done{false};dirsync::ErrorDecision result=dirsync::ErrorDecision::Cancel;
-            dirsync::OperationError error;error.code=ERROR_SHARING_VIOLATION;
+            dirsync::OperationError error;error.code=ERROR_SHARING_VIOLATION;error.kind=kind;
             error.source=L"C:\\"+std::wstring(280,L'漢')+L"\\žluťoučký.txt";error.target=L"D:\\kopie.txt";
             p.copyProgress.awaitingDecision=true;
             p.worker=std::thread([&]{result=p.errorQuestion.Ask(error,p.cancel,[&]{posted=true;return true;});done=true;});
@@ -74,6 +75,8 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= IsWindow(question) && IsWindowVisible(question) && IsWindowEnabled(parent) &&
                 GetWindow(question,GW_OWNER)==p.transferWindow && ControlText(question,IDC_ERROR_SOURCE)==error.source &&
                 !IsWindowEnabled(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE));
+            ok &= ControlText(question,IDC_ERROR_CONTEXT)==Text(kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
+                kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE);
             if(scenario<4)SendMessageW(question,WM_COMMAND,scenario==0?IDC_ERROR_RETRY:scenario==1?IDC_ERROR_SKIP:scenario==2?IDC_ERROR_SKIP_ALL:IDCANCEL,0);
             else if(scenario==4)SendMessageW(question,WM_CLOSE,0,0);
             else if(scenario==5)SendMessageW(p.transferWindow,WM_CLOSE,0,0);
@@ -83,6 +86,27 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= result==(scenario==0?dirsync::ErrorDecision::Retry:scenario==1?dirsync::ErrorDecision::Skip:
                 scenario==2?dirsync::ErrorDecision::SkipAll:dirsync::ErrorDecision::Cancel);
             ok &= !p.errorWindow && !IsWindow(question);p.running=false;p.CloseTransfer();
+        }
+        // A skipped original between two successful saves must not truncate
+        // the saved count or claim that no independent overwrite ran.
+        {
+            Preview p;p.window=parent;p.overwriteReport.keepOriginals=true;
+            p.overwriteReport.items.resize(3);p.overwriteReport.recovery.items.resize(3);
+            for(int i=0;i<3;++i){auto& copy=p.overwriteReport.recovery.items[i];copy.logged=true;
+                copy.copy.status=i==1?dirsync::CopyStatus::Skipped:dirsync::CopyStatus::Copied;
+                p.overwriteReport.items[i].status=i==1?dirsync::CopyStatus::DependencyBlocked:dirsync::CopyStatus::Copied;}
+            bool summary=false;SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&summary));
+            SetTimer(parent,59,20,[](HWND owner,UINT,UINT_PTR,DWORD){
+                HWND dialog=GetLastActivePopup(owner);if(dialog==owner)return;KillTimer(owner,59);
+                auto* data=reinterpret_cast<Information*>(GetWindowLongPtrW(dialog,DWLP_USER));
+                if(data){auto has=[&](int id,const wchar_t* value){return std::find(data->rows.begin(),data->rows.end(),
+                    std::make_pair(Text(id),std::wstring(value)))!=data->rows.end();};
+                    *reinterpret_cast<bool*>(GetWindowLongPtrW(owner,GWLP_USERDATA))=
+                        data->title==IDS_UI_OVERWRITE_RESULT && has(IDS_UI_RECOVERED,L"2 / 3") &&
+                        has(IDS_UI_REPLACED,L"2") && has(IDS_UI_ERRORS,L"0") && has(IDS_UI_DEPENDENCY_BLOCKED,L"1");}
+                SendMessageW(dialog,WM_COMMAND,IDOK,0);
+            });
+            OverwriteSummary(p);ok &= summary;KillTimer(parent,59);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
         }
         // Exercise the real modal speed dialog, not just its parser/template.
         for(int scenario=0;scenario<3;++scenario) {

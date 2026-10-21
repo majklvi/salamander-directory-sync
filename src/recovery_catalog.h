@@ -2,8 +2,8 @@
 #pragma once
 #include "engine.h"
 namespace dirsync {
-enum class StoredCopy { Unconfirmed, Recorded, Missing, Different, Unsafe };
-enum class StoredOperation { Unknown, Replaced, Deleted, NotStarted, Failed, Cancelled };
+enum class StoredCopy { Unconfirmed, Recorded, Missing, Different, Unsafe, Skipped };
+enum class StoredOperation { Unknown, Replaced, Deleted, NotStarted, Failed, Cancelled, Skipped, DependencyBlocked };
 struct StoredOriginal {
     uint64_t item=0,size=0;
     std::wstring original,saved;

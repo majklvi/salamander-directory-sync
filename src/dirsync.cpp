@@ -2115,12 +2115,7 @@ void CopyNew(Preview& p)
     InfoRows fields;Field(fields,IDS_UI_FILES,uint64_t(p.copyRows.size())-directories);Field(fields,IDS_UI_DIRECTORIES,directories);Field(fields,IDS_UI_BYTES,bytes);Field(fields,IDS_UI_OMITTED,omitted);
     if(!InformationBox(p.window,IDS_UI_COPY_CONFIRM,std::move(fields),Text(IDS_UI_COPY_POLICY),true)) return;
     BeginReport(p,L"new_copy",false,L"");
-    p.copyProgress.errors.stopOnFirstError=settings.stopOnFirstError;
-    p.copyProgress.errors.prompt=[&p](const dirsync::OperationError& error) {
-        const auto started=GetTickCount64();p.copyProgress.awaitingDecision=true;
-        struct Waiting {Preview& p;ULONGLONG started;~Waiting(){p.copyProgress.pausedMilliseconds.fetch_add(GetTickCount64()-started);p.copyProgress.awaitingDecision=false;}} waiting{p,started};
-        return p.errorQuestion.Ask(error,p.cancel,[&p]{return PostMessageW(p.window,OperationErrorMessage,0,0)!=FALSE;});
-    };
+    ConfigureErrorPolicy(p);
     p.cancel=false; p.failed=false; p.copying=true; p.running=true; p.hasCopyReport=false;
     p.copyProgress.copied=0; p.copyProgress.verified=0; p.copyProgress.completed=0; p.copyProgress.item=0;
     p.copyProgress.phase=dirsync::CopyPhase::Checking; p.copyReport={};
@@ -2141,10 +2136,11 @@ void CopyNew(Preview& p)
 }
 void RecoverySummary(Preview& p)
 {
-    uint64_t copied=0,failed=0,pending=0,logged=0; std::wstring details;
+    uint64_t copied=0,failed=0,pending=0,logged=0,skipped=0; std::wstring details;
     for (const auto& item:p.recoveryReport.items) {
         if (item.copy.status==dirsync::CopyStatus::Copied) ++copied;
         else if (item.copy.status==dirsync::CopyStatus::NotStarted) ++pending;
+        else if(item.copy.status==dirsync::CopyStatus::Skipped)++skipped;
         else ++failed;
         if (item.logged) ++logged;
         if (details.empty() && item.copy.error)
@@ -2153,7 +2149,7 @@ void RecoverySummary(Preview& p)
         if (!item.copy.remainingStage.empty()) details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.copy.remainingStage;
     }
     InfoRows rows;Field(rows,IDS_UI_COPIED,copied);Field(rows,IDS_UI_ERRORS,failed);Field(rows,IDS_UI_PENDING,pending);
-    Field(rows,IDS_UI_LOGGED,logged);Field(rows,IDS_UI_OMITTED,uint64_t(p.recoveryReport.omitted));
+    Field(rows,IDS_UI_SKIPPED,skipped);Field(rows,IDS_UI_LOGGED,logged);Field(rows,IDS_UI_OMITTED,uint64_t(p.recoveryReport.omitted));
     Field(rows,IDS_UI_MANIFEST,p.recoveryReport.journal);
     std::wstring message=Text(IDS_UI_RESULT_NOTE)+L"\n\n"+Text(IDS_UI_SAVE_POLICY);
     if (!p.recoveryReport.complete) message+=L"\n"+Text(IDS_SAVE_INCOMPLETE);
@@ -2177,7 +2173,7 @@ void SaveOriginals(Preview& p)
     InfoRows fields;Field(fields,IDS_UI_FILES,uint64_t(p.copyRows.size()));Field(fields,IDS_UI_ORIGINAL_BYTES,bytes);Field(fields,IDS_UI_OMITTED,omitted);
     Field(fields,IDS_UI_RECOVERY_FOLDER,p.recoveryRoot);
     if(!InformationBox(p.window,IDS_UI_SAVE_CONFIRM,std::move(fields),Text(IDS_UI_SAVE_POLICY),true)) return;
-    BeginReport(p,L"save_original",true,p.recoveryRoot);
+    BeginReport(p,L"save_original",true,p.recoveryRoot);ConfigureErrorPolicy(p);
     p.cancel=false; p.failed=false; p.saving=true; p.running=true; p.hasCopyReport=false; p.hasRecoveryReport=false;
     p.copyProgress.copied=0; p.copyProgress.verified=0; p.copyProgress.completed=0; p.copyProgress.item=0;
     p.copyProgress.phase=dirsync::CopyPhase::Checking; p.recoveryReport={};
@@ -2198,17 +2194,20 @@ void SaveOriginals(Preview& p)
 void OverwriteSummary(Preview& p)
 {
     const auto& report=p.overwriteReport;
-    uint64_t copied=0,failed=0,pending=0,recovered=0; std::wstring details;
+    uint64_t copied=0,failed=0,pending=0,recovered=0,skipped=0,blocked=0; std::wstring details;
     for(const auto& item:report.items) {
         if(item.status==dirsync::CopyStatus::Copied) ++copied;
         else if(item.status==dirsync::CopyStatus::NotStarted) ++pending;
+        else if(item.status==dirsync::CopyStatus::Skipped)++skipped;
+        else if(item.status==dirsync::CopyStatus::DependencyBlocked)++blocked;
         else ++failed;
-        if(details.empty() && item.error) details=L"\n\n"+item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error)+
+        if(details.empty() && item.error && item.status!=dirsync::CopyStatus::DependencyBlocked) details=L"\n\n"+item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error)+
             (item.published?L"\n"+Text(IDS_OVERWRITE_PUBLISHED_ERROR):L"");
         if(!item.remainingStage.empty()) details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.remainingStage;
     }
+    recovered=std::count_if(report.recovery.items.begin(),report.recovery.items.end(),
+        [](const dirsync::RecoveryItem& item){return item.copy.status==dirsync::CopyStatus::Copied && item.logged;});
     for(const auto& item:report.recovery.items) {
-        if(item.copy.status==dirsync::CopyStatus::Copied && item.logged) ++recovered;
         if(item.copy.error) {
             details+=L"\n\n"+Text(IDS_OVERWRITE_RECOVERY_ERROR)+L"\n"+item.original+L"\n"+Text(IDS_COPY_ERROR)+Number(item.copy.error);
             if(!item.copy.remainingStage.empty()) details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.copy.remainingStage;
@@ -2216,6 +2215,7 @@ void OverwriteSummary(Preview& p)
         }
     }
     InfoRows rows;Field(rows,IDS_UI_REPLACED,copied);Field(rows,IDS_UI_ERRORS,failed);Field(rows,IDS_UI_PENDING,pending);
+    Field(rows,IDS_UI_SKIPPED,skipped);Field(rows,IDS_UI_DEPENDENCY_BLOCKED,blocked);
     Field(rows,IDS_UI_OMITTED,uint64_t(report.omitted));Field(rows,IDS_UI_RECOVERY,Text(report.keepOriginals?IDS_UI_ON:IDS_UI_OFF));
     auto message=Text(IDS_UI_RESULT_NOTE)+L"\n\n"+Text(report.keepOriginals?IDS_OVERWRITE_ON:IDS_OVERWRITE_OFF);
     if(report.keepOriginals) {
@@ -2246,7 +2246,7 @@ void Overwrite(Preview& p)
     Field(fields,IDS_UI_RECOVERY,Text(keep?IDS_UI_ON:IDS_UI_OFF));if(keep)Field(fields,IDS_UI_RECOVERY_FOLDER,root);
     auto message=Text(IDS_UI_OVERWRITE_POLICY)+L"\n\n"+Text(keep?IDS_OVERWRITE_ON:IDS_OVERWRITE_OFF);
     if(!InformationBox(p.window,IDS_UI_OVERWRITE_CONFIRM,std::move(fields),message,true)) return;
-    BeginReport(p,L"overwrite",keep,root);
+    BeginReport(p,L"overwrite",keep,root);ConfigureErrorPolicy(p);
     p.cancel=false; p.failed=false; p.overwriting=true; p.running=true;
     p.hasCopyReport=p.hasRecoveryReport=p.hasOverwriteReport=p.hasDeleteReport=false; p.overwriteReport={};
     p.transferCount=uint64_t(p.copyRows.size())*(keep?2:1);

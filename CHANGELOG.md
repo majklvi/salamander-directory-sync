@@ -11,14 +11,17 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ## [Unreleased]
 
-### 0.4.0 development — interactive errors, stages 1–2
+### 0.4.0 development — interactive operation errors
 
-- Add a shared operation/phase/error model, recoverable/fatal classification, batch-local Skip all matching and explicit execution-skipped/dependency-blocked outcome codes. The latter is reserved for subsequent dependent adapters.
-- The separate **Copy visible new items…** command offers **Retry / Skip / Skip all / Cancel** for supported unpublished failures. Retry revalidates the remaining plan and restarts only the current file/empty directory with fresh staging; completed copies are not repeated.
-- Add a remembered global **Stop at first error** preference, off by default. Recovery, overwrite, deletion and combined synchronization retain stop-first behavior until their later implementation stages.
-- Add a compact native English/Czech error question, asynchronous worker/UI decision channel and cancellation while awaiting an answer. Keep host panels and Stop/Close available; exclude decision waits from transfer-rate accounting.
-- Summaries distinguish execution skips and incomplete batches. CSV/text operation exports add attempt count, last error and automatic-skip fields for new copies without falsely marking skipped items complete.
-- Keep verification mismatch, stale plans, published failures and staging residue fatal. Preserve existing staging, metadata/data checks and the SDK. See the [implementation and tests](docs/directory-sync-plugin-errors-040.md).
+- Add a shared operation/phase/error model, recoverable/fatal classification and batch-local Skip all matching. The separate **Copy visible new items…**, **Save visible originals…** and **Overwrite visible files…** commands offer **Retry / Skip / Skip all / Cancel** for supported unpublished failures.
+- Retry checks the remaining confirmed plan and restarts only the current item with fresh staging. Completed copies, original saves and overwrites are not repeated. Preserve destination permissions and the frozen recovery preference.
+- Map saved originals to replacements by row and target side. Skipping a failed original explicitly blocks its dependent replacement; independent overwrites can continue. Recheck the verified saved-copy identity before each dependent overwrite, including Retry.
+- Keep shared manifest/journal failures, verification mismatch, stale plans, published side effects and staging residue fatal. No fallback without the promised original, rollback or repeated published replacement.
+- Add a remembered global **Stop at first error**, off by default. Deletion and combined synchronization retain stop-first behavior pending their later implementation stages.
+- Add a compact native EN/CS question and cancellable worker/UI channel. Keep host panels and Stop/Close available, disable Pause while waiting and exclude decision waits from rate accounting.
+- Summaries, stored-originals records and CSV/text exports distinguish execution skips, dependency-blocked writes, failed/cancelled and unstarted items. Record attempts, last error and automatic skips for copy/save/overwrite adapters.
+- Correct the saved-originals count when a skipped item is between successful saves, and replace obsolete all-or-nothing recovery wording in English and Czech. Add a native results-dialog regression for this case.
+- Preserve the SDK. See [stages 1–2](docs/directory-sync-plugin-errors-040.md) and the [original-preservation/overwrite follow-up](docs/directory-sync-plugin-original-errors-040.md) for verification and limits.
 
 ## [0.3.0] — 2026-10-19
 

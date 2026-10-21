@@ -33,6 +33,7 @@ void Saved(ReportBatch& batch,const RecoveryReport& report) {
     for(const auto& item:report.items)for(auto& out:batch.items)if(out.row==item.row && out.kind==L"save_original"){
         out.saved=item.saved;out.status=CopyCode(item.copy.status);out.error=item.copy.error;out.stage=item.copy.remainingStage;
         out.changed=item.copy.published;out.logged=item.logged;out.completed=CopyDone(item.copy) && item.logged;
+        out.attempts=item.copy.attempts;out.lastError=item.copy.lastError;out.automaticSkip=item.copy.automaticSkip;
         if(out.completed)out.status=L"saved_recorded";}
     if(report.journalError && !batch.journalError)batch.journalError=report.journalError;
 }

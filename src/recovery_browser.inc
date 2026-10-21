@@ -25,13 +25,15 @@ struct StoredBrowser {
 int StoredCopyText(dirsync::StoredCopy copy) {
     using C=dirsync::StoredCopy;
     switch(copy){case C::Recorded:return IDS_STORED_RECORDED;case C::Missing:return IDS_STORED_MISSING;
-    case C::Different:return IDS_STORED_DIFFERENT;case C::Unsafe:return IDS_STORED_UNSAFE;default:return IDS_STORED_UNKNOWN;}
+    case C::Different:return IDS_STORED_DIFFERENT;case C::Unsafe:return IDS_STORED_UNSAFE;
+    case C::Skipped:return IDS_UI_SKIPPED;default:return IDS_STORED_UNKNOWN;}
 }
 int StoredOperationText(dirsync::StoredOperation operation) {
     using O=dirsync::StoredOperation;
     switch(operation){case O::Replaced:return IDS_STORED_REPLACED;case O::Deleted:return IDS_STORED_DELETED;
     case O::NotStarted:return IDS_STORED_NOT_STARTED;case O::Failed:return IDS_STORED_FAILED;
-    case O::Cancelled:return IDS_STORED_CANCELLED;default:return IDS_STORED_UNKNOWN;}
+    case O::Cancelled:return IDS_STORED_CANCELLED;case O::Skipped:return IDS_UI_SKIPPED;
+    case O::DependencyBlocked:return IDS_UI_DEPENDENCY_BLOCKED;default:return IDS_STORED_UNKNOWN;}
 }
 void StoredRow(HWND list,int index,const std::vector<std::wstring>& cells) {
     for(size_t column=0;column<cells.size();++column){LVITEMW item{};item.mask=LVIF_TEXT;item.iItem=index;

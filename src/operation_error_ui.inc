@@ -10,8 +10,10 @@ INT_PTR CALLBACK OperationErrorDialog(HWND window,UINT message,WPARAM w,LPARAM l
             const auto& error=p->operationError;
             SetDlgItemTextW(window,IDC_ERROR_SOURCE,error.source.c_str());
             SetDlgItemTextW(window,IDC_ERROR_TARGET,error.target.c_str());
-            SetDlgItemTextW(window,IDC_ERROR_CONTEXT,Text(error.site==dirsync::ErrorSite::Source?IDS_ERROR_SOURCE:
-                error.site==dirsync::ErrorSite::Target?IDS_ERROR_TARGET:IDS_ERROR_DATA).c_str());
+            const int base=error.kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
+                error.kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE;
+            SetDlgItemTextW(window,IDC_ERROR_CONTEXT,Text(base+(error.site==dirsync::ErrorSite::Source?0:
+                error.site==dirsync::ErrorSite::Target?1:2)).c_str());
             LPWSTR system=nullptr;
             FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS,
                 nullptr,error.code,0,reinterpret_cast<LPWSTR>(&system),0,nullptr);
@@ -39,10 +41,18 @@ INT_PTR CALLBACK OperationErrorDialog(HWND window,UINT message,WPARAM w,LPARAM l
     return FALSE;
 }
 void ShowOperationError(Preview& p) {
-    if(!p.running || !p.copying || p.cancel || p.errorWindow || !p.errorQuestion.Peek(p.operationError))return;
+    if(!p.running || !(p.copying || p.saving || p.overwriting) || p.cancel || p.errorWindow || !p.errorQuestion.Peek(p.operationError))return;
     ShowTransfer(p);
     HWND window=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_OPERATION_ERROR),
         p.transferWindow?p.transferWindow:p.window,OperationErrorDialog,LPARAM(&p));
     if(!window){p.Stop();return;}
     ShowWindow(window,SW_SHOW);SetForegroundWindow(window);SetFocus(GetDlgItem(window,IDC_ERROR_RETRY));UpdateTransfer(p);
+}
+void ConfigureErrorPolicy(Preview& p) {
+    p.copyProgress.errors.stopOnFirstError=settings.stopOnFirstError;
+    p.copyProgress.errors.prompt=[&p](const dirsync::OperationError& error) {
+        const auto started=GetTickCount64();p.copyProgress.awaitingDecision=true;
+        struct Waiting {Preview& p;ULONGLONG started;~Waiting(){p.copyProgress.pausedMilliseconds.fetch_add(GetTickCount64()-started);p.copyProgress.awaitingDecision=false;}} waiting{p,started};
+        return p.errorQuestion.Ask(error,p.cancel,[&p]{return PostMessageW(p.window,OperationErrorMessage,0,0)!=FALSE;});
+    };
 }

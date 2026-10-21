@@ -129,6 +129,7 @@ void ReadRun(StoredRun& run,std::atomic<bool>& cancel,size_t& total) {
             auto id=Number(record,L"item");Need(ids.count(id) && !results.count(id));results[id]=true;auto& item=run.items[ids.at(id)];
             auto error=Number(record,L"error");Need(error<=MAXDWORD);item.error=DWORD(error);
             if(Text(record,L"status")==L"saved" && !item.error && Flag(record,L"published") && item.copy!=StoredCopy::Unsafe)item.copy=StoredCopy::Recorded;
+            else if(Text(record,L"status")==L"skipped" && !Flag(record,L"published") && item.copy!=StoredCopy::Unsafe)item.copy=StoredCopy::Skipped;
         } else if(event==L"end") {ended=true;run.complete=Text(record,L"status")==L"complete";}
         else throw Bad{ERROR_INVALID_DATA};
     }
@@ -162,6 +163,8 @@ void ReadRun(StoredRun& run,std::atomic<bool>& cancel,size_t& total) {
                 else if(status==L"not_started")item.operation=StoredOperation::NotStarted;
                 else if(status==L"failed")item.operation=StoredOperation::Failed;
                 else if(status==L"cancelled")item.operation=StoredOperation::Cancelled;
+                else if(status==L"skipped" && journal==L"overwrite" && !Flag(rec,L"published"))item.operation=StoredOperation::Skipped;
+                else if(status==L"dependency_blocked" && journal==L"overwrite" && !Flag(rec,L"published"))item.operation=StoredOperation::DependencyBlocked;
                 else throw Bad{ERROR_INVALID_DATA};
             } else throw Bad{ERROR_INVALID_DATA};
         }

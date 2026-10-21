@@ -1,6 +1,6 @@
 # Interactive operation errors: observations and proposal
 
-Recorded 2026-10-21. **R1–R5 approved; implementation stages 1–2 added in 0.4.0 development.** Interactive decisions currently apply only to the separate new-item copy command. Recovery, overwrites, deletion and combined synchronization retain stop-on-first-error behavior. See the [implementation and verification report](directory-sync-plugin-errors-040.md). The reference observations below remain historical research, distinct from plugin tests.
+Recorded 2026-10-21. **R1–R5 approved; implementation stages 1–2 added in 0.4.0 development.** Interactive decisions now apply to separate new-item copying, original preservation and overwrite commands. Deletion and combined synchronization retain stop-on-first-error behavior. See the [recovery/overwrite follow-up](directory-sync-plugin-original-errors-040.md). See the [implementation and verification report](directory-sync-plugin-errors-040.md). The reference observations below remain historical research, distinct from plugin tests.
 
 ## Scope and evidence
 
@@ -123,7 +123,7 @@ No host changes, new SDK interfaces, shell-copy delegation, transfer queue or ad
 
 ## Proposed implementation sequence
 
-The user approved implementation of stages 1 and 2 as version 0.4.0 on 2026-10-21. Those stages are implemented; stages 3–6 below include later adapters and acceptance work that is not complete merely because the common model exists. Keep changes scoped to ordinary local operations and the existing SDK.
+The user approved implementation of stages 1 and 2 as version 0.4.0 on 2026-10-21. Those stages and the recovery/overwrite part of stage 3 are implemented; stages 3–6 below include remaining adapters and acceptance work that is not complete merely because the common model exists. Keep changes scoped to ordinary local operations and the existing SDK.
 
 1. **Decision and outcome model.** Define operation/phase/error context and recoverable versus fatal classification, the four decisions, batch-local Skip all matching and explicit skipped/dependency-blocked outcomes. Store the agreed global stop-on-first-error setting with interactive behavior as the default. Cover classification, matching/reset and outcomes with focused tests before connecting destructive operations.
 2. **New-copy execution and GUI handshake.** Introduce per-item retry using the existing staging and verification path. Add the compact EN/CS error dialog on the UI thread and cancellable request/response handling. Check Retry with an unchanged item, Skip/Skip all, Cancel and Stop/Close while awaiting a response. Retry must not duplicate preceding successful copies; verification, changed-plan and post-publication failures remain fatal.

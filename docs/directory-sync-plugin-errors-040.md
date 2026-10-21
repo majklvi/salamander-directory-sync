@@ -1,5 +1,7 @@
 # Interactive operation errors — 0.4.0 stages 1–2
 
+**Historical stages 1–2 checkpoint.** A later [0.4.0 follow-up](directory-sync-plugin-original-errors-040.md) adds interactive original preservation and overwrites; the scope statements below describe this earlier checkpoint.
+
 Implemented and verified 2026-10-21, based on approved [R1–R5](directory-sync-plugin-error-handling.md). Baseline: released 0.3.0, `5c9022c3ad104c5ab0f693222d24830c4d6ac24b`.
 
 ## Delivered scope

@@ -235,13 +235,13 @@ BEGIN
     IDS_DELETE_INCOMPLETE "The run is incomplete. Completed deletions remain; inspect the result and any manifests."
     IDS_DELETE_RECOVERY_ERROR "Preserving an original failed; no deletions were started."
     IDS_OVERWRITE_EMPTY "No visible copy proposal has an existing supported file on both sides. Nothing to overwrite."
-    IDS_OVERWRITE_ON "Keeping originals: ON. All originals must be independently saved, verified and logged before any overwrite."
+    IDS_OVERWRITE_ON "Keeping originals: ON. Each replacement requires its original to be independently saved, verified and logged. Skipping a saving failure also skips that replacement; independent items may continue."
     IDS_OVERWRITE_OFF "Keeping originals: OFF. Overwritten data and old ADS will have NO recovery copy from this run."
     IDS_OVERWRITE_PUBLISHED_ERROR "The replacement was published, but final checks failed. It remains in place. Inspect the target and any recovery copy."
     IDS_OVERWRITE_FAILED "The overwrite worker failed. Some files may have been replaced. Inspect both trees and any recovery folder before retrying."
     IDS_OVERWRITE_RECOVERY "Original copies verified and logged: %llu of %llu"
     IDS_OVERWRITE_INCOMPLETE "The run is incomplete. Completed replacements remain; inspect the result and any manifests."
-    IDS_OVERWRITE_RECOVERY_ERROR "Preserving an original failed; no overwrites were started."
+    IDS_OVERWRITE_RECOVERY_ERROR "Original preservation did not complete. Its dependent replacement was not executed."
     IDS_SETTINGS_FAILED "The recovery setting could not be saved. It remains in effect for this session only."
     IDS_RECOVERY_DISABLED "Keeping originals is disabled. Enable Keep originals in the plugin preferences to create recovery copies."
     IDS_RECOVERY_SPACE_ON "Recovery copies use additional disk space."
@@ -597,7 +597,7 @@ END
 
 IDD_OPERATION_ERROR DIALOGEX 0, 0, 330, 139
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Copy error"
+CAPTION "File operation error"
 FONT 8, "MS Shell Dlg"
 BEGIN
     LTEXT "", IDC_ERROR_CONTEXT, 7, 7, 316, 10
@@ -618,6 +618,17 @@ BEGIN
     IDS_ERROR_SOURCE "Copy new item — read source"
     IDS_ERROR_TARGET "Copy new item — prepare or publish target"
     IDS_ERROR_DATA "Copy new item — transfer data"
-    IDS_ERROR_POLICY "Stop new-item copying at the first error. Otherwise, recoverable errors ask for a decision. Other operation commands currently always stop at the first error."
+    IDS_ERROR_POLICY "Stop new-item copying, saving originals and overwrites at the first error. Otherwise, recoverable errors ask for a decision. Deletion and combined synchronization currently always stop at the first error."
     IDS_ERROR_SKIPPED_NOTE "Finished with skipped items; not all planned operations were completed."
+END
+
+STRINGTABLE
+BEGIN
+    IDS_ERROR_SAVE_SOURCE "Save original — read original"
+    IDS_ERROR_SAVE_TARGET "Save original — prepare recovery copy"
+    IDS_ERROR_SAVE_DATA "Save original — transfer data"
+    IDS_ERROR_OVERWRITE_SOURCE "Overwrite — read source"
+    IDS_ERROR_OVERWRITE_TARGET "Overwrite — prepare or publish target"
+    IDS_ERROR_OVERWRITE_DATA "Overwrite — transfer data"
+    IDS_UI_DEPENDENCY_BLOCKED "Not replaced: original not saved"
 END
