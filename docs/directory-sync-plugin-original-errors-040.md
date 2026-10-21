@@ -1,5 +1,7 @@
 # Interactive original preservation and overwrites — 0.4.0
 
+**Historical checkpoint.** A subsequent [deletion checkpoint](directory-sync-plugin-delete-errors-040.md) implements interactive asymmetric deletion and retained-parent protection; the scope below describes this earlier commit.
+
 Implemented and verified on 2026-10-21 against approved [R1–R5](directory-sync-plugin-error-handling.md), following the [stages 1–2 checkpoint](directory-sync-plugin-errors-040.md). Source baseline: `048e5a19711e4b585402870dbccf5f17f5959ab0`.
 
 ## Delivered behavior

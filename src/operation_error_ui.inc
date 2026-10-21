@@ -10,7 +10,7 @@ INT_PTR CALLBACK OperationErrorDialog(HWND window,UINT message,WPARAM w,LPARAM l
             const auto& error=p->operationError;
             SetDlgItemTextW(window,IDC_ERROR_SOURCE,error.source.c_str());
             SetDlgItemTextW(window,IDC_ERROR_TARGET,error.target.c_str());
-            const int base=error.kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
+            const int base=error.kind==dirsync::TransferKind::Delete?IDS_ERROR_DELETE_SOURCE:error.kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
                 error.kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE;
             SetDlgItemTextW(window,IDC_ERROR_CONTEXT,Text(base+(error.site==dirsync::ErrorSite::Source?0:
                 error.site==dirsync::ErrorSite::Target?1:2)).c_str());
@@ -41,7 +41,7 @@ INT_PTR CALLBACK OperationErrorDialog(HWND window,UINT message,WPARAM w,LPARAM l
     return FALSE;
 }
 void ShowOperationError(Preview& p) {
-    if(!p.running || !(p.copying || p.saving || p.overwriting) || p.cancel || p.errorWindow || !p.errorQuestion.Peek(p.operationError))return;
+    if(!p.running || !(p.copying || p.saving || p.overwriting || p.deleting) || p.cancel || p.errorWindow || !p.errorQuestion.Peek(p.operationError))return;
     ShowTransfer(p);
     HWND window=CreateDialogParamW(language,MAKEINTRESOURCEW(IDD_OPERATION_ERROR),
         p.transferWindow?p.transferWindow:p.window,OperationErrorDialog,LPARAM(&p));

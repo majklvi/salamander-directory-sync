@@ -370,7 +370,7 @@ BEGIN
     IDS_ERROR_SOURCE "Kopírování nové položky — čtení zdroje"
     IDS_ERROR_TARGET "Kopírování nové položky — příprava nebo publikace cíle"
     IDS_ERROR_DATA "Kopírování nové položky — přenos dat"
-    IDS_ERROR_POLICY "Zastavit kopírování nových položek, uchování originálů a přepisy při první chybě. Jinak se opravitelné chyby dotazují. Mazání a souhrnná synchronizace zatím vždy zastaví při první chybě."
+    IDS_ERROR_POLICY "Zastavit kopírování nových položek, uchování originálů, přepisy a asymetrické mazání při první chybě. Jinak se opravitelné chyby dotazují. Souhrnná synchronizace zatím vždy zastaví při první chybě."
     IDS_ERROR_SKIPPED_NOTE "Dokončeno s přeskočenými položkami; nebyly provedeny všechny plánované operace."
 END
 
@@ -383,4 +383,17 @@ BEGIN
     IDS_ERROR_OVERWRITE_TARGET "Přepis — příprava nebo publikace cíle"
     IDS_ERROR_OVERWRITE_DATA "Přepis — přenos dat"
     IDS_UI_DEPENDENCY_BLOCKED "Nepřepsáno: originál neuchován"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_ERROR_DELETE_SOURCE "Mazání — kontrola zdroje"
+    IDS_ERROR_DELETE_TARGET "Mazání — odstranění cíle"
+    IDS_ERROR_DELETE_DATA "Mazání — data"
+    IDS_UI_DELETE_BLOCKED "Nesmazáno: uchování nebo potomek"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_STORED_DEPENDENCY_BLOCKED "Neprovedeno: závislá položka ponechána"
 END

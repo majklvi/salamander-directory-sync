@@ -3,13 +3,17 @@
 #pragma once
 #include "recovery.h"
 namespace dirsync {
-enum class DeleteStatus { NotStarted, Deleted, Cancelled, Failed };
+enum class DeleteStatus { NotStarted, Deleted, Cancelled, Failed, Skipped, DependencyBlocked };
 struct DeleteOutcome {
     size_t row=0;
     std::wstring target;
     DeleteStatus status=DeleteStatus::NotStarted;
     DWORD error=0;
     bool removed=false;
+    uint64_t attempts=0;
+    DWORD lastError=0;
+    bool automaticSkip=false;
+    std::wstring blockedBy;
 };
 struct DeleteReport {
     std::vector<DeleteOutcome> items;

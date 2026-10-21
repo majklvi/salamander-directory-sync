@@ -40,8 +40,10 @@ void Saved(ReportBatch& batch,const RecoveryReport& report) {
 void Removed(ReportBatch& batch,const DeleteReport& report) {
     for(const auto& item:report.items)for(auto& out:batch.items)if(out.row==item.row && out.kind==L"delete"){
         out.status=item.status==DeleteStatus::Deleted?L"deleted":item.status==DeleteStatus::Failed?L"failed":
-            item.status==DeleteStatus::Cancelled?L"cancelled":L"not_started";
-        out.error=item.error;out.changed=item.removed;out.completed=item.status==DeleteStatus::Deleted && item.removed && !item.error;}
+            item.status==DeleteStatus::Cancelled?L"cancelled":item.status==DeleteStatus::Skipped?L"skipped":
+            item.status==DeleteStatus::DependencyBlocked?L"dependency_blocked":L"not_started";
+        out.error=item.error;out.changed=item.removed;out.completed=item.status==DeleteStatus::Deleted && item.removed && !item.error;
+        out.attempts=item.attempts;out.lastError=item.lastError;out.automaticSkip=item.automaticSkip;out.blockedBy=item.blockedBy;}
     Saved(batch,report.recovery);if(report.journalError)batch.journalError=report.journalError;
 }
 void Replaced(ReportBatch& batch,const OverwriteReport& report) {
@@ -63,7 +65,7 @@ const std::vector<std::wstring> Columns{L"record",L"key",L"value",L"row",L"relat
     L"state",L"reason",L"error",L"left_path",L"left_type",L"left_size_bytes",L"left_modified_utc",L"left_modified_ticks",L"left_attributes",L"left_error",
     L"right_path",L"right_type",L"right_size_bytes",L"right_modified_utc",L"right_modified_ticks",L"right_attributes",L"right_error",
     L"operation",L"source",L"target",L"saved_path",L"remaining_stage",L"status",L"filesystem_changed",L"completed",L"logged",L"execution_visible",
-    L"attempts",L"last_error",L"automatic_skip"};
+    L"attempts",L"last_error",L"automatic_skip",L"blocked_by"};
 std::wstring Cell(std::wstring value,bool csv){
     if(csv){auto first=value.find_first_not_of(L" \t\r\n");
         if(first!=std::wstring::npos && (value[first]==L'=' || value[first]==L'+' || value[first]==L'-' || value[first]==L'@'))value.insert(0,1,L'\'');
@@ -161,7 +163,7 @@ std::wstring RenderReport(const Result& result,const ReportContext& c,const Repo
             {L"operation",item.kind},{L"source",item.source},{L"target",item.target},{L"saved_path",item.saved},{L"remaining_stage",item.stage},
             {L"status",item.status},{L"error",N(item.error)},{L"filesystem_changed",item.status==L"not_reported"?L"":B(item.changed)},
             {L"completed",B(item.completed)},{L"logged",item.kind==L"save_original" && item.status!=L"not_reported"?B(item.logged):L""},
-            {L"attempts",N(item.attempts)},{L"last_error",N(item.lastError)},{L"automatic_skip",B(item.automaticSkip)}});
+            {L"attempts",N(item.attempts)},{L"last_error",N(item.lastError)},{L"automatic_skip",B(item.automaticSkip)},{L"blocked_by",item.blockedBy}});
     }else doc.Meta(L"operation_results",L"none recorded for this comparison");
     return doc.text;
 }

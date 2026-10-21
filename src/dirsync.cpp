@@ -2269,17 +2269,20 @@ void Overwrite(Preview& p)
 void DeleteSummary(Preview& p)
 {
     const auto& report=p.deleteReport;
-    uint64_t deleted=0,directories=0,failed=0,pending=0,recovered=0; std::wstring details;
+    uint64_t deleted=0,directories=0,failed=0,pending=0,skipped=0,blocked=0,recovered=0; std::wstring details;
     for(const auto& item:report.items) {
         if(item.status==dirsync::DeleteStatus::Deleted) {
             if(p.result.rows[item.row].right.directory) ++directories; else ++deleted;
         }
         else if(item.status==dirsync::DeleteStatus::NotStarted) ++pending;
+        else if(item.status==dirsync::DeleteStatus::Skipped)++skipped;
+        else if(item.status==dirsync::DeleteStatus::DependencyBlocked)++blocked;
         else ++failed;
+        if(details.empty() && !item.blockedBy.empty())details=L"\n\n"+item.target+L"\n"+Text(IDS_UI_DELETE_BLOCKED)+L"\n"+item.blockedBy;
         if(details.empty() && item.error) details=L"\n\n"+item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error);
     }
+    recovered=std::count_if(report.recovery.items.begin(),report.recovery.items.end(),[](const dirsync::RecoveryItem& item){return item.copy.status==dirsync::CopyStatus::Copied && item.logged;});
     for(const auto& item:report.recovery.items) {
-        if(item.copy.status==dirsync::CopyStatus::Copied && item.logged) ++recovered;
         if(item.copy.error) {
             details+=L"\n\n"+Text(IDS_DELETE_RECOVERY_ERROR)+L"\n"+item.original+L"\n"+Text(IDS_COPY_ERROR)+Number(item.copy.error);
             if(!item.copy.remainingStage.empty()) details+=L"\n"+Text(IDS_COPY_REMAINDER)+item.copy.remainingStage;
@@ -2288,12 +2291,14 @@ void DeleteSummary(Preview& p)
     }
     InfoRows rows;Field(rows,IDS_UI_DELETED,deleted);Field(rows,IDS_UI_DELETED_DIRECTORIES,directories);
     Field(rows,IDS_UI_ERRORS,failed);Field(rows,IDS_UI_PENDING,pending);
+    Field(rows,IDS_UI_SKIPPED,skipped);Field(rows,IDS_UI_DELETE_BLOCKED,blocked);
     Field(rows,IDS_UI_OMITTED,uint64_t(report.omitted));Field(rows,IDS_UI_RECOVERY,Text(report.keepOriginals?IDS_UI_ON:IDS_UI_OFF));
     auto message=Text(IDS_UI_RESULT_NOTE)+L"\n\n"+Text(report.keepOriginals?IDS_DELETE_ON:IDS_DELETE_OFF);
     if(report.keepOriginals) {
         Field(rows,IDS_UI_RECOVERED,Number(recovered)+L" / "+Number(uint64_t(report.items.size())));
         Field(rows,IDS_UI_MANIFEST,report.recovery.journal);Field(rows,IDS_UI_JOURNAL,report.journal);
     }
+    if(skipped || blocked)message+=L"\n"+Text(IDS_ERROR_SKIPPED_NOTE);
     if(!report.complete) message+=L"\n"+Text(IDS_DELETE_INCOMPLETE);
     if(report.error) message+=L"\n"+Text(IDS_COPY_ERROR)+Number(report.error);
     if(report.stale) message+=L"\n"+Text(IDS_STALE);
@@ -2320,7 +2325,7 @@ void DeleteFiles(Preview& p)
     if(keep)Field(fields,IDS_UI_RECOVERY_FOLDER,root);
     auto message=Text(IDS_UI_DELETE_POLICY)+L"\n\n"+Text(keep?IDS_DELETE_ON:IDS_DELETE_OFF);
     if(!InformationBox(p.window,IDS_UI_DELETE_CONFIRM,std::move(fields),message,true)) return;
-    BeginReport(p,L"delete",keep,root);
+    BeginReport(p,L"delete",keep,root);ConfigureErrorPolicy(p);
     p.cancel=false; p.failed=false; p.deleting=true; p.running=true;
     p.hasCopyReport=p.hasRecoveryReport=p.hasOverwriteReport=p.hasDeleteReport=false; p.deleteReport={};
     p.transferCount=uint64_t(p.copyRows.size())*(keep?2:1);

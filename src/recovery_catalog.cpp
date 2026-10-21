@@ -163,8 +163,8 @@ void ReadRun(StoredRun& run,std::atomic<bool>& cancel,size_t& total) {
                 else if(status==L"not_started")item.operation=StoredOperation::NotStarted;
                 else if(status==L"failed")item.operation=StoredOperation::Failed;
                 else if(status==L"cancelled")item.operation=StoredOperation::Cancelled;
-                else if(status==L"skipped" && journal==L"overwrite" && !Flag(rec,L"published"))item.operation=StoredOperation::Skipped;
-                else if(status==L"dependency_blocked" && journal==L"overwrite" && !Flag(rec,L"published"))item.operation=StoredOperation::DependencyBlocked;
+                else if(status==L"skipped" && !Flag(rec,journal==L"overwrite"?L"published":L"removed"))item.operation=StoredOperation::Skipped;
+                else if(status==L"dependency_blocked" && !Flag(rec,journal==L"overwrite"?L"published":L"removed"))item.operation=StoredOperation::DependencyBlocked;
                 else throw Bad{ERROR_INVALID_DATA};
             } else throw Bad{ERROR_INVALID_DATA};
         }

@@ -323,3 +323,7 @@ Na žádost uživatele byl přes Computer Use proveden místní NTFS průzkum ch
 ## Interaktivní uchování originálů a přepisy — 0.4.0 (2026-10-21)
 
 Na další pokyn uživatele byla doplněna část bodu 3: samostatné uchování originálů a přepisy používají politiku R1–R5. Výsledky a závislosti se mapují podle řádku a cílové strany, nikoli podle zkráceného pořadí úspěšných záloh. Přeskočení uchování blokuje svůj přepis; nezávislé položky mohou pokračovat. Před přepisem se kontroluje zaznamenaná ověřená identita uložené kopie. Selhání společného manifestu/protokolu, ověření a chyba po publikaci zastaví dávku. Mazání a souhrnný příkaz zůstávají bez interaktivních chyb. [Implementace a ověření](directory-sync-plugin-original-errors-040.md).
+
+### 0.4.0: interactive asymmetric deletion
+
+[Implementation and verification](directory-sync-plugin-delete-errors-040.md): per-item R1–R5 decisions, exact saved-original dependencies, retained-child ancestor protection, and known-removal-aware pending-plan checks. Shared protocol failures and uncertain/finished removals stay fatal. Combined synchronization remains stop-first until its separate continuation stage; no SDK or SMB changes.

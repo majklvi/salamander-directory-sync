@@ -1,6 +1,6 @@
 # Interactive operation errors: observations and proposal
 
-Recorded 2026-10-21. **R1–R5 approved; implementation stages 1–2 added in 0.4.0 development.** Interactive decisions now apply to separate new-item copying, original preservation and overwrite commands. Deletion and combined synchronization retain stop-on-first-error behavior. See the [recovery/overwrite follow-up](directory-sync-plugin-original-errors-040.md). See the [implementation and verification report](directory-sync-plugin-errors-040.md). The reference observations below remain historical research, distinct from plugin tests.
+Recorded 2026-10-21. **R1–R5 approved; implementation stages 1–2 added in 0.4.0 development.** Interactive decisions now apply to separate new-item copying, original preservation and overwrite and asymmetric deletion commands. Combined synchronization retains stop-on-first-error behavior. See the [recovery/overwrite follow-up](directory-sync-plugin-original-errors-040.md). See the [implementation and verification report](directory-sync-plugin-errors-040.md). The reference observations below remain historical research, distinct from plugin tests.
 
 ## Scope and evidence
 
@@ -115,7 +115,7 @@ No host changes, new SDK interfaces, shell-copy delegation, transfer queue or ad
 
 | ID | Alternatives considered | Approved decision |
 | --- | --- | --- |
-| R1: policy and default | Always stop on first error; ask on supported per-item errors; expose both as a remembered global setting. | **Approved by the user, 2026-10-21:** ask on supported per-item errors by default; allow enabling stop-on-first-error in the remembered global plugin settings. Implemented for new-item copies in 0.4.0 development; later adapters remain pending. |
+| R1: policy and default | Always stop on first error; ask on supported per-item errors; expose both as a remembered global setting. | **Approved by the user, 2026-10-21:** ask on supported per-item errors by default; allow enabling stop-on-first-error in the remembered global plugin settings. Implemented for separate new-item copies, original preservation, overwrites and asymmetric deletion in 0.4.0 development; combined phase continuation remains pending. |
 | R2: repeated errors | Three buttons only; or also a precisely scoped Skip all. | **Approved by the user, 2026-10-21: variant B, include Skip all.** Scope: matching operation/phase/error class, current batch only, no persistence; preserve fatal-error exclusions and explicitly report skipped items. |
 | R3: later destructive phases after Skip | Continue independent confirmed operations including later deletions; or suppress all later deletions after any copy/overwrite Skip. | **Approved by the user, 2026-10-21: variant A, continue independent operations.** Preserve phase order, snapshot checks and skipped-child ancestor protection; fatal failures and Cancel still stop the batch. State this clearly in the confirmation/help. |
 | R4: recovery failure | Stop the whole phase; or allow skipping the affected original and its dependent overwrite/deletion while unrelated items continue. | **Approved by the user, 2026-10-21: variant B.** Offer the agreed per-item decisions before destructive execution while the manifest is healthy; Skip/Skip all also suppress the dependent overwrite/deletion. Shared manifest/journal write failures stop the entire batch. Never proceed without the promised original. |
@@ -123,7 +123,7 @@ No host changes, new SDK interfaces, shell-copy delegation, transfer queue or ad
 
 ## Proposed implementation sequence
 
-The user approved implementation of stages 1 and 2 as version 0.4.0 on 2026-10-21. Those stages and the recovery/overwrite part of stage 3 are implemented; stages 3–6 below include remaining adapters and acceptance work that is not complete merely because the common model exists. Keep changes scoped to ordinary local operations and the existing SDK.
+The user approved implementation of stages 1 and 2 as version 0.4.0 on 2026-10-21. Stages 1–3 are implemented, including [interactive deletion](directory-sync-plugin-delete-errors-040.md); stages 4–6 below include remaining adapters and acceptance work that is not complete merely because the common model exists. Keep changes scoped to ordinary local operations and the existing SDK.
 
 1. **Decision and outcome model.** Define operation/phase/error context and recoverable versus fatal classification, the four decisions, batch-local Skip all matching and explicit skipped/dependency-blocked outcomes. Store the agreed global stop-on-first-error setting with interactive behavior as the default. Cover classification, matching/reset and outcomes with focused tests before connecting destructive operations.
 2. **New-copy execution and GUI handshake.** Introduce per-item retry using the existing staging and verification path. Add the compact EN/CS error dialog on the UI thread and cancellable request/response handling. Check Retry with an unchanged item, Skip/Skip all, Cancel and Stop/Close while awaiting a response. Retry must not duplicate preceding successful copies; verification, changed-plan and post-publication failures remain fatal.

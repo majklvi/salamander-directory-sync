@@ -229,11 +229,11 @@ BEGIN
     IDS_UI_COMPLETE "Comparison complete"
     IDS_UI_ERROR_DETAILS "Error / staging details"
     IDS_DELETE_EMPTY "No visible Delete on right proposal is a supported right-only item from an asymmetric comparison. Nothing to delete."
-    IDS_DELETE_ON "Keeping originals: ON. All originals must be independently saved, verified and logged outside both trees before any deletion."
+    IDS_DELETE_ON "Keeping originals: ON. Each deletion requires its original to be saved, verified and logged outside both trees. Skipping a save also skips its deletion. Retained children protect all their parents; independent items may continue."
     IDS_DELETE_OFF "Keeping originals: OFF. Deleted data and ADS will have NO recovery copy from this run."
     IDS_DELETE_FAILED "The deletion worker failed. Some files or directories may have been deleted. Inspect the right tree and any recovery folder before retrying."
     IDS_DELETE_INCOMPLETE "The run is incomplete. Completed deletions remain; inspect the result and any manifests."
-    IDS_DELETE_RECOVERY_ERROR "Preserving an original failed; no deletions were started."
+    IDS_DELETE_RECOVERY_ERROR "Original preservation did not complete. Its dependent deletion was not executed."
     IDS_OVERWRITE_EMPTY "No visible copy proposal has an existing supported file on both sides. Nothing to overwrite."
     IDS_OVERWRITE_ON "Keeping originals: ON. Each replacement requires its original to be independently saved, verified and logged. Skipping a saving failure also skips that replacement; independent items may continue."
     IDS_OVERWRITE_OFF "Keeping originals: OFF. Overwritten data and old ADS will have NO recovery copy from this run."
@@ -618,7 +618,7 @@ BEGIN
     IDS_ERROR_SOURCE "Copy new item — read source"
     IDS_ERROR_TARGET "Copy new item — prepare or publish target"
     IDS_ERROR_DATA "Copy new item — transfer data"
-    IDS_ERROR_POLICY "Stop new-item copying, saving originals and overwrites at the first error. Otherwise, recoverable errors ask for a decision. Deletion and combined synchronization currently always stop at the first error."
+    IDS_ERROR_POLICY "Stop new-item copying, saving originals, overwrites and asymmetric deletion at the first error. Otherwise, recoverable errors ask for a decision. Combined synchronization currently always stops at the first error."
     IDS_ERROR_SKIPPED_NOTE "Finished with skipped items; not all planned operations were completed."
 END
 
@@ -631,4 +631,17 @@ BEGIN
     IDS_ERROR_OVERWRITE_TARGET "Overwrite — prepare or publish target"
     IDS_ERROR_OVERWRITE_DATA "Overwrite — transfer data"
     IDS_UI_DEPENDENCY_BLOCKED "Not replaced: original not saved"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_ERROR_DELETE_SOURCE "Delete — check source"
+    IDS_ERROR_DELETE_TARGET "Delete — remove target"
+    IDS_ERROR_DELETE_DATA "Delete — data"
+    IDS_UI_DELETE_BLOCKED "Not deleted: preservation or child retained"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_STORED_DEPENDENCY_BLOCKED "Not executed: prerequisite or child retained"
 END

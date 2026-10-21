@@ -631,7 +631,8 @@ bool SnapshotRoots(const Result& result, std::wstring& left, std::wstring& right
 }
 bool SnapshotAsymmetric(const Result& result)
 { return result.snapshot && !result.stale && !result.cancelled && result.snapshot->options.asymmetric; }
-bool AdvanceExecutionSnapshot(Result& result,const std::vector<size_t>& pending,std::atomic<bool>& cancel,Progress& progress)
+bool AdvanceExecutionSnapshot(Result& result,const std::vector<size_t>& pending,std::atomic<bool>& cancel,Progress& progress,
+    const std::vector<size_t>& removed)
 {
     if(!result.snapshot || result.stale || result.cancelled || cancel) return false;
     const auto& old=*result.snapshot;Options options=old.options;options.content=false;
@@ -639,11 +640,23 @@ bool AdvanceExecutionSnapshot(Result& result,const std::vector<size_t>& pending,
     if(!current.snapshot || current.cancelled || cancel) return false;
     const auto& now=*current.snapshot;
     auto stable=[](const Entry& a,const Entry& b) {return Identity(a,b) && a.directory==b.directory && a.attributes==b.attributes;};
+    // Only successful removals supplied by the deletion executor authorize
+    // missing old directory parents and changed stamps of their ancestors.
+    std::set<std::wstring,Less> removedDirectories,changedDirectories;
+    for(size_t index:removed) {
+        if(index>=result.rows.size())return false;const auto& row=result.rows[index];
+        if(row.right.directory)removedDirectories.insert(Join(old.right,row.path));
+        auto relative=row.path;
+        while(relative.find_last_of(L'\\')!=std::wstring::npos) {
+            relative.resize(relative.find_last_of(L'\\'));changedDirectories.insert(relative);
+        }
+    }
     if(!Same(old.canonicalLeft,now.canonicalLeft) || !Same(old.canonicalRight,now.canonicalRight) ||
         !stable(old.a.root,now.a.root) || !stable(old.b.root,now.b.root)) return false;
     for(const auto pair:{std::pair<const Tree*,const Tree*>{&old.a,&now.a},{&old.b,&now.b}})
         for(const auto& parent:pair.first->parents) {
             auto found=pair.second->parents.find(parent.first);
+            if(pair.first==&old.b && found==pair.second->parents.end() && removedDirectories.count(parent.first))continue;
             if(found==pair.second->parents.end() || !stable(parent.second,found->second)) return false;
         }
     for(size_t index:pending) {
@@ -652,7 +665,8 @@ bool AdvanceExecutionSnapshot(Result& result,const std::vector<size_t>& pending,
             const auto& tree=side?now.b:now.a;const auto found=tree.entries.find(row.path);
             const bool present=side?row.hasRight:row.hasLeft;
             if(present!=(found!=tree.entries.end())) return false;
-            if(present && !Stamp(side?row.right:row.left,found->second)) return false;
+            if(present && !(side && row.right.directory && changedDirectories.count(row.path)?
+                stable(row.right,found->second):Stamp(side?row.right:row.left,found->second))) return false;
         }
     }
     // Keep the confirmed row model and indices. Only the validation baseline

@@ -6,7 +6,7 @@ namespace dirsync {
 struct ImmediateReport;
 struct ReportOperation {
     size_t row=0;
-    std::wstring kind,source,target,saved,stage,status=L"not_reported";
+    std::wstring kind,source,target,saved,stage,blockedBy,status=L"not_reported";
     uint64_t error=0;
     uint64_t attempts=0,lastError=0;
     bool automaticSkip=false;

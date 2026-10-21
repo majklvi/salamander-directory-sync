@@ -1481,10 +1481,123 @@ void InteractiveOriginalsAndOverwrites() {
         Check(!report.complete && report.error && !prompts && !f.progress.errors.stopOnFirstError,"combined command stays noninteractive and restores caller policy");
     }
 }
+
+// Allows ordinary backup reads while refusing delete sharing.
+struct DeleteLock {
+    HANDLE handle=INVALID_HANDLE_VALUE;
+    explicit DeleteLock(const std::wstring& path){handle=CreateFileW(ApiPath(path).c_str(),GENERIC_READ,
+        FILE_SHARE_READ|FILE_SHARE_WRITE,nullptr,OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS,nullptr);Check(handle!=INVALID_HANDLE_VALUE,"delete-sharing fixture");}
+    void Unlock(){if(handle!=INVALID_HANDLE_VALUE){CloseHandle(handle);handle=INVALID_HANDLE_VALUE;}}
+    ~DeleteLock(){Unlock();}
+};
+void InteractiveDeletion() {
+    for(bool keep:{false,true})for(bool skip:{false,true}) {
+        Fixture f;auto recovery=f.root+L"\\recovery-漢字";f.Dir(recovery);
+        f.Dir(f.right+L"\\tree");f.Dir(f.right+L"\\tree\\nested");f.Dir(f.right+L"\\tree-other");
+        Put(f.right+L"\\a-done","DONE");Put(f.right+L"\\tree\\nested\\locked","RETAIN");
+        Put(f.right+L"\\tree\\nested\\locked:old","ADS");Put(f.right+L"\\tree\\nested\\z-after","AFTER");Put(f.right+L"\\z-independent","INDEPENDENT");
+        auto plan=DirectoryPlan(f);DeleteLock lock(f.right+L"\\tree\\nested\\locked");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;
+            Check(error.kind==TransferKind::Delete && error.site==ErrorSite::Target && error.phase==CopyPhase::Deleting && error.code==ERROR_SHARING_VIOLATION,"deletion question context");
+            if(!skip)lock.Unlock();return skip?ErrorDecision::Skip:ErrorDecision::Retry;};
+        auto report=RemoveFiles(f,plan,keep,recovery);lock.Unlock();
+        if(!(prompts==1 && !report.error && !report.cancelled && report.complete==!skip)){std::cerr<<"delete case keep="<<keep<<" skip="<<skip<<" prompts="<<prompts<<" error="<<report.error<<" stale="<<report.stale<<" recovery="<<report.recovery.error<<"\n";for(const auto& x:report.items)std::wcerr<<x.target<<L" status "<<int(x.status)<<L" err "<<x.error<<L"\n";}
+        Check(prompts==1 && !report.error && !report.cancelled && report.complete==!skip,"interactive deletion retry or skip ON/OFF");
+        Check(!Exists(f.right+L"\\a-done") && !Exists(f.right+L"\\z-independent") && !Exists(f.right+L"\\tree-other"),"independent names and prefix siblings deleted");
+        unsigned blocked=0;for(const auto& item:report.items){
+            if(item.status==DeleteStatus::DependencyBlocked){++blocked;Check(!item.removed && !item.attempts && item.blockedBy==f.right+L"\\tree\\nested\\locked","every blocked parent names retained child");}
+            if(item.target==f.right+L"\\a-done")Check(item.attempts==1 && item.removed,"retry never repeats previous deletion");
+            if(item.target==f.right+L"\\tree\\nested\\locked")Check(item.status==(skip?DeleteStatus::Skipped:DeleteStatus::Deleted) && item.attempts==(skip?1:2),"current attempt status and count");
+        }
+        Check(blocked==(skip?2:0) && Exists(f.right+L"\\tree")==skip,"retained child protects all ancestors");
+        if(skip)Check(Read(f.right+L"\\tree\\nested\\locked")=="RETAIN" && Read(f.right+L"\\tree\\nested\\locked:old")=="ADS" && !Exists(f.right+L"\\tree\\nested\\z-after"),"skipped file ADS survive while independent sibling is deleted");
+        if(keep){auto catalog=ReadRecoveryCatalog(recovery,f.cancel);Check(!catalog.error && catalog.runs.size()==1 && !catalog.runs[0].error,"delete skip protocol loads in saved originals");
+            auto saved=std::find_if(report.recovery.items.begin(),report.recovery.items.end(),[&](const RecoveryItem& i){return plan.rows[i.row].path==L"tree\\nested\\locked";});
+            auto restored=f.root+L"\\manual-restored";Check(saved!=report.recovery.items.end() && CopyFileW(ApiPath(saved->saved).c_str(),ApiPath(restored).c_str(),TRUE) && Read(restored)=="RETAIN" && Read(restored+L":old")=="ADS","manual restoration of independently saved deleted original");}
+        else Check(report.recovery.items.empty() && report.journal.empty(),"delete OFF has no recovery journal");
+        ReportContext context;context.left=f.left;context.right=f.right;for(size_t i=0;i<plan.rows.size();++i)context.visible.push_back(i);
+        auto batch=PrepareReport(plan,context,L"delete",keep,recovery);CompleteReport(batch,report);auto text=RenderReport(plan,context,&batch,false);
+        Check(text.find(L"attempts: 1")!=std::wstring::npos && (skip?text.find(L"status: dependency_blocked")!=std::wstring::npos && text.find(L"blocked_by: ")!=std::wstring::npos:batch.complete),"delete exports include attempts and retained dependencies");
+    }
+    for(bool keep:{false,true}) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);f.Dir(f.right+L"\\tree");f.Dir(f.right+L"\\tree\\nested");
+        for(auto name:{L"a",L"b"})Put(f.right+L"\\tree\\nested\\"+name,"LOCKED");Put(f.right+L"\\z","INDEPENDENT");
+        auto plan=DirectoryPlan(f);std::unique_ptr<HeldFile> exclusive;std::unique_ptr<DeleteLock> a,b;
+        if(keep)exclusive=std::make_unique<HeldFile>(f.right+L"\\tree\\nested\\a");
+        else {a=std::make_unique<DeleteLock>(f.right+L"\\tree\\nested\\a");b=std::make_unique<DeleteLock>(f.right+L"\\tree\\nested\\b");}
+        unsigned prompts=0;f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;
+            Check(error.kind==(keep?TransferKind::Save:TransferKind::Delete),"backup error and deletion error have distinct operation kinds");return ErrorDecision::SkipAll;};
+        auto report=RemoveFiles(f,plan,keep,recovery);exclusive.reset();a.reset();b.reset();
+        Check(prompts==1 && !report.error && !report.complete && Exists(f.right+L"\\tree\\nested\\a") && !Exists(f.right+L"\\z"),"skip save or deletion retains ancestors and continues unrelated deletion");
+        if(keep)Check(report.recovery.processed && !report.recovery.complete && report.items[0].status==DeleteStatus::DependencyBlocked,"unsaved original deletion never attempted");
+        else {auto automatic=std::find_if(report.items.begin(),report.items.end(),[](const DeleteOutcome& item){return item.automaticSkip;});Check(automatic!=report.items.end() && automatic->status==DeleteStatus::Skipped,"delete Skip all records automatically skipped item");}
+    }
+    for(bool keep:{false,true}) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);f.Dir(f.right+L"\\a-gone");f.Dir(f.right+L"\\a-gone\\leaf");f.Dir(f.right+L"\\b-lock");f.Dir(f.right+L"\\c-after");
+        auto plan=DirectoryPlan(f);DeleteLock lock(f.right+L"\\b-lock");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;lock.Unlock();return ErrorDecision::Retry;};
+        auto report=RemoveFiles(f,plan,keep,recovery);Check(prompts==1 && report.complete && !Exists(f.right+L"\\c-after"),"retry after completed nested directory removals accepts only known removed parents");
+    }
+    for(bool keep:{false,true})for(bool close:{false,true})for(bool saving:{false,true}) {
+        if(saving && !keep)continue;
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);for(auto name:{L"a-done",L"b-lock",L"c-after"})Put(f.right+L"\\"+name,"DATA");
+        auto plan=DirectoryPlan(f);std::unique_ptr<DeleteLock> lock;std::unique_ptr<HeldFile> backupLock;
+        if(saving)backupLock=std::make_unique<HeldFile>(f.right+L"\\b-lock");else lock=std::make_unique<DeleteLock>(f.right+L"\\b-lock");ErrorQuestion question;std::atomic<bool> posted{false},done{false};DeleteReport report;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){return question.Ask(error,f.cancel,[&]{posted=true;return true;});};
+        ControlWorker worker(f);worker.thread=std::thread([&]{report=RemoveFiles(f,plan,keep,recovery);done=true;});
+        Check(WaitForControl([&]{return posted.load();},done),"delete worker waiting for decision");if(close)question.Cancel();else f.cancel=true;
+        const bool ended=WaitForControl([&]{return done.load();},done);question.Cancel();worker.Join();lock.reset();backupLock.reset();
+        Check(ended && report.cancelled && report.items[0].removed==!saving && Exists(f.right+L"\\a-done")==saving && Exists(f.right+L"\\b-lock") && Exists(f.right+L"\\c-after"),"Stop/Close joins deletion wait and preserves completed effects only");
+    }
+    for(bool keep:{false,true}) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);f.Dir(f.right+L"\\a-tree");f.Dir(f.right+L"\\z-after");
+        Put(f.right+L"\\a-tree\\child","DELETE");auto plan=DirectoryPlan(f);DeleteLock lock(f.right+L"\\a-tree");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;lock.Unlock();Put(f.right+L"\\a-tree\\unexpected","KEEP");return ErrorDecision::Retry;};
+        auto report=RemoveFiles(f,plan,keep,recovery);Check(prompts==1 && report.error==ERROR_DIR_NOT_EMPTY && !report.complete &&
+            !Exists(f.right+L"\\a-tree\\child") && Read(f.right+L"\\a-tree\\unexpected")=="KEEP" && Exists(f.right+L"\\z-after"),"new unplanned child is never adopted or recursively removed after directory retry");
+    }
+    for(bool keep:{false,true})for(int mutation=0;mutation<3;++mutation) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.right+L"\\a","DATA");Put(f.right+L"\\b","UNCHANGED");auto plan=DirectoryPlan(f);DeleteLock lock(f.right+L"\\a");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;lock.Unlock();
+            if(mutation==0)Put(f.right+L"\\b","EXTERNAL CHANGE LONGER",false);
+            if(mutation==1)Put(f.left+L"\\a","NEW COUNTERPART");
+            if(mutation==2)return ErrorDecision::Cancel;return ErrorDecision::Retry;};
+        auto report=RemoveFiles(f,plan,keep,recovery);Check(prompts==1 && !report.complete && (mutation==2?report.cancelled:report.stale) && Exists(f.right+L"\\a") && Exists(f.right+L"\\b"),"changed pending item/counterpart or Cancel stops every further deletion");
+    }
+    for(bool keep:{false,true}) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.right+L"\\a","READONLY");Put(f.right+L"\\b","DELETE");
+        SetFileAttributesW(ApiPath(f.right+L"\\a").c_str(),FILE_ATTRIBUTE_READONLY);auto plan=DirectoryPlan(f);unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.code==ERROR_ACCESS_DENIED,"readonly deletion decision");return ErrorDecision::Skip;};
+        auto report=RemoveFiles(f,plan,keep,recovery);Check(prompts==1 && !report.error && Exists(f.right+L"\\a") && !Exists(f.right+L"\\b") &&
+            (GetFileAttributesW(ApiPath(f.right+L"\\a").c_str()) & FILE_ATTRIBUTE_READONLY),"interactive readonly Skip leaves attributes and continues independently");
+    }
+    for(bool keep:{false,true}) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.right+L"\\a","A");Put(f.right+L"\\b","B");auto plan=DirectoryPlan(f);unsigned prompts=0;
+        SetCopyHook([&](CopyPhase phase,const std::wstring&){if(phase==CopyPhase::Deleted)throw std::bad_alloc();});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::Retry;};
+        auto report=RemoveFiles(f,plan,keep,recovery);SetCopyHook({});Check(!prompts && report.error && report.items[0].removed && report.items[0].status==DeleteStatus::Failed && Exists(f.right+L"\\b"),"post-removal failure never prompts or repeats removal");
+    }
+    {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.right+L"\\a","A");Put(f.right+L"\\b","B");auto plan=DirectoryPlan(f);DeleteLock lock(f.right+L"\\a");unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;lock.Unlock();auto catalog=ReadRecoveryCatalog(recovery,f.cancel);
+            Put(catalog.runs.at(0).items.at(0).saved,"TAMPERED SAVED COPY",false);return ErrorDecision::Retry;};
+        auto report=RemoveFiles(f,plan,true,recovery);Check(prompts==1 && report.error==ERROR_FILE_INVALID && Exists(f.right+L"\\a") && Exists(f.right+L"\\b"),"changed saved original blocks delete retry");
+    }
+    for(int fault=0;fault<3;++fault) {
+        Fixture f;auto recovery=f.root+L"\\recovery";f.Dir(recovery);Put(f.right+L"\\a","A");Put(f.right+L"\\b","B");auto plan=DirectoryPlan(f);bool deleting=false;unsigned prompts=0;
+        SetRecoveryLogHook([&](const std::wstring& line)->DWORD{if(line.find(L"\"operation\":\"delete_right\"")!=std::wstring::npos)deleting=true;
+            const bool result=line.find(L"\"event\":\"result\"")!=std::wstring::npos,end=line.find(L"\"event\":\"end\"")!=std::wstring::npos;
+            return (result && (fault==0?!deleting:fault==1?deleting:false)) || (fault==2 && deleting && end)?ERROR_WRITE_FAULT:0;});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::SkipAll;};
+        auto report=RemoveFiles(f,plan,true,recovery);SetRecoveryLogHook({});
+        Check(!prompts && !report.complete && report.error==ERROR_WRITE_FAULT && (report.journalError || report.recovery.journalError),"shared delete/recovery journal failure fatal without decisions");
+        Check(Exists(f.right+L"\\a")== (fault==0) && Exists(f.right+L"\\b")== (fault!=2),"journal failure reports real prior deletion effects");
+    }
+}
 int main() {
     try { Success(); Scope(); ModifyOnlyDestination(); Boundaries(); Paths(); AfterPublication(); DiskSpace();
         RecoverySuccess(); RecoveryFailures(); RecoveryPaths(); OverwriteSuccess(); OverwriteFailures(); OverwritePaths();
-        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();InteractiveErrors();InteractiveOriginalsAndOverwrites();
+        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();InteractiveErrors();InteractiveOriginalsAndOverwrites();InteractiveDeletion();
         std::cout<<checks<<" copy/recovery/overwrite/delete assertions passed\n"; return 0; }
     catch(const std::exception& e) { std::cerr<<"FAILED: "<<e.what()<<"\n"; return 1; }
 }

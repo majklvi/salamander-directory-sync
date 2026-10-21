@@ -78,8 +78,10 @@ bool SnapshotRoots(const Result& result, std::wstring& left, std::wstring& right
 bool SnapshotAsymmetric(const Result& result);
 // Between confirmed execution phases: keep pending row identities/stamps and
 // original roots/ancestors, while accepting our completed writes elsewhere.
+// removed contains only this executor's successful right-side deletions; it
+// permits their missing parents and ancestor stamp changes, never new actions.
 bool AdvanceExecutionSnapshot(Result& result,const std::vector<size_t>& pending,
-    std::atomic<bool>& cancel,Progress& progress);
+    std::atomic<bool>& cancel,Progress& progress,const std::vector<size_t>& removed={});
 #ifdef DIRSYNC_ENGINE_TEST
 void SetAfterScanHook(std::function<void()> hook);
 void SetBeforeReadHook(std::function<void()> hook);

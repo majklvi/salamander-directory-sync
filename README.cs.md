@@ -24,7 +24,7 @@ Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava ná
 
 Samostatný vývoj a hlášení chyb probíhají v [majklvi/salamander-directory-sync](https://github.com/majklvi/salamander-directory-sync). Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
 
-**Ve vývoji 0.4.0:** Opakovat / Přeskočit / Přeskočit vše / Storno při samostatném kopírování nových položek, uchování originálů a přepisech se zapamatovanou volbou zastavení při první chybě. Přeskočený originál blokuje svůj přepis; nezávislé položky mohou pokračovat. Mazání a souhrnná synchronizace zatím končí při první chybě. [Podrobnosti a ověření](docs/directory-sync-plugin-original-errors-040.md). Výše se nadále stahuje vydaná alfa 0.3.0.
+**Ve vývoji 0.4.0:** Opakovat / Přeskočit / Přeskočit vše / Storno při samostatném kopírování nových položek, uchování originálů, přepisech a asymetrickém mazání se zapamatovanou volbou zastavení při první chybě. Přeskočený originál blokuje své smazání či přepis; ponechaný potomek chrání všechny rodiče. Nezávislé položky mohou pokračovat. Souhrnná synchronizace zatím končí při první chybě. [Podrobnosti a ověření](docs/directory-sync-plugin-delete-errors-040.md). Výše se nadále stahuje vydaná alfa 0.3.0.
 
 ## Sestavení ze zdrojů a testy (pro vývojáře)
 

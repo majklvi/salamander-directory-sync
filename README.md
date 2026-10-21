@@ -18,7 +18,7 @@ A native directory comparison and synchronization plugin for **Samandarin**, wit
 
 <img width="917" height="796" alt="image" src="https://github.com/user-attachments/assets/a994cc19-ca1a-40bc-99d3-6edb76edfd51" />
 
-**0.4.0 in development:** interactive Retry / Skip / Skip all / Cancel for separate new-item copying, saving originals and overwrites, with a remembered stop-at-first-error option. Skipping a failed original prevents its overwrite; independent items may continue. Deletion and combined synchronization retain stop-first behavior. [Details and verification](docs/directory-sync-plugin-original-errors-040.md). The download above remains the published 0.3.0 alpha.
+**0.4.0 in development:** interactive Retry / Skip / Skip all / Cancel for separate new-item copying, saving originals, overwrites and asymmetric deletion, with a remembered stop-at-first-error option. Skipping a failed original prevents its destructive operation; retained children protect every parent. Independent items may continue. Combined synchronization retains stop-first behavior. [Details and verification](docs/directory-sync-plugin-delete-errors-040.md). The download above remains the published 0.3.0 alpha.
 
 ## Highlights
 

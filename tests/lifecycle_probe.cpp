@@ -62,11 +62,11 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
         if(!parent){FreeLibrary(resources);return FALSE;}
         // Real modeless error dialog and channel: a worker can be joined after
         // Stop/Close without dispatching another UI message or answering it.
-        for(auto kind:{dirsync::TransferKind::Copy,dirsync::TransferKind::Save,dirsync::TransferKind::Overwrite})for(int scenario=0;scenario<7;++scenario) {
+        for(auto kind:{dirsync::TransferKind::Copy,dirsync::TransferKind::Save,dirsync::TransferKind::Overwrite,dirsync::TransferKind::Delete})for(int scenario=0;scenario<7;++scenario) {
             Preview p;p.window=parent;p.running=true;p.copying=kind==dirsync::TransferKind::Copy;
-            p.saving=kind==dirsync::TransferKind::Save;p.overwriting=kind==dirsync::TransferKind::Overwrite;
+            p.saving=kind==dirsync::TransferKind::Save;p.overwriting=kind==dirsync::TransferKind::Overwrite;p.deleting=kind==dirsync::TransferKind::Delete;
             std::atomic<bool> posted{false},done{false};dirsync::ErrorDecision result=dirsync::ErrorDecision::Cancel;
-            dirsync::OperationError error;error.code=ERROR_SHARING_VIOLATION;error.kind=kind;
+            dirsync::OperationError error;error.code=ERROR_SHARING_VIOLATION;error.kind=kind;error.site=kind==dirsync::TransferKind::Delete?dirsync::ErrorSite::Target:dirsync::ErrorSite::Source;
             error.source=L"C:\\"+std::wstring(280,L'漢')+L"\\žluťoučký.txt";error.target=L"D:\\kopie.txt";
             p.copyProgress.awaitingDecision=true;
             p.worker=std::thread([&]{result=p.errorQuestion.Ask(error,p.cancel,[&]{posted=true;return true;});done=true;});
@@ -75,7 +75,7 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= IsWindow(question) && IsWindowVisible(question) && IsWindowEnabled(parent) &&
                 GetWindow(question,GW_OWNER)==p.transferWindow && ControlText(question,IDC_ERROR_SOURCE)==error.source &&
                 !IsWindowEnabled(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE));
-            ok &= ControlText(question,IDC_ERROR_CONTEXT)==Text(kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
+            ok &= ControlText(question,IDC_ERROR_CONTEXT)==Text(kind==dirsync::TransferKind::Delete?IDS_ERROR_DELETE_TARGET:kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
                 kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE);
             if(scenario<4)SendMessageW(question,WM_COMMAND,scenario==0?IDC_ERROR_RETRY:scenario==1?IDC_ERROR_SKIP:scenario==2?IDC_ERROR_SKIP_ALL:IDCANCEL,0);
             else if(scenario==4)SendMessageW(question,WM_CLOSE,0,0);
@@ -107,6 +107,22 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
                 SendMessageW(dialog,WM_COMMAND,IDOK,0);
             });
             OverwriteSummary(p);ok &= summary;KillTimer(parent,59);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
+        }
+        {
+            Preview p;p.window=parent;p.result.rows.resize(3);p.deleteReport.keepOriginals=true;
+            p.deleteReport.items.resize(3);p.deleteReport.recovery.items.resize(3);
+            for(int i=0;i<3;++i){p.deleteReport.items[i].row=i;p.deleteReport.items[i].status=i==1?dirsync::DeleteStatus::DependencyBlocked:dirsync::DeleteStatus::Deleted;
+                auto& saved=p.deleteReport.recovery.items[i];saved.logged=true;saved.copy.status=i==1?dirsync::CopyStatus::Skipped:dirsync::CopyStatus::Copied;}
+            bool summary=false;SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&summary));
+            SetTimer(parent,59,20,[](HWND owner,UINT,UINT_PTR,DWORD){
+                HWND dialog=GetLastActivePopup(owner);if(dialog==owner)return;KillTimer(owner,59);
+                auto* data=reinterpret_cast<Information*>(GetWindowLongPtrW(dialog,DWLP_USER));
+                if(data){auto has=[&](int id,const wchar_t* value){return std::find(data->rows.begin(),data->rows.end(),std::make_pair(Text(id),std::wstring(value)))!=data->rows.end();};
+                    *reinterpret_cast<bool*>(GetWindowLongPtrW(owner,GWLP_USERDATA))=data->title==IDS_UI_DELETE_RESULT && has(IDS_UI_RECOVERED,L"2 / 3") &&
+                        has(IDS_UI_DELETED,L"2") && has(IDS_UI_ERRORS,L"0") && has(IDS_UI_DELETE_BLOCKED,L"1");}
+                SendMessageW(dialog,WM_COMMAND,IDOK,0);
+            });
+            DeleteSummary(p);ok &= summary;KillTimer(parent,59);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
         }
         // Exercise the real modal speed dialog, not just its parser/template.
         for(int scenario=0;scenario<3;++scenario) {
