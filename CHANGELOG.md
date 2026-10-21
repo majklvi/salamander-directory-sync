@@ -13,6 +13,8 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ### 0.4.0 development — interactive operation errors
 
+- Prepare the final x64 distribution candidate and verify clean installation plus in-place update from the published 0.3.0 package in English/Czech. Preserve all 13 old settings and both profiles, verify all 17 new settings across restarts, and complete 86 independent checks. Refresh packaged guides, including recovery/error-policy migration defaults and current synchronization/empty-directory commands. See the [distribution report](docs/directory-sync-plugin-distribution-040.md).
+
 - Repeat real disk-full verification on an isolated NTFS VHD with the current buffered main/ADS adapter: stop-on-first-error, cleanup, fresh comparison and interactive Retry before/after releasing space. Preserve completed copies and verify all streams/metadata independently. Correct buffered target-write error captions to say transfer data rather than preparation/publication. See the [real-volume report](docs/directory-sync-plugin-vhd-buffered-040.md).
 
 - Verify mixed and stopped batches through the GUI across result summaries, actual CSV/text exports and Stored originals. Confirm hidden/manual-Skip rows, explicit/automatic execution skips, blocked prerequisites/parents, confirmation exclusions and cancelled/unstarted work against real JSONL records and disk data. All 201 independent checks pass; no production fix was needed. See the [outcome-consistency report](docs/directory-sync-plugin-outcomes-gui-040.md).
