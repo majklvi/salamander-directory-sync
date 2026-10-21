@@ -30,6 +30,10 @@ Implementation requirements:
 
 The design replaces first-error-only behavior incrementally. Broader failure scenarios and release publication require separate requests.
 
+**Focused native-dialog acceptance completed:** the common error question follows the host's basic file-error layout, retaining complete Unicode paths and the cancellable modeless channel. Four private EN/CS light/dark GUI cases cover plain confirmation/result captions, keyboard use and shutdown/forced unload with an unanswered question. Both Manager cases actually unmap SPL/SLG and reload successfully in the same host PID. See the [source comparison and live report](docs/directory-sync-plugin-native-errors-gui-040.md).
+
+The [0.4.0 release checklist](docs/directory-sync-plugin-release-readiness-040.md) records the remaining report-consumer and distribution checks. Next: inspect mixed outcomes in CSV/text export and Stored originals, then final package installation/update checks. Restoration and large-list optimization remain separate work below.
+
 ## 2. Restore an individual stored original
 
 Extend the existing read-only Stored originals browser with explicit restoration of one selected item. Start with a target preview, validation of the stored copy and an explicit collision decision. Preserve the recovery source and report the actual result.

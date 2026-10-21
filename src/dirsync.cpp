@@ -286,27 +286,27 @@ void InformationColumns(HWND window)
 }
 void CompactInformation(HWND window,const Information& info)
 {
-    RECT units{7,5,0,96};MapDialogRect(window,&units);
+    RECT units{7,5,0,0};MapDialogRect(window,&units);
     const int margin=units.left,gap=units.top;
     HWND list=GetDlgItem(window,IDC_INFO_TABLE),notes=GetDlgItem(window,IDC_INFO_NOTES);
-    RECT listBox{},header{},item{},label{},button{},client{},outer{};
+    RECT listBox{},header{},item{},button{},client{},outer{};
     GetWindowRect(list,&listBox);GetWindowRect(ListView_GetHeader(list),&header);
     ListView_GetItemRect(list,0,&item,LVIR_BOUNDS);
     int rowHeight=std::max(1,int(item.bottom-item.top));
     int tableHeight=int(header.bottom-header.top)+rowHeight*int(std::min(size_t(10),std::max(size_t(1),info.rows.size())))+4;
-    GetWindowRect(GetDlgItem(window,IDC_INFO_NOTES_LABEL),&label);
     GetWindowRect(GetDlgItem(window,IDOK),&button);
     int width=int(listBox.right-listBox.left);
     HDC dc=GetDC(notes);auto font=SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(notes,WM_GETFONT,0,0)));
-    RECT text{0,0,width-GetSystemMetrics(SM_CXVSCROLL)-8,0};
-    DrawTextW(dc,info.notes.c_str(),int(info.notes.size()),&text,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX|DT_EDITCONTROL);
+    RECT text{0,0,width,0};
+    DrawTextW(dc,info.notes.c_str(),int(info.notes.size()),&text,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX);
     TEXTMETRICW metrics{};GetTextMetricsW(dc,&metrics);SelectObject(dc,font);ReleaseDC(notes,dc);
-    int notesHeight=std::min(int(units.bottom),std::max(int(metrics.tmHeight)*2+6,int(text.bottom)+8));
-    int labelY=margin+tableHeight+gap,notesY=labelY+int(label.bottom-label.top)+2;
+    // A static caption cannot scroll: reserve the complete wrapped text height.
+    int notesHeight=info.notes.empty()?0:std::max(int(metrics.tmHeight),int(text.bottom))+2;
+    int notesY=margin+tableHeight+gap;
     int buttonY=notesY+notesHeight+gap;
     MoveWindow(list,margin,margin,width,tableHeight,FALSE);
-    MoveWindow(GetDlgItem(window,IDC_INFO_NOTES_LABEL),margin,labelY,width,int(label.bottom-label.top),FALSE);
     MoveWindow(notes,margin,notesY,width,notesHeight,FALSE);
+    ShowWindow(notes,info.notes.empty()?SW_HIDE:SW_SHOW);
     for(int id:{IDOK,IDCANCEL}) {
         RECT r{};GetWindowRect(GetDlgItem(window,id),&r);MapWindowPoints(nullptr,window,reinterpret_cast<POINT*>(&r),2);
         MoveWindow(GetDlgItem(window,id),r.left,buttonY,r.right-r.left,r.bottom-r.top,FALSE);
@@ -377,8 +377,7 @@ INT_PTR CALLBACK InformationDialog(HWND window,UINT message,WPARAM w,LPARAM l)
                 SendMessageW(list,LVM_INSERTITEMW,0,LPARAM(&item));
                 item.iSubItem=1; item.pszText=row.second.data(); SendMessageW(list,LVM_SETITEMTEXTW,i,LPARAM(&item));
             }
-            SendDlgItemMessageW(window,IDC_INFO_NOTES,EM_SETLIMITTEXT,0x7ffffffe,0);
-            SetDlgItemTextW(window,IDC_INFO_NOTES,EditLines(info->notes).c_str());
+            SetDlgItemTextW(window,IDC_INFO_NOTES,info->notes.c_str());
             if(!info->confirm) {
                 RECT r{};GetWindowRect(GetDlgItem(window,IDCANCEL),&r);MapWindowPoints(nullptr,window,reinterpret_cast<POINT*>(&r),2);
                 MoveWindow(GetDlgItem(window,IDOK),r.left,r.top,r.right-r.left,r.bottom-r.top,FALSE);

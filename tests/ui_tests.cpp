@@ -73,15 +73,32 @@ void Test(int dialog)
         }
         if (c.id == IDC_LIST || c.id == IDC_COMPARE || c.id == IDC_STOP || c.id == IDC_STOP_SYNC || c.id == IDC_SYNCHRONIZE || c.id == IDC_SETTINGS ||
             c.id == IDC_RECOVERY_ROOT || c.id == IDC_SAVE_ORIGINALS || c.id == IDC_KEEP_ORIGINALS || c.id == IDC_OVERWRITE || c.id == IDC_DELETE_FILES || c.id == IDCANCEL ||
-            c.id == IDC_INFO_TABLE || c.id == IDC_INFO_NOTES ||
+            c.id == IDC_INFO_TABLE ||
             c.id == IDC_BROWSE_LEFT || c.id == IDC_BROWSE_RIGHT || c.id == IDC_BROWSE_RECOVERY || c.id == IDOK)
             Check((c.style & WS_TABSTOP) != 0, "primary controls reachable by Tab");
         if(dialog==IDD_INFORMATION && c.id==IDOK)
             Check(c.text==L"OK","standard confirmation caption");
         if(c.id==IDC_STATUS) Check(c.className==L"msctls_statusbar32", "real native status bar");
-        if(c.id==IDC_INFO_NOTES)
-            Check((c.style&ES_READONLY)!=0 && (c.style&ES_MULTILINE)!=0 && (c.style&WS_VSCROLL)!=0,"selectable scrolling read-only details");
+        if(c.id==IDC_INFO_NOTES || c.id==IDC_ERROR_DETAILS)
+            Check(c.type==0x82 && (c.style&SS_NOPREFIX) && !(c.style&(WS_TABSTOP|WS_BORDER|WS_VSCROLL)),
+                "explanations are plain wrapping static captions without edit chrome or a Tab stop");
         controls.push_back(c);
+    }
+    if(dialog==IDD_OPERATION_ERROR) {
+        auto control=[&](DWORD id)->const Control& {for(const auto& c:controls)if(c.id==id)return c;throw std::runtime_error("missing operation-error control");};
+        Check(width==350 && height==104,"host basic file-error width with context and two path rows");
+        const bool czech=control(IDC_ERROR_RETRY).text==L"&Opakovat";
+        int x=czech?54:61;
+        for(int id:{IDC_ERROR_RETRY,IDC_ERROR_SKIP,IDC_ERROR_SKIP_ALL,IDCANCEL}) {
+            const auto& button=control(id);
+            Check(button.x==x && button.y==80 && button.width==(czech?56:50) && button.height==14,
+                "host centered error-button grid, widened only for Czech captions");x+=czech?62:59;
+        }
+        for(int id:{IDC_ERROR_SOURCE,IDC_ERROR_TARGET}) {
+            const auto& path=control(id);
+            Check(path.x==34 && path.width==309 && path.type==0x81 && (path.style&ES_READONLY) && (path.style&WS_TABSTOP) && !(path.style&WS_BORDER),
+                "host-aligned borderless paths retain complete selectable Unicode values");
+        }
     }
     if(dialog==IDD_TRANSFER_PROGRESS) {
         auto control=[&](DWORD id)->const Control& {for(const auto& c:controls)if(c.id==id)return c;throw std::runtime_error("missing transfer control");};

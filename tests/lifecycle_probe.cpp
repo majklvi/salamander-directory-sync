@@ -11,6 +11,18 @@ std::unique_ptr<Preview> probe;
 std::atomic<bool> finished{false};
 std::atomic<bool> copyBoundary{false};
 INT_PTR CALLBACK EmptyDialog(HWND,UINT,WPARAM,LPARAM) { return FALSE; }
+bool StaticCaptionFits(HWND window,int id)
+{
+    HWND caption=GetDlgItem(window,id);wchar_t type[32]{};
+    GetClassNameW(caption,type,int(std::size(type)));
+    if(wcscmp(type,L"Static") || (GetWindowLongPtrW(caption,GWL_STYLE)&(WS_TABSTOP|WS_BORDER|WS_VSCROLL)))return false;
+    RECT bounds{};GetClientRect(caption,&bounds);RECT text{0,0,bounds.right,0};
+    HDC dc=GetDC(caption);auto font=SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(caption,WM_GETFONT,0,0)));
+    const auto value=ControlText(window,id);
+    DrawTextW(dc,value.c_str(),int(value.size()),&text,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX);
+    SelectObject(dc,font);ReleaseDC(caption,dc);
+    return text.bottom<=bounds.bottom;
+}
 bool RecoveryLogged()
 {
     if(probe->overwriting) return !probe->overwriteReport.keepOriginals || probe->overwriteReport.recovery.complete;
@@ -77,6 +89,7 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
                 !IsWindowEnabled(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE));
             ok &= ControlText(question,IDC_ERROR_CONTEXT)==Text(kind==dirsync::TransferKind::Delete?IDS_ERROR_DELETE_TARGET:kind==dirsync::TransferKind::Save?IDS_ERROR_SAVE_SOURCE:
                 kind==dirsync::TransferKind::Overwrite?IDS_ERROR_OVERWRITE_SOURCE:IDS_ERROR_SOURCE);
+            ok &= StaticCaptionFits(question,IDC_ERROR_DETAILS);
             if(scenario<4)SendMessageW(question,WM_COMMAND,scenario==0?IDC_ERROR_RETRY:scenario==1?IDC_ERROR_SKIP:scenario==2?IDC_ERROR_SKIP_ALL:IDCANCEL,0);
             else if(scenario==4)SendMessageW(question,WM_CLOSE,0,0);
             else if(scenario==5)SendMessageW(p.transferWindow,WM_CLOSE,0,0);
@@ -86,6 +99,26 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
             ok &= result==(scenario==0?dirsync::ErrorDecision::Retry:scenario==1?dirsync::ErrorDecision::Skip:
                 scenario==2?dirsync::ErrorDecision::SkipAll:dirsync::ErrorDecision::Cancel);
             ok &= !p.errorWindow && !IsWindow(question);p.running=false;p.CloseTransfer();
+        }
+        // Long confirmation/result explanations remain fully visible without
+        // an edit border, scrollbar or an extra keyboard stop, also on resize.
+        for(bool confirm:{false,true}) {
+            bool captions=false;SetWindowLongPtrW(parent,GWLP_USERDATA,LONG_PTR(&captions));
+            SetTimer(parent,59,20,[](HWND owner,UINT,UINT_PTR,DWORD){
+                HWND dialog=GetLastActivePopup(owner);if(dialog==owner)return;KillTimer(owner,59);
+                auto* data=reinterpret_cast<Information*>(GetWindowLongPtrW(dialog,DWLP_USER));
+                bool fits=data && ControlText(dialog,IDC_INFO_NOTES)==data->notes && StaticCaptionFits(dialog,IDC_INFO_NOTES);
+                RECT box{};GetWindowRect(dialog,&box);
+                SetWindowPos(dialog,nullptr,0,0,box.right-box.left+160,box.bottom-box.top+80,SWP_NOMOVE|SWP_NOZORDER);
+                fits &= StaticCaptionFits(dialog,IDC_INFO_NOTES);
+                SetWindowPos(dialog,nullptr,0,0,box.right-box.left,box.bottom-box.top,SWP_NOMOVE|SWP_NOZORDER);
+                fits &= StaticCaptionFits(dialog,IDC_INFO_NOTES);
+                *reinterpret_cast<bool*>(GetWindowLongPtrW(owner,GWLP_USERDATA))=fits;
+                SendMessageW(dialog,WM_COMMAND,IDCANCEL,0);
+            });
+            InfoRows rows(12,{L"Unicode žluťoučký 漢字 &",L"C:\\test & data\\漢字"});
+            InformationBox(parent,IDS_SYNC_CONFIRM,std::move(rows),Text(IDS_UI_RESULT_NOTE)+L"\n\n"+Text(IDS_SYNC_POLICY)+L"\nA & B",confirm);
+            ok &= captions;KillTimer(parent,59);SetWindowLongPtrW(parent,GWLP_USERDATA,0);
         }
         // A skipped original between two successful saves must not truncate
         // the saved count or claim that no independent overwrite ran.
