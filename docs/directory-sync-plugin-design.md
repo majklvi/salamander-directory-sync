@@ -1,5 +1,7 @@
 # Synchronizační plugin pro Samandarin
 
+Aktuální priority po vydání 0.3.0 uvádí [plán vývoje](../ROADMAP.md): interaktivní řešení chyb, obnova jednotlivého uloženého originálu a měřením podložené zrychlení velkých seznamů. Níže zůstává historický návrh a evidence rozhodnutí.
+
 Redakční příprava exportu (17. října 2026): názvy referenčního programu a odkazy na jeho web jsou nahrazeny neutrálním označením. Historické zdroje v plném znění zachovává [archiv původního forku](https://github.com/majklvi/salamander/tree/af0e81bc1bccb6c733025fe31a97d53adf5cb32f/doc). Cesty s prefixem `reference-sync-probe-` jsou dokumentační aliasy, nikoli přejmenované testovací adresáře. Výsledky a meze ověření se nemění.
 
 > **Datovaný návrh / evidence vývoje.** Aktuální stav, instalace, ovládání a omezení jsou v [hlavním návodu](directory-sync-plugin.md). Níže uvedené tehdejší rozsahy, názvy ovládacích prvků, počty testů a neprovedená ověření popisují příslušnou etapu; nejsou souhrnem současné verze.
@@ -313,3 +315,7 @@ Podrobný aktuální návrh a evidence: [Profily](directory-sync-plugin-profiles
 ## Přehled uložených originálů pro 0.2.2 (2026-10-19)
 
 První etapa pouze čte existující běhy a jejich položky, odlišuje zaznamenané výsledky od současné dostupnosti kopií a umožňuje kopírovat cesty nebo otevřít adresáře. Nezavádí automatickou obnovu ani úklid záloh. Návrh a meze ověření: [Stored originals](directory-sync-plugin-stored-originals.md). Na následný pokyn uživatele je do 0.2.2 doplněn také export porovnání a výsledků operací včetně filtrů a Skip: [návrh a ověření exportu](directory-sync-plugin-report-export.md). SDK se nemění, SMB se netestuje.
+
+## Interaktivní reakce na chyby — průzkum 2026-10-21
+
+Na žádost uživatele byl přes Computer Use proveden místní NTFS průzkum chyb čtení, přepisu, přístupu a mazání v referenční aplikaci, včetně Opakovat, Přeskočit, Přeskočit vše a přerušení dávky. [Pozorování a návrh](directory-sync-plugin-error-handling.md) oddělují skutečně ověřené scénáře od budoucích testů pluginu a obsahují rozhodnutí R1–R5 schválená uživatelem 2026-10-21 i navržený postup implementace. Výchozí bude dotazování s možností zapnout zastavení při první chybě; Přeskočit vše platí pouze pro stejnou operaci/fázi/druh chyby v aktuální dávce. Po přeskočení pokračuje nezávislá práce; neuložený originál blokuje související přepis či mazání. Chyby ověření, neplatný plán, nejistý výsledek a selhání společného protokolu zastaví dávku. Zachovat platnost potvrzeného plánu, D4/D5, staging, ověření a mazání pouze prázdných adresářů. Na následný pokyn uživatele byly jako vývojová verze 0.4.0 implementovány body 1–2: společný model, zapamatovaná politika a interaktivní chyby samostatného kopírování nových položek. Přepisy, obnova, mazání a souhrnná synchronizace zatím zůstávají se zastavením při první chybě. [Implementace a ověření](directory-sync-plugin-errors-040.md). SDK se nemění a SMB se netestuje.

@@ -20,6 +20,7 @@
 namespace dirsync {
 void CopyProgress::ResetControls() noexcept
 {
+    errors={};awaitingDecision=false;errorSite=ErrorSite::Source;
     pauseRequested=false;paused=false;bytesPerSecond=0;pausedMilliseconds=0;completedWork=0;completedCopyBytes=0;
     throttleTick=GetTickCount64();throttleCopied=0;throttleRate=0;throttleDebt=0;
 }
@@ -247,15 +248,19 @@ void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, con
     const Entry& expected=row.action==Action::CopyRight ? row.left : row.right;
     const std::wstring source=Join(sourceRoot,row.path), target=Join(targetRoot,row.path);
     progress.BeginDisplay(source,target,recovery?TransferKind::Save:original?TransferKind::Overwrite:TransferKind::Copy,false,expected.size);
+    progress.errorSite=ErrorSite::Source;
     Entry owned{}; std::wstring stage;
     try {
         if (!Relative(row.path)) throw Failure{ERROR_INVALID_NAME};
-        Control(cancel,progress); Parents(sourceRoot,source,false,cancel); Parents(targetRoot,target,false,cancel);
+        Control(cancel,progress); Parents(sourceRoot,source,false,cancel);
+        progress.errorSite=ErrorSite::Target;Parents(targetRoot,target,false,cancel);
     } catch (const Failure& e) {
         // Missing target descendants may be created, never missing roots/ancestors.
         if (e.error!=ERROR_PATH_NOT_FOUND && e.error!=ERROR_FILE_NOT_FOUND) throw;
-        Parents(sourceRoot,source,false,cancel); Parents(targetRoot,target,true,cancel);
+        progress.errorSite=ErrorSite::Source;Parents(sourceRoot,source,false,cancel);
+        progress.errorSite=ErrorSite::Target;Parents(targetRoot,target,true,cancel);
     }
+    progress.errorSite=ErrorSite::Source;
     File in(Open(source,GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE)); Need(in.h != INVALID_HANDLE_VALUE);
     if (!Unchanged(expected,Info(in.h))) throw Failure{ERROR_FILE_INVALID};
     auto checkTarget=[&]() {
@@ -265,7 +270,7 @@ void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, con
             throw Failure{ERROR_FILE_INVALID};
         if(original->attributes & FILE_ATTRIBUTE_READONLY) throw Failure{ERROR_ACCESS_DENIED};
     };
-    checkTarget(); Control(cancel,progress);
+    progress.errorSite=ErrorSite::Target;checkTarget(); Control(cancel,progress);
     try {
         auto parent=target.substr(0,target.find_last_of(L'\\'));
         for (int tries=0; tries<16; ++tries) {
@@ -282,6 +287,7 @@ void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, con
         Callback callback{cancel,progress,progress.copied.load(),stage};
         Phase(progress,CopyPhase::Copying,stage); Control(cancel,progress);
         // Destination is our CREATE_NEW reservation, never the user's target.
+        progress.errorSite=ErrorSite::Data;
         Need(CopyFileExW(ApiPath(source).c_str(),ApiPath(stage).c_str(),CopyCallback,&callback,nullptr,0));
         Control(cancel,progress);
         File staging(Open(stage,GENERIC_READ|FILE_WRITE_ATTRIBUTES)); Need(staging.h!=INVALID_HANDLE_VALUE);
@@ -308,6 +314,7 @@ void CopyOne(const std::wstring& sourceRoot, const std::wstring& targetRoot, con
         currentStage.Close();staging.Close();
         // Same-volume replacement changes this name, never the old hardlink's data.
         // There is deliberately no delete/recreate or cross-volume fallback.
+        progress.errorSite=ErrorSite::Target;
         Need(MoveFileExW(ApiPath(stage).c_str(),ApiPath(target).c_str(),original?MOVEFILE_REPLACE_EXISTING:0));
         outcome.published=true;
         Phase(progress,CopyPhase::Published,target);
@@ -471,10 +478,11 @@ void CopyEmptyDirectory(const std::wstring& sourceRoot,const std::wstring& targe
     const auto& expected=row.action==Action::CopyRight?row.left:row.right;
     const auto source=Join(sourceRoot,row.path),target=Join(targetRoot,row.path);
     progress.BeginDisplay(source,target,TransferKind::Copy,true);
+    progress.errorSite=ErrorSite::Source;
     Control(cancel,progress);Parents(sourceRoot,source,false,cancel);
     File original(Open(source,FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE));Need(original.h!=INVALID_HANDLE_VALUE);
     auto check=[&]{if(!Unchanged(expected,Info(original.h))) throw Failure{ERROR_FILE_INVALID};EmptyDirectory(source);DirectoryStreams(source);};
-    check();Parents(targetRoot,target,true,cancel);Absent(target);
+    check();progress.errorSite=ErrorSite::Target;Parents(targetRoot,target,true,cancel);Absent(target);
     const auto parent=target.substr(0,target.find_last_of(L'\\'));
     std::wstring stage;Entry owned;
     try {
@@ -860,16 +868,40 @@ CopyReport CopyNewFiles(Result snapshot,const std::vector<size_t>& visible,std::
     for (size_t n=0;n<report.items.size();++n) {
         auto& outcome=report.items[n]; const auto& row=snapshot.rows[outcome.row];
         bool toRight=row.action==Action::CopyRight; outcome.target=Join(toRight?right:left,row.path); progress.item=n;
-        try {
-            Control(cancel,progress);
-            if((toRight?row.left:row.right).directory) CopyEmptyDirectory(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
-            else CopyOne(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
+        for(;;) {
+            outcome.error=0;outcome.status=CopyStatus::NotStarted;++outcome.attempts;
+            try {
+                Control(cancel,progress);
+                if((toRight?row.left:row.right).directory) CopyEmptyDirectory(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
+                else CopyOne(toRight?left:right,toRight?right:left,row,outcome,cancel,progress);
+                break;
+            }
+            catch (const Failure& e) {
+                outcome.error=outcome.lastError=e.error;
+                report.cancelled=cancel.load() || e.error==ERROR_CANCELLED || e.error==ERROR_REQUEST_ABORTED || e.error==ERROR_OPERATION_ABORTED;
+                outcome.status=report.cancelled?CopyStatus::Cancelled:CopyStatus::Failed;
+                OperationError error{TransferKind::Copy,progress.phase.load(),progress.errorSite,e.error,
+                    Join(toRight?left:right,row.path),outcome.target,outcome.published,!outcome.remainingStage.empty()};
+                if(report.cancelled || progress.errors.stopOnFirstError || !progress.errors.prompt || !Recoverable(error))break;
+                bool automatic=false;ErrorDecision decision=ErrorDecision::Cancel;
+                try {decision=progress.errors.Decide(error,automatic);}
+                catch(...) {outcome.error=ERROR_NOT_ENOUGH_MEMORY;break;}
+                if(cancel || decision==ErrorDecision::Cancel){cancel=true;report.cancelled=true;outcome.status=CopyStatus::Cancelled;break;}
+                if(decision==ErrorDecision::Skip){outcome.status=CopyStatus::Skipped;outcome.automaticSkip=automatic;}
+                // Earlier successful writes are expected; remaining confirmed
+                // sources/targets and root/parent identities must still match.
+                std::vector<size_t> pending;
+                for(size_t i=n+(decision==ErrorDecision::Skip?1:0);i<report.items.size();++i)pending.push_back(report.items[i].row);
+                if(!AdvanceExecutionSnapshot(snapshot,pending,cancel,checking)) {
+                    report.cancelled=cancel.load();report.stale=!report.cancelled;
+                    outcome.status=report.cancelled?CopyStatus::Cancelled:CopyStatus::Failed;
+                    outcome.error=report.cancelled?ERROR_CANCELLED:ERROR_FILE_INVALID;break;
+                }
+                if(decision==ErrorDecision::Skip)break;
+            }
+            catch (...) { outcome.error=ERROR_NOT_ENOUGH_MEMORY; outcome.status=CopyStatus::Failed; break; }
         }
-        catch (const Failure& e) {
-            outcome.error=e.error; report.cancelled=cancel.load() || e.error==ERROR_CANCELLED || e.error==ERROR_REQUEST_ABORTED || e.error==ERROR_OPERATION_ABORTED;
-            outcome.status=report.cancelled?CopyStatus::Cancelled:CopyStatus::Failed; break;
-        }
-        catch (...) { outcome.error=ERROR_NOT_ENOUGH_MEMORY; outcome.status=CopyStatus::Failed; break; }
+        if(outcome.status!=CopyStatus::Copied && outcome.status!=CopyStatus::Skipped)break;
     }
     Phase(progress,CopyPhase::Finished,L""); return report;
 }

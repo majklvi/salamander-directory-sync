@@ -1210,10 +1210,129 @@ void TransferControls()
         Check(Read(published)=="ORIGINAL" && Read(f.right+L"\\a")=="ORIGINAL" && Read(f.right+L"\\b")=="ORIGINAL","paused recovery and cancellation preserve all originals");
     }
 }
+void InteractiveErrors() {
+    {
+        ErrorPolicy policy;policy.stopOnFirstError=false;unsigned prompts=0;
+        policy.prompt=[&](const OperationError&){++prompts;return ErrorDecision::SkipAll;};
+        OperationError error;error.code=ERROR_SHARING_VIOLATION;bool automatic=false;
+        Check(policy.Decide(error,automatic)==ErrorDecision::Skip && !automatic,"Skip all records first error");
+        Check(policy.Decide(error,automatic)==ErrorDecision::Skip && automatic && prompts==1,"same class skips without another question");
+        error.site=ErrorSite::Target;policy.Decide(error,automatic);Check(prompts==2,"source choice does not cover target error");
+        error.phase=CopyPhase::Copying;policy.Decide(error,automatic);Check(prompts==3,"different phase prompts separately");
+        error.kind=TransferKind::Save;policy.Decide(error,automatic);Check(prompts==4,"recovery kind prompts separately");
+        error.code=ERROR_ACCESS_DENIED;policy.Decide(error,automatic);Check(prompts==5,"different error code prompts separately");
+        for(auto code:{ERROR_FILE_INVALID,ERROR_FILE_EXISTS,ERROR_CRC,ERROR_INVALID_DATA,ERROR_NOT_ENOUGH_MEMORY}) {
+            error.code=code;Check(!Recoverable(error),"unsafe errors never eligible for Skip all");
+        }
+        error.code=ERROR_DISK_FULL;error.kind=TransferKind::Copy;
+        Check(Recoverable(error),"unpublished disk full supports decisions");
+        error.changed=true;Check(!Recoverable(error),"post-publication disk full stops");error.changed=false;
+        error.remainingStage=true;Check(!Recoverable(error),"unaccounted residue stops");error.remainingStage=false;
+        error.phase=CopyPhase::Verifying;Check(!Recoverable(error),"verification failure stops");
+        error.phase=CopyPhase::Checking;policy.stopOnFirstError=true;policy.Decide(error,automatic);
+        Check(prompts==5,"stop-first policy never invokes prompt");
+        CopyProgress progress;progress.errors=std::move(policy);progress.ResetControls();
+        Check(progress.errors.skipped.empty() && !progress.errors.prompt,"batch reset clears remembered Skip all and callback");
+    }
+    {
+        Fixture f;for(auto name:{L"a",L"b",L"c"})Put(f.left+L"\\"+name,"DATA");auto plan=f.Scan();
+        HANDLE locked=INVALID_HANDLE_VALUE;unsigned prompts=0;
+        SetCopyHook([&](CopyPhase phase,const std::wstring& path){if(phase==CopyPhase::Published && path==f.right+L"\\a") {
+            locked=CreateFileW(ApiPath(f.left+L"\\b").c_str(),GENERIC_READ,0,nullptr,OPEN_EXISTING,0,nullptr);
+        }});
+        f.progress.errors.stopOnFirstError=false;
+        f.progress.errors.prompt=[&](const OperationError& error){++prompts;
+            Check(error.site==ErrorSite::Source && error.code==ERROR_SHARING_VIOLATION && locked!=INVALID_HANDLE_VALUE,"actual source-lock context");
+            CloseHandle(locked);locked=INVALID_HANDLE_VALUE;return ErrorDecision::Retry;};
+        auto report=f.Run(plan);if(locked!=INVALID_HANDLE_VALUE)CloseHandle(locked);SetCopyHook({});
+        Check(prompts==1 && !report.cancelled && !report.stale && report.items.size()==3,"unlock and retry continues");
+        Check(report.items[0].attempts==1 && report.items[1].attempts==2 && report.items[1].lastError==ERROR_SHARING_VIOLATION &&
+            report.items[1].error==0 && report.items[2].attempts==1,"successful earlier copy not repeated; retry keeps last error");
+        Check(f.progress.completed==3 && Read(f.right+L"\\b")=="DATA","retry counts successful files once");f.NoStaging(f.right);
+    }
+    {
+        Fixture f;for(auto name:{L"a",L"b",L"c",L"d"})Put(f.left+L"\\"+name,"DATA");auto plan=f.Scan();
+        HANDLE a=CreateFileW(ApiPath(f.left+L"\\a").c_str(),GENERIC_READ,0,nullptr,OPEN_EXISTING,0,nullptr);
+        HANDLE b=CreateFileW(ApiPath(f.left+L"\\b").c_str(),GENERIC_READ,0,nullptr,OPEN_EXISTING,0,nullptr);
+        Check(a!=INVALID_HANDLE_VALUE && b!=INVALID_HANDLE_VALUE,"two source locks");
+        dirsync_test::SetSpaceFault(dirsync_test::SpaceFault::Reserve,ERROR_ACCESS_DENIED,1);
+        unsigned prompts=0;f.progress.errors.stopOnFirstError=false;
+        f.progress.errors.prompt=[&](const OperationError& error){++prompts;return error.site==ErrorSite::Source?ErrorDecision::SkipAll:ErrorDecision::Skip;};
+        auto report=f.Run(plan);CloseHandle(a);CloseHandle(b);
+        Check(prompts==2 && report.items[0].status==CopyStatus::Skipped && report.items[1].automaticSkip &&
+            report.items[2].status==CopyStatus::Skipped && !report.items[2].automaticSkip && report.items[3].status==CopyStatus::Copied,
+            "Skip all handles matching errors only and independent later item copies");
+        ReportContext context;context.left=f.left;context.right=f.right;context.visible={0,1,2,3};
+        auto batch=PrepareReport(plan,context,L"new_copy",false,L"");CompleteReport(batch,report);
+        auto csv=RenderReport(plan,context,&batch,true),text=RenderReport(plan,context,&batch,false);
+        Check(!batch.complete && batch.items[1].status==L"skipped" && !batch.items[1].completed &&
+            text.find(L"automatic_skip: true")!=std::wstring::npos && csv.find(L"last_error")!=std::wstring::npos,
+            "exports distinguish execution skips and attempts without false completion");f.NoStaging(f.right);
+    }
+    for(int scenario=0;scenario<4;++scenario) {
+        Fixture f;Put(f.left+L"\\a","ORIGINAL");Put(f.left+L"\\b","LATER");auto plan=f.Scan();
+        dirsync_test::SetSpaceFault(dirsync_test::SpaceFault::Reserve,ERROR_DISK_FULL,1);
+        unsigned prompts=0;f.progress.errors.stopOnFirstError=false;
+        f.progress.errors.prompt=[&](const OperationError& error){++prompts;Check(error.code==ERROR_DISK_FULL,"disk full context");
+            if(scenario==0)return ErrorDecision::Retry;
+            if(scenario==1)return ErrorDecision::Cancel;
+            if(scenario==2)Put(f.left+L"\\a","MUTATED LONGER!",false);
+            else Put(f.right+L"\\a","EXTERNAL");
+            return ErrorDecision::Retry;
+        };
+        auto report=f.Run(plan);
+        Check(prompts==1,"one decision for reservation failure");
+        if(!scenario)Check(report.items[0].status==CopyStatus::Copied && report.items[0].attempts==2 && report.items[1].status==CopyStatus::Copied,"disk full full restart succeeds");
+        else {
+            Check(report.items[1].status==CopyStatus::NotStarted,"cancel or stale retry prevents later items");
+            if(scenario==1)Check(report.cancelled && report.items[0].status==CopyStatus::Cancelled,"Cancel stops whole batch");
+            else Check(report.stale && report.items[0].error==ERROR_FILE_INVALID,"retry refuses changed source or appearing target");
+            if(scenario==3)Check(Read(f.right+L"\\a")=="EXTERNAL","appearing target never overwritten");
+        }
+        f.NoStaging(f.right);
+    }
+    {
+        Fixture f;Put(f.left+L"\\a","ORIGINAL");Put(f.left+L"\\b","LATER");auto plan=f.Scan();unsigned prompts=0;
+        SetCopyHook([&](CopyPhase phase,const std::wstring& path){if(phase==CopyPhase::Verifying && !f.progress.verified)Put(path,"CORRUPT!",false);});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::SkipAll;};
+        auto report=f.Run(plan);SetCopyHook({});
+        Check(prompts==0 && report.items[0].error==ERROR_CRC && !report.items[0].published && report.items[1].status==CopyStatus::NotStarted,
+            "verification mismatch remains fatal even with interactive policy");f.NoStaging(f.right);
+    }
+    for(bool toLeft:{false,true}) {
+        Fixture f;const auto source=toLeft?f.right:f.left,target=toLeft?f.left:f.right;
+        f.Dir(source+L"\\empty");Put(source+L"\\z-later","DATA");Options options;options.emptyDirectories=true;
+        Acl(target,L"D:P(D;;0x4;;;WD)(A;OICI;FA;;;OW)"); // deny creation of target subdirectories
+        auto plan=Compare(f.left,f.right,options,f.cancel,f.checking);unsigned prompts=0;
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError& error){++prompts;
+            Check(error.site==ErrorSite::Target && error.phase==CopyPhase::Checking && error.code==ERROR_ACCESS_DENIED,"empty directory error context");
+            Acl(target,L"D:P(A;OICI;FA;;;OW)");return ErrorDecision::Retry;};
+        auto report=f.Run(plan);Acl(target,L"D:P(A;OICI;FA;;;OW)");
+        Check(prompts==1 && report.items[0].status==CopyStatus::Copied && report.items[0].attempts==2 &&
+            report.items[1].status==CopyStatus::Copied,"empty directory retry in either direction");f.NoStaging(target);
+    }
+    {
+        Fixture f;Put(f.left+L"\\a","DATA");Put(f.left+L"\\b","LATER");auto plan=f.Scan();unsigned prompts=0;
+        SetCopyHook([&](CopyPhase phase,const std::wstring&){if(phase==CopyPhase::Published)throw std::runtime_error("after publication");});
+        f.progress.errors.stopOnFirstError=false;f.progress.errors.prompt=[&](const OperationError&){++prompts;return ErrorDecision::Retry;};
+        auto report=f.Run(plan);SetCopyHook({});
+        Check(prompts==0 && report.items[0].published && report.items[0].status==CopyStatus::Failed &&
+            report.items[1].status==CopyStatus::NotStarted,"published failure never repeats or continues");f.NoStaging(f.right);
+    }
+    for(bool close:{false,true}) {
+        ErrorQuestion question;std::atomic<bool> cancel{false},posted{false},done{false};ErrorDecision answer=ErrorDecision::Retry;
+        std::thread worker([&]{answer=question.Ask({},cancel,[&]{posted=true;return true;});done=true;});
+        const bool waiting=WaitForControl([&]{return posted.load();},done);
+        OperationError context;Check(waiting && question.Peek(context),"decision available without synchronous UI call");
+        if(close)question.Cancel();else cancel=true;
+        const bool ended=WaitForControl([&]{return done.load();},done);question.Cancel();worker.join();
+        Check(ended && answer==ErrorDecision::Cancel,"Stop or Close unblocks pending decision before join");
+    }
+}
 int main() {
     try { Success(); Scope(); ModifyOnlyDestination(); Boundaries(); Paths(); AfterPublication(); DiskSpace();
         RecoverySuccess(); RecoveryFailures(); RecoveryPaths(); OverwriteSuccess(); OverwriteFailures(); OverwritePaths();
-        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();
+        DeletionSuccess(); DeletionFailures(); DeletionPaths(); DirectoryDeletion(); EmptyDirectoryCopies(); CombinedSynchronization();StoredOriginalsCatalog();Reports();TransferControls();InteractiveErrors();
         std::cout<<checks<<" copy/recovery/overwrite/delete assertions passed\n"; return 0; }
     catch(const std::exception& e) { std::cerr<<"FAILED: "<<e.what()<<"\n"; return 1; }
 }

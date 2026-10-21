@@ -309,6 +309,8 @@ int main()
         for(int id=IDS_STORED_DATE;id<=IDS_STORED_ERROR;++id)Check(!text(id).empty(),"stored originals interface localized");
         for(int id=IDS_REPORT_EXPORT;id<=IDS_REPORT_HELP;++id)Check(!text(id).empty(),"report export interface localized");
         for(int id=IDS_PROGRESS_PREPARE;id<=IDS_STORED_OPEN_SAVED_MENU;++id)Check(!text(id).empty(),"transfer progress and explicit recovery menu actions localized");
+        Test(IDD_OPERATION_ERROR);
+        for(int id=IDS_ERROR_WAIT;id<=IDS_ERROR_SKIPPED_NOTE;++id)Check(!text(id).empty(),"operation-error strings localized");
         Test(IDD_TRANSFER_PROGRESS);
         Test(IDD_TRANSFER_SPEED);
         Test(IDD_STORED_ORIGINALS);

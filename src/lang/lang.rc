@@ -100,6 +100,7 @@ BEGIN
     LTEXT "Other settings", -1, 7, 209, 75, 8
     CONTROL "", -1, "Static", SS_ETCHEDHORZ, 88, 213, 211, 1
     CONTROL "&Keep originals", IDC_KEEP_ORIGINALS, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 7, 225, 140, 12
+    CONTROL "Stop at first error", IDC_STOP_ON_ERROR, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 159, 225, 140, 12
     LTEXT "Rec&overy folder:", IDC_RECOVERY_LABEL, 7, 246, 76, 10
     EDITTEXT IDC_RECOVERY_ROOT, 86, 243, 195, 14, ES_AUTOHSCROLL
     PUSHBUTTON "...", IDC_BROWSE_RECOVERY, 285, 243, 14, 14
@@ -592,4 +593,31 @@ BEGIN
     IDS_TRANSFER_RATE ", speed: {rate}/s"
     IDS_TRANSFER_RATE_LIMIT ", speed: {rate}/s ({limit}/s)"
     IDS_TRANSFER_LEFT ", time left: {time}"
+END
+
+IDD_OPERATION_ERROR DIALOGEX 0, 0, 330, 139
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Copy error"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "", IDC_ERROR_CONTEXT, 7, 7, 316, 10
+    LTEXT "Source:", -1, 7, 25, 36, 10
+    EDITTEXT IDC_ERROR_SOURCE, 45, 22, 278, 14, ES_READONLY | ES_AUTOHSCROLL
+    LTEXT "Target:", -1, 7, 44, 36, 10
+    EDITTEXT IDC_ERROR_TARGET, 45, 41, 278, 14, ES_READONLY | ES_AUTOHSCROLL
+    EDITTEXT IDC_ERROR_DETAILS, 7, 62, 316, 48, ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL
+    DEFPUSHBUTTON "&Retry", IDC_ERROR_RETRY, 7, 118, 76, 14
+    PUSHBUTTON "&Skip", IDC_ERROR_SKIP, 87, 118, 76, 14
+    PUSHBUTTON "Skip &all", IDC_ERROR_SKIP_ALL, 167, 118, 76, 14
+    PUSHBUTTON "&Cancel", IDCANCEL, 247, 118, 76, 14
+END
+STRINGTABLE
+BEGIN
+    IDS_ERROR_WAIT "Waiting for an error decision…"
+    IDS_UI_SKIPPED "Skipped during execution"
+    IDS_ERROR_SOURCE "Copy new item — read source"
+    IDS_ERROR_TARGET "Copy new item — prepare or publish target"
+    IDS_ERROR_DATA "Copy new item — transfer data"
+    IDS_ERROR_POLICY "Stop new-item copying at the first error. Otherwise, recoverable errors ask for a decision. Other operation commands currently always stop at the first error."
+    IDS_ERROR_SKIPPED_NOTE "Finished with skipped items; not all planned operations were completed."
 END

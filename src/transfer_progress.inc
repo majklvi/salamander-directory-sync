@@ -96,9 +96,11 @@ void UpdateTransfer(Preview& p) {
     auto time=InsertTextValues(Text(IDS_PROGRESS_ELAPSED),{{L"{time}",elapsed}});
     p.transferDetails=status+L"\n"+counts+L"\n"+bytes+L"\n"+time;
     const bool paused=p.copyProgress.pauseRequested.load();
+    const bool waiting=p.copyProgress.awaitingDecision.load();
     const auto tick=GetTickCount64()-p.copyProgress.pausedMilliseconds.load();
     const auto copiedBytes=p.copyProgress.copied.load();
-    if(!p.transferSampleTick || paused){p.transferSampleTick=tick;p.transferSampleCopied=copiedBytes;p.transferSampleWork=work;p.transferRate=p.transferWorkRate=0;}
+    if(waiting){p.transferSampleTick=0;p.transferRate=p.transferWorkRate=0;}
+    else if(!p.transferSampleTick || paused){p.transferSampleTick=tick;p.transferSampleCopied=copiedBytes;p.transferSampleWork=work;p.transferRate=p.transferWorkRate=0;}
     else if(tick-p.transferSampleTick>=500){
         const auto elapsed=tick-p.transferSampleTick;
         auto rate=[&](uint64_t current,uint64_t before){return current>=before?uint64_t(static_cast<long double>(current-before)*1000/elapsed):0;};
@@ -106,7 +108,8 @@ void UpdateTransfer(Preview& p) {
         p.transferSampleTick=tick;p.transferSampleCopied=copiedBytes;p.transferSampleWork=work;
     }
     std::wstring line;
-    if(paused)line=Text(p.copyProgress.paused?IDS_TRANSFER_PAUSED:IDS_TRANSFER_PAUSING);
+    if(waiting)line=Text(IDS_ERROR_WAIT);
+    else if(paused)line=Text(p.copyProgress.paused?IDS_TRANSFER_PAUSED:IDS_TRANSFER_PAUSING);
     else if(p.cancel)line=Text(IDS_UI_STOPPING);
     else if(p.transferBytesTotal){
         line=copiedBytes<=p.transferBytesTotal?InsertTextValues(Text(IDS_TRANSFER_COPIED),{{L"{copied}",copied},{L"{total}",TransferSize(p.transferBytesTotal)}}):copied;
@@ -124,15 +127,15 @@ void UpdateTransfer(Preview& p) {
     auto caption=L"("+Number(uint64_t(totalPosition/10))+L" %) "+p.transferCaption+(paused?L" "+Text(IDS_TRANSFER_PAUSED):L"");
     TransferText(p.transferWindow,0,caption);
     TransferText(p.transferWindow,IDC_TRANSFER_PAUSE,Text(paused?IDS_TRANSFER_RESUME:IDS_TRANSFER_PAUSE));
-    EnableWindow(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE),!p.cancel);
+    EnableWindow(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE),!p.cancel && !waiting);
     EnableWindow(GetDlgItem(p.transferWindow,IDCANCEL),!p.cancel);
 }
 void TransferPause(Preview& p) {
-    if(p.cancel)return;
+    if(p.cancel || p.copyProgress.awaitingDecision)return;
     p.copyProgress.pauseRequested=!p.copyProgress.pauseRequested.load();UpdateTransfer(p);
 }
 void TransferMenu(Preview& p,bool keyboard) {
-    if(!gui || p.cancel)return;
+    if(!gui || p.cancel || p.copyProgress.awaitingDecision)return;
     const bool wasPaused=p.copyProgress.pauseRequested.load();p.copyProgress.pauseRequested=true;
     MENU_TEMPLATE_ITEM items[]={{MNTT_PB,0,0,0,-1,0,nullptr},
         {MNTT_IT,wasPaused?IDS_TRANSFER_RESUME:IDS_TRANSFER_PAUSE,MNTS_B|MNTS_I|MNTS_A,1,-1,0,nullptr},

@@ -24,6 +24,8 @@ Samostatný nativní plugin pro Samandarin. Porovnání adresářů, úprava ná
 
 Samostatný vývoj a hlášení chyb probíhají v [majklvi/salamander-directory-sync](https://github.com/majklvi/salamander-directory-sync). Zdrojový archiv a původ závislostí jsou uvedeny v `EXPORT-ATTRIBUTIONS.md` a `EXPORT-SUPPORT.json`. Historické protokoly v `docs/` popisují své tehdejší etapy, nikoli dnešní omezení.
 
+**Ve vývoji 0.4.0:** Opakovat / Přeskočit / Přeskočit vše / Storno při samostatném kopírování nových položek a zapamatovaná volba zastavení při první chybě. Ostatní operační příkazy zatím zůstávají se zastavením při první chybě. [Podrobnosti a ověření](docs/directory-sync-plugin-errors-040.md). Výše se nadále stahuje vydaná alfa 0.3.0.
+
 ## Sestavení ze zdrojů a testy (pro vývojáře)
 
 Windows, Visual Studio 2026 s C++ desktop tools (v145, potřebné x86/x64/ARM64 komponenty), Windows SDK 10 a PowerShell 7.3 nebo novější. Není potřeba checkout ani knihovna Salamanderu, Python, vcpkg, certifikát nebo síťové stahování závislostí. MSBuild se vyhledává pomocí systémového vswhere.
@@ -104,4 +106,4 @@ Ověřen je místní NTFS a x64. SMB je neotestované. Skryté a systémové pol
 
 Chyby hlaste přes [Issues](https://github.com/majklvi/salamander-directory-sync/issues): verze a hash balíčku, prostředí/jazyk/schéma/DPI, masky/volby/filtry, obnova ON/OFF, přesný postup a očekávaný/skutečný výsledek. Souhrn lze kopírovat Ctrl+Shift+C, relativní cesty vybraných řádků Ctrl+C. Z přiložených kopií protokolů odstraňte soukromé údaje; ideální je malá syntetická reprodukce. Při neočekávané změně dat zastavte další zápisy a ponechte souhrn i obnovovací běh.
 
-[Historie změn (anglicky)](CHANGELOG.md) · [English README](README.md) · [Licence GPL-2.0-or-later](LICENSE) · [Atribuce závislostí](docs/third_party.md)
+[Historie změn (anglicky)](CHANGELOG.md) · [Plán vývoje (anglicky)](ROADMAP.md) · [English README](README.md) · [Licence GPL-2.0-or-later](LICENSE) · [Atribuce závislostí](docs/third_party.md)

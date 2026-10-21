@@ -22,10 +22,12 @@ std::wstring Stamp(uint64_t value) {
 std::wstring Path(const std::wstring& root,const Row& row){return root+(!root.empty() && root.back()==L'\\'?L"":L"\\")+row.path;}
 bool CopyDone(const CopyOutcome& item){return item.status==CopyStatus::Copied && item.published && !item.error;}
 const wchar_t* CopyCode(CopyStatus status){switch(status){case CopyStatus::Copied:return L"copied";
-    case CopyStatus::Cancelled:return L"cancelled";case CopyStatus::Failed:return L"failed";default:return L"not_started";}}
+    case CopyStatus::Cancelled:return L"cancelled";case CopyStatus::Failed:return L"failed";
+    case CopyStatus::Skipped:return L"skipped";case CopyStatus::DependencyBlocked:return L"dependency_blocked";default:return L"not_started";}}
 void Copies(ReportBatch& batch,const CopyReport& report,const std::wstring& kind) {
     for(const auto& item:report.items)for(auto& out:batch.items)if(out.row==item.row && out.kind==kind){
-        out.status=CopyCode(item.status);out.error=item.error;out.changed=item.published;out.completed=CopyDone(item);out.stage=item.remainingStage;}
+        out.status=CopyCode(item.status);out.error=item.error;out.changed=item.published;out.completed=CopyDone(item);out.stage=item.remainingStage;
+        out.attempts=item.attempts;out.lastError=item.lastError;out.automaticSkip=item.automaticSkip;}
 }
 void Saved(ReportBatch& batch,const RecoveryReport& report) {
     for(const auto& item:report.items)for(auto& out:batch.items)if(out.row==item.row && out.kind==L"save_original"){
@@ -59,7 +61,8 @@ using Fields=std::vector<std::pair<std::wstring,std::wstring>>;
 const std::vector<std::wstring> Columns{L"record",L"key",L"value",L"row",L"relative_path",L"visible",L"default_action",L"action",L"skipped",
     L"state",L"reason",L"error",L"left_path",L"left_type",L"left_size_bytes",L"left_modified_utc",L"left_modified_ticks",L"left_attributes",L"left_error",
     L"right_path",L"right_type",L"right_size_bytes",L"right_modified_utc",L"right_modified_ticks",L"right_attributes",L"right_error",
-    L"operation",L"source",L"target",L"saved_path",L"remaining_stage",L"status",L"filesystem_changed",L"completed",L"logged",L"execution_visible"};
+    L"operation",L"source",L"target",L"saved_path",L"remaining_stage",L"status",L"filesystem_changed",L"completed",L"logged",L"execution_visible",
+    L"attempts",L"last_error",L"automatic_skip"};
 std::wstring Cell(std::wstring value,bool csv){
     if(csv){auto first=value.find_first_not_of(L" \t\r\n");
         if(first!=std::wstring::npos && (value[first]==L'=' || value[first]==L'+' || value[first]==L'-' || value[first]==L'@'))value.insert(0,1,L'\'');
@@ -156,7 +159,8 @@ std::wstring RenderReport(const Result& result,const ReportContext& c,const Repo
         for(const auto& item:b.items)doc.Add(L"operation",{{L"row",N(item.row+1)},{L"execution_visible",B(executionVisible.count(item.row)!=0)},
             {L"operation",item.kind},{L"source",item.source},{L"target",item.target},{L"saved_path",item.saved},{L"remaining_stage",item.stage},
             {L"status",item.status},{L"error",N(item.error)},{L"filesystem_changed",item.status==L"not_reported"?L"":B(item.changed)},
-            {L"completed",B(item.completed)},{L"logged",item.kind==L"save_original" && item.status!=L"not_reported"?B(item.logged):L""}});
+            {L"completed",B(item.completed)},{L"logged",item.kind==L"save_original" && item.status!=L"not_reported"?B(item.logged):L""},
+            {L"attempts",N(item.attempts)},{L"last_error",N(item.lastError)},{L"automatic_skip",B(item.automaticSkip)}});
     }else doc.Meta(L"operation_results",L"none recorded for this comparison");
     return doc.text;
 }

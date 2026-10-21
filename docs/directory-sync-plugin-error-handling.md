@@ -1,0 +1,148 @@
+# Interactive operation errors: observations and proposal
+
+Recorded 2026-10-21. **R1–R5 approved; implementation stages 1–2 added in 0.4.0 development.** Interactive decisions currently apply only to the separate new-item copy command. Recovery, overwrites, deletion and combined synchronization retain stop-on-first-error behavior. See the [implementation and verification report](directory-sync-plugin-errors-040.md). The reference observations below remain historical research, distinct from plugin tests.
+
+## Scope and evidence
+
+The user requested direct GUI investigation of a reference file manager, followed by a proposal for this plugin. All application input used Computer Use. Shell scripts only prepared synthetic files, held exclusive file handles, applied/restored one fixture-directory ACL and inspected resulting filesystem contents. No application UI was driven through shell commands or a custom automation helper.
+
+- Reference application: installed x64 build 11.58, English interface. Executable SHA-256: `3c3858615480ac9f572f80711ab8b040e11442a1063e580a4800456043ca7836`.
+- Filesystem: local NTFS, ordinary non-elevated user. No SMB tests, host/SDK changes or plugin implementation.
+- Plugin source reviewed: released 0.3.0 commit `5c9022c3ad104c5ab0f693222d24830c4d6ac24b`.
+- Local evidence, outside Git: `C:\Samandarin\builds\dirsync-error-policy-20261021`. It contains sanitized accessibility observations `01`–`74`, inventories, a lock worker, recycle-bin metadata and an evidence-check script. Screenshots were inspected through Computer Use, not added to the repository.
+- The synchronization view used Asymmetric, Subdirs, Empty directories and By content enabled; Ignore date disabled; mask `*.*`. Transfer Verify and copying source NTFS permissions were disabled. Confirmation of overwrites was enabled. These findings do not establish behavior for other configurations or filesystems.
+
+The synchronization dialog initially extended outside the desktop and its accessibility element indexes could not be used for input. Keyboard maximization and screenshot-based input worked. This was an automation limitation, not a file-operation result. Raw application names in saved accessibility text were replaced with neutral identifiers.
+
+## Direct GUI observations
+
+The table describes actual actions and disk results. The dialog captions are paraphrased except for short button labels. An observed generic access-denied message does not establish the exact internal Win32 error code.
+
+| Case | Setup and action | Observed result |
+| --- | --- | --- |
+| E1: source lock, Retry and Skip | Four new files; exclusive read handles on files 02 and 03. Copy file 01, retry file 02 while locked, release its handle and retry, then skip file 03. | The first error showed the affected source and the sharing-violation explanation. Buttons: Skip, Retry, Skip all, Abort, and two administrator alternatives. Retry while locked returned to the same error. After unlocking, file 02 copied and the next locked source prompted separately. Skip left file 03 absent at the destination and copied file 04. Earlier successful files remained. Unicode in the source name was displayed. |
+| E2: scope of Skip all | Two unreadable new sources followed by an existing destination held exclusively open. Choose Skip all on the first source-read error. | The second source-read error did not require another decision. The independent file 04 copied. The overwrite confirmation still appeared, followed by a separate target access-denied dialog. Thus this observed Skip all did not suppress overwrite confirmation or target-write errors. Its complete matching rule is not established by this test. |
+| E2: target Retry | Confirm the overwrite, retry with the target still locked, release the lock and retry again. | Target error buttons included Skip, Retry, Abort, Skip all, Rename and administrator alternatives. The first retry remained blocked. The retry after unlocking completed the overwrite. The final destination matched the new source. |
+| E3: new batch and Abort | Keep the same two sources locked; prepare another batch with a successful preceding file and later independent files. | A source-read question appeared again: the earlier Skip all choice did not persist into this new batch. Abort returned to the comparison view. The successful preceding file remained; the failing and later new files were absent. No automatic rollback was observed. |
+| E4: changed/missing source after Compare | Compare first. Replace the content of source 02 with a larger value and move source 03 temporarily outside the source tree. Start the previously displayed plan. | Source 02 copied its **current changed content** without requesting a new comparison. Source 03 produced a missing-file read error with Retry/Skip/Skip all/Abort. Returning the original file to the same path and choosing Retry succeeded; later files copied. This is a material difference from the plugin's snapshot contract. |
+| E5: target parent replaced by a file | Compare a new nested source and an independent root-level source. Afterwards create a regular file at the target path required for the parent directory. | The nested transfer failed with a missing-path explanation, phrased as a read error. Skip left the blocker intact and the nested destination absent; the independent file copied. There was no separate directory-creation decision in this sequence. Do not reproduce the ambiguous operation description in our dialog. |
+| E6: actual access denial | A matching target directory exists but has no file yet. After Compare, deny Write to the current user on that fixture directory. A separate write probe confirmed access denial. | Transfer displayed the target access-denied dialog. Skip left the denied destination absent and allowed an independent later subdirectory file to copy. The original ACL was restored and its SDDL matched exactly. No administrator action was used. |
+| E7: read failure during Compare | Lock a source whose size/date and counterpart otherwise match; run By content comparison. | Comparison completed without an interactive error dialog. The unreadable pair appeared with a question-mark operation symbol; other comparison results remained available. Do not treat inability to read as equality or absence. |
+| E8: recycle failure and later work | Explicitly approved synthetic batch: three right-only files and two directories for removal, plus two new copies. One deleted file remained exclusively locked. Original application option used the Recycle Bin. | The deletion confirmation appeared before either new copy existed. After confirming it, the operation returned to the preview without a captured error question. Both unlocked files disappeared, the empty child directory disappeared, and both new copies completed. The locked file and its nonempty parent remained. Two matching recycle-bin metadata entries and stored payloads were found for the unlocked files. This does not prove that the empty directory has a separate recoverable recycle item. The internal reason for the absent error question is unknown. |
+| E9: permanent deletion Retry and Skip | Separate explicitly approved batch containing only the remaining locked file and its parent. Temporarily disable the application's recycle option; confirm permanent removal. | An access-denied deletion dialog offered Skip, Retry, Skip all and Abort. Retry while locked showed the same error again. Skip ended the batch with the file and its parent retained, without a second parent-deletion question. No permanent deletion succeeded in this case. The original recycle option was subsequently restored to ON. |
+
+Accessibility evidence ranges: E1 `10`–`15`; E2 `16`–`22`; E3 `23`–`26`; E4 `27`–`30`; E5 `31`–`34`; E6 `35`–`38`; E7 `39`; E8 `40`–`44`; E9 preparation `45`–`65`, error/decision `66`–`68`; settings restoration `69`–`74`. Inventories use corresponding `E*-inventory.json` names. The lock worker and reference application were closed normally after testing; the retained file is readable again. The user's running host instance was left alone. Test data and matching recycle items were retained for inspection.
+
+The final evidence checker passed **14/14 assertions** over the captured inventories, hashes and two retained recycle payloads. It checks the earlier completed copies, skipped/unstarted destinations, original-source preservation, the changed-source case and retained deleted child/parent. This is verification of the research evidence, not a plugin test-suite result. The fixture-directory ACL restoration was also compared with its saved original SDDL and matched exactly.
+
+### Limits of this investigation
+
+No new physical disk-full, transfer-interruption, mid-stream I/O fault or Verify-corruption campaign was performed here. No administrator retry, Rename, unattended automatic retry, exhaustive Skip all error-code matching, or permanent-delete Retry after unlocking was exercised. E9 verifies repeat failure and Skip, not successful permanent deletion. The reference application does not implement this plugin's D4 recovery protocol, so its behavior cannot validate recovery-copy/journal failures. Earlier [reference observations](directory-sync-plugin-reference-observations.md) contain a separate Verify failure test; they are not new verification of these untested branches.
+
+That earlier 2026-10-14/15 GUI record observed a real changed byte during Verify, an integrity-error question with Ignore / Ignore all / Abort, and a corrupted destination left on disk after Abort while the next file remained uncopied. Only Abort was exercised. This supports keeping the plugin's existing verified staging and declining an Ignore-verification option; it does not establish what the two untested Ignore buttons do. Its separately documented transfer-cancellation test removed the unfinished new destination and did not start the next item.
+
+## What the plugin should preserve and change
+
+The useful common behavior is to pause the batch on a recoverable per-item error, explain the operation and paths, then let the user retry, skip that item or end the batch. A single locked file should not necessarily prevent unrelated work. Completed changes remain, and the summary must distinguish an incomplete batch from success.
+
+The following differences are intentional proposals:
+
+| Area | Proposed plugin behavior | Reason |
+| --- | --- | --- |
+| Changed source/target | Require a fresh comparison when the confirmed identity or supported stamp no longer matches. Retry never silently adopts new content or a new target. | Preserve the existing snapshot contract, including changes while the error dialog is open. |
+| Operation order | Keep new copies, then overwrites, then file/empty-directory deletions. | Already approved for combined synchronization. The observed reference deletion-first confirmation does not change that decision. |
+| Recovery | **R4 approved, 2026-10-21, variant B:** for a recoverable per-item saving failure offer Retry / Skip / Skip all / Cancel. Skipping also skips the dependent overwrite/deletion; unrelated work may continue. Keep originals remains frozen for the batch, with no implicit fallback without recovery. A shared recovery-manifest or operation-journal write failure stops the entire batch. | Preserve D4 and the remembered user choice. |
+| Retained child | Skip prevents deletion of every planned ancestor of that retained child. Continue independent eligible items. | A skipped child is not permission to recurse into or force-delete its parent. |
+| Staging and verification | Retry restarts the affected unpublished operation with fresh staging and the original checks. Verification is never ignored. | Do not publish unverified bytes or repeat an already published overwrite. |
+| Error wording | Identify Copy, Save original, Replace or Delete, the actual failing phase, paths and system error. | A target-parent failure should not be reported simply as an unreadable source. |
+| Completion | Explicitly report skipped, dependency-blocked, failed, cancelled and unstarted items, separately from successful operations. | Returning to the preview or reaching the end of the loop is not evidence of complete synchronization. |
+| Elevation and rename | No automatic elevation, administrator retry or destination renaming in the first stage. | These change execution privileges or the approved plan and require separate design. |
+| Comparison | Keep existing blocked comparison rows; do not add an error dialog for every scan/content-read failure in this stage. | This work concerns executing a confirmed plan; unreadable input must not cause inferred deletion. |
+
+## Proposed decision rules
+
+Classify using **operation, phase and observed side effects**, not just a numerical error code. An access-denied error before opening a source differs from access denied after a destination has already been published.
+
+| Failure context | Proposed choices and result |
+| --- | --- |
+| Sharing/lock violation, ordinary access denial or temporary I/O error before the affected target changes | Retry / Skip / Cancel. Retry is permitted only after cleanup is accounted for and the relevant roots, parents, source and destination still satisfy the original plan. A changed ACL or attribute on an existing planned file can itself invalidate that plan; fixing access does not guarantee retry will be accepted. |
+| Insufficient space while preparing an unpublished copy or recovery copy | Recommend Retry / Skip / Cancel for that item, with the affected target or recovery volume clearly identified. Retry restarts that item's copy; it does not resume arbitrary partially verified bytes. Skip of a recovery copy also skips its dependent destructive operation. No automatic backup disabling. This branch still requires implementation-time fault and GUI tests. |
+| Newly missing source, unexpected new target, changed identity/stamp, unsafe/reparse parent, invalid roots or plan | Stop and request a fresh comparison. Do not offer Retry that accepts a different object under the same path. An unchanged blocked/unsupported item remains ineligible. |
+| Content/metadata verification mismatch | End the batch and explain verification failure. Do not offer Ignore or mark it completed. A future bounded full recopy could be designed separately; it is not included in this proposal. |
+| Recovery manifest or operation-journal write failure, uncertain publication/removal, failure after publication/removal, unaccounted staging residue, unexpected exception/out of memory | End the batch with the actual known side effects and remaining paths recorded. No generic retry of the complete operation, rollback, or silent continuation. |
+| Stop, error-dialog Cancel/Escape/Close, main-window Close, host shutdown or forced unload | Cancel the current batch and prevent later phases. Resolve any pending question and unblock the worker; already completed changes remain. |
+
+These are proposed supported recovery points, not a promise that any error can be corrected without rescanning. In particular, changing the content, identity, protected attributes or security of an existing file while answering an error can require a new comparison.
+
+### Scope of Skip
+
+An execution-time Skip is separate from editing a row's proposal to Skip before starting. Record it in the batch result without rewriting the original proposal or profile. It skips the current item and its dependent destructive work; it does not remove the row from an existing recovery manifest.
+
+**R3 approved by the user, 2026-10-21: variant A, continue independent operations and phases after an explicitly skipped recoverable error**, including later confirmed deletions, only while the remaining plan is valid. Preserve the order of new copies, overwrites, then deletions. Before deleting directories, exclude ancestors of any retained/skipped/failed child; retain the existing empty-directory check at the final operation. A skipped prerequisite blocks its dependants, which must have their own explanation in the report. An unrelated skipped copy does not automatically block a different confirmed right-only deletion. Fatal failures and Cancel still stop the batch.
+
+**R2 approved by the user, 2026-10-21: include Skip all in the first implementation (variant B).** It skips the current item and further eligible items with a matching operation/phase/error class in this batch. Never persist it to profiles or apply it to stale-plan, verification, journal or post-publication failures. A source-read choice does not suppress target-write, recovery-save or deletion questions. Report every automatically skipped item and the final skipped count. The reference tests establish only that source-read Skip all did not cover target-write errors and did not carry into the next batch; they do not establish its complete internal matching rule.
+
+## Compact GUI proposal
+
+Use the existing host font, spacing, light/dark handling and English/Czech resources. The error question belongs to the plugin's transfer window and disables only that plugin operation's controls; working in the host must remain possible. Do not create a competing application style.
+
+Display a short operation/phase heading, source and target (or original and saved-copy path), system error text with code, and four conventional action buttons:
+
+- **Retry / Opakovat**: another attempt at this same eligible item.
+- **Skip / Přeskočit**: leave this item incomplete and continue eligible independent work.
+- **Skip all / Přeskočit vše**: skip this item and further eligible items with the same operation/phase/error class in this batch, as approved in R2.
+- **Cancel / Zrušit**: stop the entire batch, including later phases.
+
+Use the same labels for different operation types, enable only supported actions, and make Escape and the title-bar close button Cancel. Keep long Unicode paths available through selection/copy or a compact details expander; do not widen the dialog to the longest path. No elevation buttons, unrelated options or radio-button replacement for actions.
+
+While waiting, the progress window must say it is awaiting a decision; elapsed waiting time must not distort transfer speed or remaining-time estimates. Pause/Resume must not accidentally dismiss the error or start another operation. Repeated activation must raise the existing question rather than create duplicates. A final summary must say "Finished with skipped items" rather than "All operations completed" when appropriate; a fresh comparison is required before another execution.
+
+## Minimal internal changes, after agreement
+
+This is more than replacing `break` with `continue`:
+
+1. `src/copy.cpp` currently catches a `Failure` containing only a `DWORD` and ends its per-item loops. Capture the failing operation/phase and publication state, release attempt-local handles, account for staging cleanup, then request an item decision outside the active copy callback or publish/journal sequence. Retry only that item; do not re-run successful preceding operations or the whole `Synchronize` call.
+2. Add a small internal error-decision interface usable by copy/recovery/overwrite/delete and deterministic tests. Production UI posts a request to the host UI thread and waits cancellably for a copied response. Keep SDK/UI calls off the worker. Stop/Close/unload must wake this wait before any worker join; do not use a synchronous worker-to-UI call that can deadlock during shutdown.
+3. `SaveOriginalsImpl` currently saves the whole phase before destructive execution; `OverwriteFiles` and `DeleteFiles` require all originals to be saved and use positional recovery-item mapping. An explicitly skipped recovery item needs an explicit eligible subset and stable row/operation mapping, not a shortened vector interpreted with the old index. Keep verified saved copies and their records; never delete them merely because execution was skipped.
+4. `DeletionRows` currently protects descendants omitted from the initial plan. Extend that protection to execution-time skipped/retained descendants and their ancestors. Never add recursive deletion as an error fallback.
+5. `Synchronize` currently stops unless every stage succeeds, while `AdvanceExecutionSnapshot` admits known earlier changes only after checking remaining items. Define stage completion separately from all-items-success and carry the eligible pending subset across phases. Do not blindly revalidate the original whole tree after successful writes, and do not silently rebuild proposals from a fresh scan.
+6. Add explicit skipped/dependency-blocked outcomes and final skipped/failed/unstarted counts to `copy.h`, `delete.h`, `sync.h` and report conversion. Preserve `published`, `removed`, saved-copy/log state and remaining-stage paths even on failure. CSV/text exports must distinguish proposal Skip from execution Skip and must not report a retrying item as successful twice. Recording an attempt count and last error is sufficient for the first stage; no transaction engine or automatic rollback is proposed.
+7. Connect the compact dialog and cancellation wait in `dirsync.cpp` / `transfer_progress.inc`, including keyboard, modeless ownership and waiting-time accounting. Persist only the agreed global error policy, not a per-batch Skip all decision. Keep recovery settings and the profile format otherwise unchanged.
+
+No host changes, new SDK interfaces, shell-copy delegation, transfer queue or advanced filesystem backend are required. The implementation should reuse the existing adapter and ordinary host-level checks.
+
+## Approved decisions R1–R5
+
+| ID | Alternatives considered | Approved decision |
+| --- | --- | --- |
+| R1: policy and default | Always stop on first error; ask on supported per-item errors; expose both as a remembered global setting. | **Approved by the user, 2026-10-21:** ask on supported per-item errors by default; allow enabling stop-on-first-error in the remembered global plugin settings. Implemented for new-item copies in 0.4.0 development; later adapters remain pending. |
+| R2: repeated errors | Three buttons only; or also a precisely scoped Skip all. | **Approved by the user, 2026-10-21: variant B, include Skip all.** Scope: matching operation/phase/error class, current batch only, no persistence; preserve fatal-error exclusions and explicitly report skipped items. |
+| R3: later destructive phases after Skip | Continue independent confirmed operations including later deletions; or suppress all later deletions after any copy/overwrite Skip. | **Approved by the user, 2026-10-21: variant A, continue independent operations.** Preserve phase order, snapshot checks and skipped-child ancestor protection; fatal failures and Cancel still stop the batch. State this clearly in the confirmation/help. |
+| R4: recovery failure | Stop the whole phase; or allow skipping the affected original and its dependent overwrite/deletion while unrelated items continue. | **Approved by the user, 2026-10-21: variant B.** Offer the agreed per-item decisions before destructive execution while the manifest is healthy; Skip/Skip all also suppress the dependent overwrite/deletion. Shared manifest/journal write failures stop the entire batch. Never proceed without the promised original. |
+| R5: insufficient space and verification | Offer item decisions including a full recopy after verification failure; or distinguish resource shortage from data-integrity failure. | **Approved by the user, 2026-10-21: variant B.** Space shortage before changing the target can offer Retry / Skip / Skip all / Cancel when cleanup and the unchanged plan are accounted for. Verification mismatch, changed/invalid plan, post-publication failure, uncertain removal result and shared manifest/journal write failure stop the entire batch. Skip all never suppresses these failures. Retry restarts the affected copy, not the whole batch; completed changes remain and there is no automatic rollback. |
+
+## Proposed implementation sequence
+
+The user approved implementation of stages 1 and 2 as version 0.4.0 on 2026-10-21. Those stages are implemented; stages 3–6 below include later adapters and acceptance work that is not complete merely because the common model exists. Keep changes scoped to ordinary local operations and the existing SDK.
+
+1. **Decision and outcome model.** Define operation/phase/error context and recoverable versus fatal classification, the four decisions, batch-local Skip all matching and explicit skipped/dependency-blocked outcomes. Store the agreed global stop-on-first-error setting with interactive behavior as the default. Cover classification, matching/reset and outcomes with focused tests before connecting destructive operations.
+2. **New-copy execution and GUI handshake.** Introduce per-item retry using the existing staging and verification path. Add the compact EN/CS error dialog on the UI thread and cancellable request/response handling. Check Retry with an unchanged item, Skip/Skip all, Cancel and Stop/Close while awaiting a response. Retry must not duplicate preceding successful copies; verification, changed-plan and post-publication failures remain fatal.
+3. **Recovery, overwrites and deletions.** Replace positional recovery assumptions with stable row/operation mapping and an explicit eligible subset. A skipped recovery copy excludes its dependent overwrite/deletion; preserve all successfully saved originals. Protect planned ancestors of retained children and keep final empty-directory checks. Verify both recovery modes and fatal shared-protocol errors using the existing failure hooks.
+4. **Combined synchronization.** Carry eligible pending operations and skipped/dependency-blocked results across the existing copy, overwrite and deletion phases. Continue independent confirmed operations after Skip, but stop all later phases on Cancel or fatal error. Revalidate the remaining plan without silently changing proposals or rejecting known earlier successful writes as unexpected external changes.
+5. **Results and presentation.** Complete summaries, status/progress waiting state, attempt/last-error accounting and CSV/text exports. Distinguish completed, execution-skipped, dependency-blocked, failed, cancelled and unstarted operations; do not confuse execution Skip with proposal Skip. Exclude decision-wait time from speed/remaining-time estimates. Verify compact EN/CS layout, long Unicode paths, keyboard and light/dark appearance.
+6. **Acceptance and delivery.** Run all five x64 suites in Debug and Release plus the relevant build matrix. Perform the focused NTFS GUI scenarios below, especially active-host use and shutdown/unload with an error question open. Document the results and limitations. Commit/push and inspect this repository's CI at agreed delivery checkpoints; no release publication without a separate request. No SMB test or SDK expansion is part of this sequence.
+
+## Full-feature acceptance checklist
+
+Use the existing five x64 suites and relevant build matrix, plus a focused local GUI fixture. This full-scope list includes future adapter tests; the separate [0.4.0 report](directory-sync-plugin-errors-040.md) identifies checks actually completed:
+
+- New-copy, overwrite and delete lock failures: retry unchanged locked item, unlock/retry, skip and cancel; both directions for copies; Keep originals ON/OFF.
+- Skip all suppresses only further matching eligible errors in the current batch; unrelated operation/phase/error classes still prompt, fatal failures still stop, and the next batch prompts again. Count and export every automatically skipped item.
+- Access denial and space shortage in both staging and recovery locations; safe original retention; healthy per-item recovery Skip versus fatal shared-journal error. Reuse deterministic failure boundaries before repeating an elevated physical-volume campaign.
+- Changed/missing source, appearing/replaced target and changed parent while a question is open: no silent adoption of a new plan; confirm metadata/security revalidation limits.
+- Skip child deletion preserves every ancestor; skip required parent creation blocks dependent children; unrelated selected work remains eligible. Hidden/filter/Skip eligibility stays unchanged.
+- Fail before publication, after publication, after removal, during verification and during manifest append: truthful effects, no duplicate destructive retry, no false successful completion.
+- Error question open during Pause/Resume, Stop, transfer Close, preview Close, host exit and forced unload: no deadlock or orphan dialog; host remains usable. EN/CS, light/dark, keyboard and long Unicode paths.
+- CSV/text and stored-original records agree on completed, execution-skipped, dependency-blocked, cancelled, failed and unstarted items. Earlier successful items remain completed after any later decision.
+
+The research itself changed no production source. Subsequent stage 1–2 implementation, version selection and delivery are recorded separately. Release publication, later interactive adapters, SMB tests and SDK expansion are outside this checkpoint.

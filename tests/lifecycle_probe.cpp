@@ -60,6 +60,30 @@ extern "C" __declspec(dllexport) BOOL WINAPI ProbeTransferDialog() try {
         owner.dialog.style=WS_POPUP;owner.dialog.cx=355;owner.dialog.cy=154;
         HWND parent=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&owner.dialog,nullptr,EmptyDialog,0);
         if(!parent){FreeLibrary(resources);return FALSE;}
+        // Real modeless error dialog and channel: a worker can be joined after
+        // Stop/Close without dispatching another UI message or answering it.
+        for(int scenario=0;scenario<7;++scenario) {
+            Preview p;p.window=parent;p.running=true;p.copying=true;
+            std::atomic<bool> posted{false},done{false};dirsync::ErrorDecision result=dirsync::ErrorDecision::Cancel;
+            dirsync::OperationError error;error.code=ERROR_SHARING_VIOLATION;
+            error.source=L"C:\\"+std::wstring(280,L'漢')+L"\\žluťoučký.txt";error.target=L"D:\\kopie.txt";
+            p.copyProgress.awaitingDecision=true;
+            p.worker=std::thread([&]{result=p.errorQuestion.Ask(error,p.cancel,[&]{posted=true;return true;});done=true;});
+            for(int attempt=0;attempt<200 && !posted;++attempt)Sleep(5);
+            ok &= posted.load();ShowOperationError(p);HWND question=p.errorWindow;
+            ok &= IsWindow(question) && IsWindowVisible(question) && IsWindowEnabled(parent) &&
+                GetWindow(question,GW_OWNER)==p.transferWindow && ControlText(question,IDC_ERROR_SOURCE)==error.source &&
+                !IsWindowEnabled(GetDlgItem(p.transferWindow,IDC_TRANSFER_PAUSE));
+            if(scenario<4)SendMessageW(question,WM_COMMAND,scenario==0?IDC_ERROR_RETRY:scenario==1?IDC_ERROR_SKIP:scenario==2?IDC_ERROR_SKIP_ALL:IDCANCEL,0);
+            else if(scenario==4)SendMessageW(question,WM_CLOSE,0,0);
+            else if(scenario==5)SendMessageW(p.transferWindow,WM_CLOSE,0,0);
+            else p.Stop();
+            for(int attempt=0;attempt<200 && !done;++attempt)Sleep(5);
+            ok &= done.load();if(!done)p.Stop();p.Join();
+            ok &= result==(scenario==0?dirsync::ErrorDecision::Retry:scenario==1?dirsync::ErrorDecision::Skip:
+                scenario==2?dirsync::ErrorDecision::SkipAll:dirsync::ErrorDecision::Cancel);
+            ok &= !p.errorWindow && !IsWindow(question);p.running=false;p.CloseTransfer();
+        }
         // Exercise the real modal speed dialog, not just its parser/template.
         for(int scenario=0;scenario<3;++scenario) {
             struct SpeedProbe {HWND dialog=nullptr;int scenario=0;bool ok=true;} speedProbe;
@@ -876,6 +900,13 @@ extern "C" __declspec(dllexport) unsigned WINAPI ProbeSettingsTest()
         check(settings.keepOriginals && settings.recoveryRoot.empty());
         check(!settings.relativeSizes && !settings.relativeTimes);
         check(!settings.colorRows);
+        check(!settings.stopOnFirstError);
+        for(bool enabled:{true,false}) {
+            settings.stopOnFirstError=enabled;plugin.SaveConfiguration(nullptr,key,&registry);
+            settings={};plugin.LoadConfiguration(nullptr,key,&registry);check(settings.stopOnFirstError==enabled);
+        }
+        registry.values["StopOnFirstErrorV1"].bytes={2,0,0,0};
+        plugin.LoadConfiguration(nullptr,key,&registry);check(!settings.stopOnFirstError);
         for(bool enabled:{true,false}) {
             settings.colorRows=enabled;plugin.SaveConfiguration(nullptr,key,&registry);
             settings={};plugin.LoadConfiguration(nullptr,key,&registry);check(settings.colorRows==enabled);

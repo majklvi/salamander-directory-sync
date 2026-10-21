@@ -40,6 +40,7 @@ HINSTANCE instance = nullptr, language = nullptr;
 CSalamanderGeneralAbstract* general = nullptr;
 CSalamanderGUIAbstract* gui = nullptr;
 constexpr UINT Done = WM_APP + 41;
+constexpr UINT OperationErrorMessage = WM_APP + 92;
 constexpr std::array<int,10> ColumnOrder{0,1,2,3,5,4,9,6,7,8};
 HBRUSH backgroundBrush = nullptr;
 bool dark = false;
@@ -55,6 +56,7 @@ struct Settings {
     int sortColumn=0;
     bool sortDescending=false;
     bool keepOriginals=true;
+    bool stopOnFirstError=false;
     bool actionLabels=false;
     bool colorRows=false;
     bool relativeSizes=false;
@@ -70,6 +72,9 @@ void LoadSettings(HKEY key,CSalamanderRegistryAbstract* registry)
     DWORD enabled=1,bytes=0;
     if(registry->GetValue(key,"KeepOriginals",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
         settings.keepOriginals=enabled!=0;
+    enabled=0;
+    if(registry->GetValue(key,"StopOnFirstErrorV1",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
+        settings.stopOnFirstError=enabled!=0;
     enabled=0;
     if(registry->GetValue(key,"ActionLabels",REG_DWORD,&enabled,sizeof(enabled)) && enabled<=1)
         settings.actionLabels=enabled!=0;
@@ -120,6 +125,8 @@ bool StoreSettings(HKEY key,CSalamanderRegistryAbstract* registry)
     if(!key || !registry || settings.recoveryRoot.size()>=32760) return false;
     DWORD enabled=settings.keepOriginals?1:0;
     bool mode=registry->SetValue(key,"KeepOriginals",REG_DWORD,&enabled,sizeof(enabled))!=FALSE;
+    DWORD stop=settings.stopOnFirstError?1:0;
+    mode=(registry->SetValue(key,"StopOnFirstErrorV1",REG_DWORD,&stop,sizeof(stop))!=FALSE) && mode;
     bool path=registry->SetValue(key,"RecoveryRootUtf16",REG_BINARY,settings.recoveryRoot.c_str(),
         DWORD((settings.recoveryRoot.size()+1)*sizeof(wchar_t)))!=FALSE;
     DWORD labels=settings.actionLabels?1:0;
@@ -459,6 +466,9 @@ struct Preview
     std::atomic<bool> cancel{false};
     dirsync::Progress progress;
     dirsync::CopyProgress copyProgress;
+    dirsync::ErrorQuestion errorQuestion;
+    dirsync::OperationError operationError;
+    HWND errorWindow=nullptr;
     dirsync::CopyReport copyReport;
     dirsync::RecoveryReport recoveryReport;
     dirsync::OverwriteReport overwriteReport;
@@ -494,6 +504,8 @@ struct Preview
     bool running = false, closing = false, failed = false, validating = false, updatingList = false;
     bool modeless=false;
     void CloseTransfer() {
+        errorQuestion.Cancel();
+        if(errorWindow){HWND window=errorWindow;errorWindow=nullptr;DestroyWindow(window);}
         if(transferSpeedWindow){EndDialog(transferSpeedWindow,IDCANCEL);transferSpeedWindow=nullptr;}
         if(transferWindow){HWND window=transferWindow;transferWindow=nullptr;DestroyWindow(window);}
     }
@@ -501,6 +513,8 @@ struct Preview
     void Stop()
     {
         cancel = true;
+        errorQuestion.Cancel();
+        if(errorWindow){HWND window=errorWindow;errorWindow=nullptr;DestroyWindow(window);}
         if (worker.joinable()) CancelSynchronousIo(worker.native_handle());
     }
     void Join() { if (worker.joinable()) worker.join(); }
@@ -518,7 +532,7 @@ LRESULT CALLBACK PreviewKeyboard(int code,WPARAM removed,LPARAM value) {
         auto* message=reinterpret_cast<MSG*>(value);
         if(message->message>=WM_KEYFIRST && message->message<=WM_KEYLAST) {
             HWND root=GetAncestor(message->hwnd,GA_ROOT);
-            if(root && (root==active->window || root==active->transferWindow) && IsDialogMessageW(root,message))
+            if(root && (root==active->window || root==active->transferWindow || root==active->errorWindow) && IsDialogMessageW(root,message))
                 message->message=WM_NULL;
         }
     }
@@ -824,6 +838,7 @@ INT_PTR AppearanceBody(HWND window,UINT message,WPARAM w,LPARAM l)
         CheckDlgButton(window,IDC_ACTION_LABELS,appearance->draft.actionLabels?BST_CHECKED:BST_UNCHECKED);
         CheckDlgButton(window,IDC_COLOR_ROWS,appearance->draft.colorRows?BST_CHECKED:BST_UNCHECKED);
         CheckDlgButton(window,IDC_KEEP_ORIGINALS,appearance->draft.keepOriginals?BST_CHECKED:BST_UNCHECKED);
+        CheckDlgButton(window,IDC_STOP_ON_ERROR,appearance->draft.stopOnFirstError?BST_CHECKED:BST_UNCHECKED);
         for(size_t i=0;i<OptionalColumns.size();++i) {
             SetDlgItemTextW(window,IDC_COLUMN_FIRST+int(i),Text(IDS_COLUMNS+OptionalColumns[i]).c_str());
             CheckDlgButton(window,IDC_COLUMN_FIRST+int(i),(appearance->draft.visibleColumns&(1u<<OptionalColumns[i]))?BST_CHECKED:BST_UNCHECKED);
@@ -882,6 +897,7 @@ INT_PTR AppearanceBody(HWND window,UINT message,WPARAM w,LPARAM l)
             if(!(settings.visibleColumns&(1u<<settings.sortColumn))) {settings.sortColumn=0;settings.sortDescending=false;}
             appearance->draft.recoveryRoot=ControlText(window,IDC_RECOVERY_ROOT);
             settings.keepOriginals=Checked(window,IDC_KEEP_ORIGINALS);
+            settings.stopOnFirstError=Checked(window,IDC_STOP_ON_ERROR);
             settings.recoveryRoot=std::move(appearance->draft.recoveryRoot);
             settings.actionLabels=Checked(window,IDC_ACTION_LABELS);
             settings.colorRows=Checked(window,IDC_COLOR_ROWS);
@@ -926,6 +942,7 @@ void Tooltips(HWND window)
     SendMessageW(tip,TTM_SETMAXTIPWIDTH,0,MulDiv(420,dpi,96));
     for(auto entry:{std::pair<int,int>{IDC_PROFILE_MENU,0},
         {IDC_MASK,IDS_TIP_MASK},{IDC_KEEP_ORIGINALS,IDS_TIP_KEEP},{IDC_RECOVERY_ROOT,IDS_SAVE_ROOT},
+        {IDC_STOP_ON_ERROR,IDS_ERROR_POLICY},
         {IDC_SYNCHRONIZE,IDS_TIP_SCOPE},{IDC_STOP,IDS_TIP_STOP_COMPARE},{IDC_STOP_SYNC,IDS_TIP_STOP_SYNC},
         {IDC_SELECTED,IDS_TIP_SELECTION},{IDC_EMPTY,IDS_TIP_EMPTY},
         {IDC_RECURSIVE,IDS_TIP_SCAN_OPTIONS},{IDC_CONTENT,IDS_TIP_SCAN_OPTIONS},
@@ -1230,6 +1247,7 @@ int StopControl(const Preview& p)
 }
 #include "transfer_speed.inc"
 #include "transfer_progress.inc"
+#include "operation_error_ui.inc"
 void ProfileControls(Preview& p);
 void Busy(Preview& p, bool busy)
 {
@@ -2062,10 +2080,11 @@ void SyncAll(Preview& p)
 }
 void CopySummary(Preview& p)
 {
-    uint64_t copied=0, failed=0, pending=0; std::wstring details;
+    uint64_t copied=0, failed=0, pending=0, skipped=0; std::wstring details;
     for (const auto& item:p.copyReport.items) {
         if (item.status==dirsync::CopyStatus::Copied) ++copied;
         else if (item.status==dirsync::CopyStatus::NotStarted) ++pending;
+        else if(item.status==dirsync::CopyStatus::Skipped || item.status==dirsync::CopyStatus::DependencyBlocked) ++skipped;
         else {
             ++failed;
             if (details.empty()) details=L"\n\n"+item.target+L"\n"+Text(IDS_COPY_ERROR)+Number(item.error)+
@@ -2075,8 +2094,10 @@ void CopySummary(Preview& p)
     }
     InfoRows rows;
     Field(rows,IDS_UI_COPIED,copied);Field(rows,IDS_UI_ERRORS,failed);Field(rows,IDS_UI_PENDING,pending);
+    Field(rows,IDS_UI_SKIPPED,skipped);
     Field(rows,IDS_UI_OMITTED,uint64_t(p.copyReport.omitted));
     std::wstring message=Text(IDS_UI_RESULT_NOTE);
+    if(skipped)message+=L"\n"+Text(IDS_ERROR_SKIPPED_NOTE);
     if (p.copyReport.stale) message+=L"\n"+Text(IDS_STALE);
     if (p.copyReport.cancelled) message+=L"\n"+Text(IDS_COPY_STOPPED);
     if(!details.empty()) Field(rows,IDS_UI_ERROR_DETAILS,details);
@@ -2094,6 +2115,12 @@ void CopyNew(Preview& p)
     InfoRows fields;Field(fields,IDS_UI_FILES,uint64_t(p.copyRows.size())-directories);Field(fields,IDS_UI_DIRECTORIES,directories);Field(fields,IDS_UI_BYTES,bytes);Field(fields,IDS_UI_OMITTED,omitted);
     if(!InformationBox(p.window,IDS_UI_COPY_CONFIRM,std::move(fields),Text(IDS_UI_COPY_POLICY),true)) return;
     BeginReport(p,L"new_copy",false,L"");
+    p.copyProgress.errors.stopOnFirstError=settings.stopOnFirstError;
+    p.copyProgress.errors.prompt=[&p](const dirsync::OperationError& error) {
+        const auto started=GetTickCount64();p.copyProgress.awaitingDecision=true;
+        struct Waiting {Preview& p;ULONGLONG started;~Waiting(){p.copyProgress.pausedMilliseconds.fetch_add(GetTickCount64()-started);p.copyProgress.awaitingDecision=false;}} waiting{p,started};
+        return p.errorQuestion.Ask(error,p.cancel,[&p]{return PostMessageW(p.window,OperationErrorMessage,0,0)!=FALSE;});
+    };
     p.cancel=false; p.failed=false; p.copying=true; p.running=true; p.hasCopyReport=false;
     p.copyProgress.copied=0; p.copyProgress.verified=0; p.copyProgress.completed=0; p.copyProgress.item=0;
     p.copyProgress.phase=dirsync::CopyPhase::Checking; p.copyReport={};
@@ -2531,6 +2558,7 @@ INT_PTR CALLBACK DialogBody(HWND window, UINT message, WPARAM w, LPARAM l)
         else ClosePreview(*p);
         return TRUE;
     case ShowTransferMessage: ShowTransfer(*p);return TRUE;
+    case OperationErrorMessage: ShowOperationError(*p);return TRUE;
     case WM_SETTINGCHANGE: case WM_THEMECHANGED: ReadPanelFormat(*p);UpdateGroupHeaders(*p);RememberColumns(*p);ConfigureDark(window);ColumnStyle(*p);ButtonIcons(*p);InvalidateRect(GetDlgItem(window,IDC_LIST),nullptr,FALSE); return TRUE;
     case WM_CONTEXTMENU:
         if(reinterpret_cast<HWND>(w)==GetDlgItem(window,IDC_LIST)) {PreviewMenu(*p,l);return TRUE;}
@@ -2888,7 +2916,7 @@ CPluginInterfaceAbstract* WINAPI SalamanderPluginEntry(CSalamanderPluginEntryAbs
     if (!language) return nullptr;
     INITCOMMONCONTROLSEX controls{sizeof(controls), ICC_LISTVIEW_CLASSES | ICC_BAR_CLASSES}; InitCommonControlsEx(&controls);
     ConfigureDark(nullptr);
-    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.3.0", VERSINFO_COPYRIGHT,
+    entry->SetBasicPluginData(general->LoadStr(language, IDS_NAME), FUNCTION_LOADSAVECONFIGURATION|FUNCTION_CONFIGURATION, "0.4.0", VERSINFO_COPYRIGHT,
                               general->LoadStr(language, IDS_DESCRIPTION), "DirectorySync");
     entry->SetPluginHomePageURL("https://github.com/majklvi/salamander-directory-sync");
     return &plugin;

@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include "engine.h"
+#include "operation_error.h"
 #include <mutex>
 #if defined(DIRSYNC_ENGINE_TEST) || defined(DIRSYNC_COPY_TEST_HOOKS)
 #include <functional>
 #endif
 
 namespace dirsync {
-enum class CopyPhase { Checking, Copying, Preparing, Verifying, Publishing, Published, Deleting, Deleted, Finished };
-enum class TransferKind { Copy, Overwrite, Save, Delete, Recycle };
 struct TransferDisplay {
     std::wstring source,target;
     TransferKind kind=TransferKind::Copy;
@@ -24,6 +23,9 @@ struct CopyProgress {
     // UI requests are cooperative. Never suspend a worker that may own a file
     // handle or be completing an atomic publish/journal sequence.
     std::atomic<bool> pauseRequested{false}, paused{false};
+    std::atomic<bool> awaitingDecision{false};
+    ErrorPolicy errors;
+    ErrorSite errorSite=ErrorSite::Source; // worker-only failure context
     std::atomic<uint64_t> bytesPerSecond{0}, pausedMilliseconds{0}; // zero: unlimited
     // Call before starting a batch, with the previous worker already joined.
     void ResetControls() noexcept;
@@ -46,13 +48,16 @@ private:
     mutable std::mutex displayMutex;
     TransferDisplay display;
 };
-enum class CopyStatus { NotStarted, Copied, Cancelled, Failed };
+enum class CopyStatus { NotStarted, Copied, Cancelled, Failed, Skipped, DependencyBlocked };
 struct CopyOutcome {
     size_t row = 0;
     std::wstring target, remainingStage;
     CopyStatus status = CopyStatus::NotStarted;
     DWORD error = 0;
     bool published = false;
+    uint64_t attempts=0;
+    DWORD lastError=0;
+    bool automaticSkip=false;
 };
 struct CopyReport {
     std::vector<CopyOutcome> items;

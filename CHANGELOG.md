@@ -11,6 +11,15 @@ Dates use `YYYY-MM-DD`; public release dates are the GitHub publication dates.
 
 ## [Unreleased]
 
+### 0.4.0 development — interactive errors, stages 1–2
+
+- Add a shared operation/phase/error model, recoverable/fatal classification, batch-local Skip all matching and explicit execution-skipped/dependency-blocked outcome codes. The latter is reserved for subsequent dependent adapters.
+- The separate **Copy visible new items…** command offers **Retry / Skip / Skip all / Cancel** for supported unpublished failures. Retry revalidates the remaining plan and restarts only the current file/empty directory with fresh staging; completed copies are not repeated.
+- Add a remembered global **Stop at first error** preference, off by default. Recovery, overwrite, deletion and combined synchronization retain stop-first behavior until their later implementation stages.
+- Add a compact native English/Czech error question, asynchronous worker/UI decision channel and cancellation while awaiting an answer. Keep host panels and Stop/Close available; exclude decision waits from transfer-rate accounting.
+- Summaries distinguish execution skips and incomplete batches. CSV/text operation exports add attempt count, last error and automatic-skip fields for new copies without falsely marking skipped items complete.
+- Keep verification mismatch, stale plans, published failures and staging residue fatal. Preserve existing staging, metadata/data checks and the SDK. See the [implementation and tests](docs/directory-sync-plugin-errors-040.md).
+
 ## [0.3.0] — 2026-10-19
 
 - Complete local x64 0.3.0 package installation checks in an isolated Samandarin 0.16 developer build: clean configuration, English/Czech loading, registration after restart, a new Unicode profile, and an in-place update from the published 0.2.1 package. All 13 saved plugin values, including both old profiles and their selection, remain identical after Czech and English restarts. See the [distribution report](docs/directory-sync-plugin-distribution-030.md).
