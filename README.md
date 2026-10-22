@@ -112,7 +112,7 @@ Own CI builds Debug Win32/x64/ARM64 and Release x64, runs all five x64 suites in
 
 ## Documentation and license
 
-[Changelog](CHANGELOG.md) · [Development roadmap](ROADMAP.md) · [Český přehled](README.cs.md) · [Detailed user guide](docs/directory-sync-plugin.en.md) · [Pilot checklist](docs/directory-sync-plugin-pilot-guide.en.md)
+[Changelog](CHANGELOG.md) · [Development handoff](HANDOFF.md) · [Development roadmap](ROADMAP.md) · [Český přehled](README.cs.md) · [Detailed user guide](docs/directory-sync-plugin.en.md) · [Pilot checklist](docs/directory-sync-plugin-pilot-guide.en.md)
 
 This repository retains the plugin's own development history and documentation from the original fork. The [commit map](docs/migration/commit-map.tsv) connects original and exported SHAs. Dated reports in `docs/` describe their historical stages, not necessarily current limitations.
 
